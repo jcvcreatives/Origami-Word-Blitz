@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 50 &&
+             data.totalScore is int && data.totalScore >= 0 &&
+             data.highestWordScore is int && data.highestWordScore >= 0 &&
+             data.bestWord is string && data.bestWord.size() <= 20 &&
+             data.campaignStage is int && data.campaignStage >= 1 && data.campaignStage <= 10 &&
+             data.dailyStreak is int && data.dailyStreak >= 0 &&
+             data.paperCoins is int && data.paperCoins >= 0 &&
+             data.equippedTileSkin is string && data.equippedTileSkin.size() >= 1 && data.equippedTileSkin.size() <= 40 &&
+             data.unlockedSkins is list && data.unlockedSkins.size() <= 20 &&
+             (data.unlockedSkins.size() == 0 || (data.unlockedSkins[0] is string && data.unlockedSkins[0].size() <= 40)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSavedMatch(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.mode is string && data.mode in ['CAMPAIGN', 'PASS_AND_PLAY', 'DAILY_BLITZ', 'ASYNC_DUEL'] &&
+             data.opponentName is string && data.opponentName.size() >= 1 && data.opponentName.size() <= 50 &&
+             data.playerScore is int && data.playerScore >= 0 &&
+             data.opponentScore is int && data.opponentScore >= 0 &&
+             data.turnNumber is int && data.turnNumber >= 1 &&
+             data.maxCombo is int && data.maxCombo >= 1 &&
+             data.bestPlayedWord is string && data.bestPlayedWord.size() <= 20 &&
+             data.status is string && data.status in ['ACTIVE', 'WON', 'LOST', 'DRAW'] &&
+             data.boardSnapshot is string && data.boardSnapshot.size() <= 2000 &&
+             data.rackSnapshot is string && data.rackSnapshot.size() <= 100 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'totalScore', 'highestWordScore',
+                         'bestWord', 'campaignStage', 'dailyStreak', 'paperCoins',
+                         'equippedTileSkin', 'unlockedSkins', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'totalScore', 'highestWordScore',
+                         'bestWord', 'campaignStage', 'dailyStreak', 'paperCoins',
+                         'equippedTileSkin', 'unlockedSkins', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'totalScore', 'highestWordScore', 'bestWord',
+                         'campaignStage', 'dailyStreak', 'paperCoins', 'equippedTileSkin',
+                         'unlockedSkins', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /matches/{matchId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(matchId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(matchId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll([
+                           'userId', 'mode', 'opponentName', 'playerScore', 'opponentScore',
+                           'turnNumber', 'maxCombo', 'bestPlayedWord', 'status',
+                           'boardSnapshot', 'rackSnapshot', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'mode', 'opponentName', 'playerScore', 'opponentScore',
+                           'turnNumber', 'maxCombo', 'bestPlayedWord', 'status',
+                           'boardSnapshot', 'rackSnapshot', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidSavedMatch(incoming());
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(matchId) &&
+                         request.auth.uid == userId &&
+                         isValidSavedMatch(incoming()) &&
+                         existing().status == 'ACTIVE' &&
+                         incoming().userId == existing().userId &&
+                         incoming().mode == existing().mode &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'opponentName', 'playerScore', 'opponentScore', 'turnNumber',
+                           'maxCombo', 'bestPlayedWord', 'status', 'boardSnapshot',
+                           'rackSnapshot', 'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(matchId) && request.auth.uid == userId;
+      }
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Stores player progression, career word blitz stats, campaign stage, paper coins, and unlocked origami tile skins.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the player."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the player."
+        },
+        "totalScore": {
+          "type": "integer",
+          "description": "Cumulative career score across matches."
+        },
+        "highestWordScore": {
+          "type": "integer",
+          "description": "Highest single-turn word score achieved."
+        },
+        "bestWord": {
+          "type": "string",
+          "description": "Highest-scoring word played by the user."
+        },
+        "campaignStage": {
+          "type": "integer",
+          "description": "Current unlocked campaign stage (1 to 10)."
+        },
+        "dailyStreak": {
+          "type": "integer",
+          "description": "Current daily blitz streak count."
+        },
+        "paperCoins": {
+          "type": "integer",
+          "description": "In-game currency earned from word plays and combos for unlocking cosmetic tile skins."
+        },
+        "equippedTileSkin": {
+          "type": "string",
+          "description": "Currently equipped cosmetic tile skin ID."
+        },
+        "unlockedSkins": {
+          "type": "array",
+          "description": "List of unlocked cosmetic tile skin IDs."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the profile was last updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "totalScore",
+        "highestWordScore",
+        "bestWord",
+        "campaignStage",
+        "dailyStreak",
+        "paperCoins",
+        "equippedTileSkin",
+        "unlockedSkins",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedMatch": {
+      "title": "SavedMatch",
+      "description": "Represents an active or completed Origami: Word Blitz board game match (Campaign AI, Pass-and-Play, or Daily Blitz).",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the match owner."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["CAMPAIGN", "PASS_AND_PLAY", "DAILY_BLITZ", "ASYNC_DUEL"],
+          "description": "Game mode of the match."
+        },
+        "opponentName": {
+          "type": "string",
+          "description": "Name of the AI master or pass-and-play challenger."
+        },
+        "playerScore": {
+          "type": "integer",
+          "description": "Player 1 score."
+        },
+        "opponentScore": {
+          "type": "integer",
+          "description": "Opponent or Player 2 score."
+        },
+        "turnNumber": {
+          "type": "integer",
+          "description": "Current turn number (>= 1)."
+        },
+        "maxCombo": {
+          "type": "integer",
+          "description": "Highest combo multiplier reached during the match."
+        },
+        "bestPlayedWord": {
+          "type": "string",
+          "description": "Best word played during the match."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "WON", "LOST", "DRAW"],
+          "description": "Match lifecycle status."
+        },
+        "boardSnapshot": {
+          "type": "string",
+          "description": "Compact 225-character serialized representation of the 15x15 board tiles."
+        },
+        "rackSnapshot": {
+          "type": "string",
+          "description": "Serialized representation of the player's 7-tile rack."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the match was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the match was last updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "mode",
+        "opponentName",
+        "playerScore",
+        "opponentScore",
+        "turnNumber",
+        "maxCombo",
+        "bestPlayedWord",
+        "status",
+        "boardSnapshot",
+        "rackSnapshot",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Player profile document scoped by userId."
+    },
+    "/users/{userId}/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/SavedMatch" },
+      "description": "Active and completed matches scoped under the player's profile."
+    }
+  }
+}

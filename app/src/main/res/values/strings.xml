@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Origami: Word Blitz</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="cd_hero_banner">Origami Word Blitz key art banner</string>
+    <string name="nav_arena">Blitz Board</string>
+    <string name="nav_campaign">Campaign</string>
+    <string name="nav_vault">Tile Vault</string>
+    <string name="nav_lexicon">Lexicon &amp; Cloud</string>
+    <string name="action_fold_word">FOLD WORD</string>
+    <string name="action_recall">Recall</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_hint">Hint</string>
+    <string name="action_auto_fold">Auto-Fold</string>
+    <string name="action_pass">Pass</string>
+    <string name="sign_out">Sign Out</string>
+</resources>

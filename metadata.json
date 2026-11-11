@@ -1,0 +1,6 @@
+{
+  "name": "Origami: Word Blitz",
+  "description": "A fast-paced Scrabble-inspired crossword board game with rogue-lite multipliers, combo streaks, campaign AI opponents, multiplayer, and collectible origami tiles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
