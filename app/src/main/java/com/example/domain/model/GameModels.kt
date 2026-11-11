@@ -7,6 +7,8 @@ data class Coordinate(val x: Int, val y: Int) {
   val isValid: Boolean
     get() = x in 0 until BOARD_SIZE && y in 0 until BOARD_SIZE
 
+  fun isWithin(width: Int, height: Int): Boolean = x in 0 until width && y in 0 until height
+
   companion object {
     const val BOARD_SIZE = 15
     val CENTER = Coordinate(7, 7)
@@ -19,19 +21,19 @@ enum class SquareMultiplier(
   val wordFactor: Int,
   val description: String,
 ) {
-  NONE("", 1, 1, "Standard Washi Square"),
+  NONE("", 1, 1, "Standard Skeleton Slot"),
   DL("2L", 2, 1, "Double Letter Score"),
   TL("3L", 3, 1, "Triple Letter Score"),
   DW("2W", 1, 2, "Double Word Score"),
   TW("3W", 1, 3, "Triple Word Score"),
-  CENTER_STAR("★", 1, 2, "Center Origami Star (2x Word)"),
+  CENTER_STAR("★", 1, 2, "Center Nexus Star (2x Word)"),
 }
 
 enum class TileBonusEffect(val badge: String, val title: String, val description: String) {
   NONE("", "Standard Tile", "Classic letter tile"),
-  GOLD_FOIL("+4", "Gold Leaf", "Adds +4 flat bonus points when scored"),
-  CRANE_BLESSING("×1.5", "Crane Fold", "Boosts total word score by 1.5x"),
-  SAKURA_SPARK("+10s", "Sakura Spark", "Restores +10s to the blitz turn timer"),
+  GOLD_FOIL("+5", "Gilded Edge", "Adds +5 flat bonus points when completing a word"),
+  CRANE_BLESSING("×1.5", "Nexus Boost", "Boosts completed word score by 1.5x"),
+  SAKURA_SPARK("+10", "Spark Core", "Adds +10 bonus points on intersection clears"),
 }
 
 @Immutable
@@ -41,7 +43,242 @@ data class Tile(
   val baseScore: Int,
   val bonusEffect: TileBonusEffect = TileBonusEffect.NONE,
   val isLockedOnBoard: Boolean = false,
+) {
+  val letter: Char
+    get() = char
+}
+
+/**
+ * LexiFill: Crossword Skeleton core cell model.
+ * Represents a single cell on the puzzle board:
+ * - [fixedLetter]: Permanent pre-placed clue letter (null if void or unfilled blank target).
+ * - [isBlankTarget]: True when this cell is an intentional blank slot needing a player tile.
+ * - [placedTile]: The player's tile dropped into this blank target.
+ * - [multiplier]: Scrabble-style score multiplier (NONE, DL, TL, DW, TW).
+ */
+@Immutable
+data class BoardCell(
+  val x: Int,
+  val y: Int,
+  val fixedLetter: Char? = null,
+  val isBlankTarget: Boolean = false,
+  val placedTile: Tile? = null,
+  val multiplier: SquareMultiplier = SquareMultiplier.NONE,
+  val isIntersection: Boolean = false,
+  val isLockedCompleted: Boolean = false,
+  val expectedLetter: Char? = null,
+  val wordIds: List<String> = emptyList(),
+) {
+  val coordinate: Coordinate
+    get() = Coordinate(x, y)
+
+  val isPlayable: Boolean
+    get() = fixedLetter != null || isBlankTarget
+
+  val activeLetter: Char?
+    get() = fixedLetter ?: placedTile?.char
+
+  val isOpenBlank: Boolean
+    get() = isBlankTarget && placedTile == null
+}
+
+enum class WordDirection(val shortCode: String, val label: String) {
+  HORIZONTAL("H", "Across"),
+  VERTICAL("V", "Down"),
+}
+
+/**
+ * Represents an intersecting target word in a LexiFill: Crossword Skeleton level.
+ */
+@Immutable
+data class TargetWord(
+  val id: String,
+  val word: String,
+  val clue: String,
+  val startX: Int,
+  val startY: Int,
+  val direction: WordDirection,
+  val missingBlankIndices: List<Int>,
+  val isCompleted: Boolean = false,
+  val completedWordText: String? = null,
+  val awardedScore: Int = 0,
+) {
+  fun coordinates(): List<Coordinate> =
+    List(word.length) { index ->
+      when (direction) {
+        WordDirection.HORIZONTAL -> Coordinate(startX + index, startY)
+        WordDirection.VERTICAL -> Coordinate(startX, startY + index)
+      }
+    }
+
+  fun blankCoordinates(): List<Coordinate> =
+    missingBlankIndices.map { index ->
+      when (direction) {
+        WordDirection.HORIZONTAL -> Coordinate(startX + index, startY)
+        WordDirection.VERTICAL -> Coordinate(startX, startY + index)
+      }
+    }
+
+  fun containsCoordinate(x: Int, y: Int): Boolean {
+    return when (direction) {
+      WordDirection.HORIZONTAL -> y == startY && x in startX until (startX + word.length)
+      WordDirection.VERTICAL -> x == startX && y in startY until (startY + word.length)
+    }
+  }
+
+  fun charIndexAt(x: Int, y: Int): Int {
+    if (!containsCoordinate(x, y)) return -1
+    return when (direction) {
+      WordDirection.HORIZONTAL -> x - startX
+      WordDirection.VERTICAL -> y - startY
+    }
+  }
+
+  /**
+   * Builds the current pattern string on the board (e.g., "P_ANET" or "PLANET").
+   */
+  fun currentPattern(cells: List<List<BoardCell>>): String {
+    val sb = StringBuilder(word.length)
+    for (coord in coordinates()) {
+      val ch = cells.getOrNull(coord.y)?.getOrNull(coord.x)?.activeLetter
+      sb.append(ch ?: '_')
+    }
+    return sb.toString()
+  }
+
+  /**
+   * Display skeleton with spaced blanks (e.g., "P _ A N E T") for clue cards.
+   */
+  fun formattedSkeleton(cells: List<List<BoardCell>>): String {
+    return coordinates()
+      .map { coord -> cells.getOrNull(coord.y)?.getOrNull(coord.x)?.activeLetter ?: '_' }
+      .joinToString(" ")
+  }
+
+  fun isFullyFilled(cells: List<List<BoardCell>>): Boolean {
+    return coordinates().all { coord ->
+      cells.getOrNull(coord.y)?.getOrNull(coord.x)?.activeLetter != null
+    }
+  }
+}
+
+/**
+ * Compact, zero-network-quota puzzle definition with target words, board dimensions,
+ * multiplier coordinates, and player letter inventory.
+ */
+@Immutable
+data class LevelTemplate(
+  val levelNumber: Int,
+  val title: String,
+  val tierBadge: String,
+  val boardWidth: Int,
+  val boardHeight: Int,
+  val targetWords: List<TargetWord>,
+  val multipliers: Map<Coordinate, SquareMultiplier> = emptyMap(),
+  val decoyLetters: List<Char> = emptyList(),
+  val compactCode: String = "",
 )
+
+/**
+ * Live evaluation when hovering or dropping a tile onto a target blank cell (x, y).
+ */
+@Immutable
+data class DropPreviewEvaluation(
+  val targetCoord: Coordinate,
+  val tileChar: Char,
+  val isValidSlot: Boolean,
+  val isDualAxisValid: Boolean,
+  val horizontalPatternAfter: String? = null,
+  val verticalPatternAfter: String? = null,
+  val wouldCompleteWords: List<String> = emptyList(),
+  val isIntersectionSlot: Boolean = false,
+  val estimatedScoreGain: Int = 0,
+  val invalidReason: String? = null,
+)
+
+@Immutable
+data class ScorePopupEvent(
+  val id: String,
+  val coord: Coordinate,
+  val headline: String,
+  val subline: String,
+  val isDualAxisClear: Boolean = false,
+  val comboCount: Int = 1,
+  val createdAtMs: Long = System.currentTimeMillis(),
+)
+
+@Immutable
+data class LevelClearSummary(
+  val levelNumber: Int,
+  val levelTitle: String,
+  val levelScore: Int,
+  val wordsCompleted: Int,
+  val maxCombo: Int,
+  val accuracyBonus: Int,
+  val coinsEarned: Int,
+  val stars: Int,
+)
+
+@Immutable
+data class RackState(
+  val tiles: List<Tile>,
+  val selectedTileId: String? = null,
+  val draggingTileId: String? = null,
+)
+
+/**
+ * Primary immutable UI StateFlow model for LexiFill: Crossword Skeleton.
+ */
+@Immutable
+data class PuzzleState(
+  val levelTemplate: LevelTemplate,
+  val boardWidth: Int,
+  val boardHeight: Int,
+  val cells: List<List<BoardCell>>,
+  val targetWords: List<TargetWord>,
+  val rackState: RackState,
+  val levelScore: Int = 0,
+  val totalCampaignScore: Int = 0,
+  val comboStreak: Int = 0,
+  val comboMultiplier: Float = 1.0f,
+  val movesMade: Int = 0,
+  val mistakesMade: Int = 0,
+  val hintsRemaining: Int = 3,
+  val completedLevels: Set<Int> = emptySet(),
+  val highestUnlockedLevel: Int = 1,
+  val hoverCoord: Coordinate? = null,
+  val hoverPreview: DropPreviewEvaluation? = null,
+  val highlightedHintCoord: Coordinate? = null,
+  val scorePopups: List<ScorePopupEvent> = emptyList(),
+  val particleBursts: List<ParticleBurst> = emptyList(),
+  val cellFlashTimestamps: Map<Coordinate, Long> = emptyMap(),
+  val boardShakeIntensity: Float = 0f,
+  val statusMessage: String = "Drag letter tiles into open blanks to complete intersecting words!",
+  val isStatusError: Boolean = false,
+  val isLevelCleared: Boolean = false,
+  val levelClearSummary: LevelClearSummary? = null,
+  val autoAdvanceCountdownSec: Int? = null,
+  val equippedSkin: CosmeticTileSkin = GameCatalog.COSMETIC_SKINS.first(),
+  val unlockedSkinIds: Set<String> = setOf("washi_classic"),
+  val lexiCoins: Int = 160,
+  val strictTrieValidation: Boolean = true,
+) {
+  fun cellAt(x: Int, y: Int): BoardCell? {
+    if (y !in 0 until boardHeight || x !in 0 until boardWidth) return null
+    return cells[y][x]
+  }
+
+  val totalBlanksCount: Int
+    get() = cells.sumOf { row -> row.count { it.isBlankTarget } }
+
+  val filledBlanksCount: Int
+    get() = cells.sumOf { row -> row.count { it.isBlankTarget && it.placedTile != null } }
+
+  val completedWordsCount: Int
+    get() = targetWords.count { it.isCompleted }
+}
+
+// --- Legacy Compatibility Models for Existing Tests ---
 
 @Immutable
 data class BoardSquare(
@@ -189,13 +426,6 @@ data class LexiBoardState(
 }
 
 @Immutable
-data class RackState(
-  val tiles: List<Tile>,
-  val selectedTileId: String? = null,
-  val draggingTileId: String? = null,
-)
-
-@Immutable
 data class ScoreState(
   val playerScore: Int = 0,
   val opponentScore: Int = 0,
@@ -207,10 +437,10 @@ data class ScoreState(
 )
 
 enum class GameMode(val displayName: String, val subtitle: String) {
-  CAMPAIGN("Campaign Masters", "Battle themed Origami AI scribes with rogue-lite relics"),
-  PASS_AND_PLAY("Pass & Play Duel", "2-Player local tabletop showdown on one device"),
-  DAILY_BLITZ("Daily Crane Blitz", "Pre-seeded board puzzle with 35s rapid turn clock"),
-  ASYNC_DUEL("Cloud Saved Arena", "Persistent cloud-synced matches stored to your account"),
+  CAMPAIGN("Skeleton Campaign", "Progressive Kriss-Kross crossword skeletons"),
+  PASS_AND_PLAY("Co-Op Skeleton", "Pass-and-play collaborative crossword fill"),
+  DAILY_BLITZ("Daily Skeleton", "Featured high-multiplier intersection grid"),
+  ASYNC_DUEL("Cloud Profile", "Optional cloud sync for career stats & skins"),
 }
 
 enum class TurnStatus {
@@ -238,7 +468,7 @@ data class GameState(
   val floatingBursts: List<FloatingScoreBurst> = emptyList(),
   val particleBursts: List<ParticleBurst> = emptyList(),
   val boardShakeIntensity: Float = 0f,
-  val lastMoveSummary: String = "Tap or drag tiles onto the Center Star (★) to fold your first word!",
+  val lastMoveSummary: String = "",
   val hintSuggestion: String? = null,
   val bestWordPlayed: String = "",
   val highestSingleTurnScore: Int = 0,
@@ -251,9 +481,9 @@ object GameCatalog {
     listOf(
       AiOpponent(
         stage = 1,
-        name = "Apprentice Momo",
-        title = "Blossom Folder",
-        quote = "Swift 3-letter folds keep the paper crisp!",
+        name = "Architect Lyra",
+        title = "Skeleton Draftsman",
+        quote = "Every intersection anchors two worlds at once.",
         style = AiVocabularyStyle.AGILE_SHORT,
         targetScore = 120,
         rewardCoins = 45,
@@ -261,9 +491,9 @@ object GameCatalog {
       ),
       AiOpponent(
         stage = 2,
-        name = "Kitsune Scribe",
-        title = "Trickster of Multipliers",
-        quote = "Every Triple Letter square belongs to the fox.",
+        name = "Curator Vance",
+        title = "Keeper of Multipliers",
+        quote = "Drop high-value letters onto Triple Word intersections.",
         style = AiVocabularyStyle.MULTIPLIER_HUNTER,
         targetScore = 165,
         rewardCoins = 75,
@@ -271,9 +501,9 @@ object GameCatalog {
       ),
       AiOpponent(
         stage = 3,
-        name = "Sensei Haiku",
-        title = "Keeper of Five Syllables",
-        quote = "True mastery unfolds in long, intersecting verses.",
+        name = "Oracle Kael",
+        title = "Weaver of Crossings",
+        quote = "One tile, two completed words—true geometric harmony.",
         style = AiVocabularyStyle.POETIC_LONG,
         targetScore = 210,
         rewardCoins = 110,
@@ -281,9 +511,9 @@ object GameCatalog {
       ),
       AiOpponent(
         stage = 4,
-        name = "Grandmaster Tsuru",
-        title = "Thousand-Crane Sovereign",
-        quote = "Show me a word worthy of imperial gold leaf.",
+        name = "Grandmaster Lexis",
+        title = "Sovereign of the Trie",
+        quote = "Solve the entire skeleton without a single misplaced letter.",
         style = AiVocabularyStyle.GRANDMASTER_OPTIMAL,
         targetScore = 260,
         rewardCoins = 160,
@@ -295,46 +525,46 @@ object GameCatalog {
     listOf(
       CosmeticTileSkin(
         id = "washi_classic",
-        name = "Classic Cream Washi",
+        name = "Ivory Bone & Brass",
         rarity = "COMMON",
-        description = "Hand-pressed ivory mulberry paper over warm cedar wood.",
+        description = "Tactile satin-ivory letter tiles with warm engraved brass points.",
         costCoins = 0,
-        baseColorHex = 0xFFFFF6E5,
+        baseColorHex = 0xFFFFF8EC,
         borderColorHex = 0xFFD9B382,
-        textColorHex = 0xFF2B1E16,
-        accentGlowHex = 0xFFE6A145,
+        textColorHex = 0xFF1E293B,
+        accentGlowHex = 0xFF38BDF8,
       ),
       CosmeticTileSkin(
         id = "sakura_foil",
-        name = "Sakura Gold Leaf",
+        name = "Amber Blueprint",
         rarity = "RARE",
-        description = "Petal-pink lacquer inlaid with Kyoto metallic gold trim.",
+        description = "Gilded drafting vellum trimmed with radiant solar gold.",
         costCoins = 100,
-        baseColorHex = 0xFFFFE6EE,
-        borderColorHex = 0xFFE06D94,
-        textColorHex = 0xFF4A152B,
+        baseColorHex = 0xFFFFF3D6,
+        borderColorHex = 0xFFF59E0B,
+        textColorHex = 0xFF451A03,
         accentGlowHex = 0xFFFFB703,
       ),
       CosmeticTileSkin(
         id = "obsidian_shogun",
-        name = "Obsidian Shogun",
+        name = "Obsidian Matrix",
         rarity = "EPIC",
-        description = "Charcoal volcanic slate etched with vermilion cinnabar ink.",
+        description = "Deep volcanic slate tiles etched with neon crimson circuitry.",
         costCoins = 220,
-        baseColorHex = 0xFF1F2430,
+        baseColorHex = 0xFF1E2436,
         borderColorHex = 0xFFFF5A36,
         textColorHex = 0xFFFFF4EC,
         accentGlowHex = 0xFFFF5A36,
       ),
       CosmeticTileSkin(
         id = "celestial_jade",
-        name = "Mythic Celestial Jade",
+        name = "Mythic Emerald Rune",
         rarity = "MYTHIC",
-        description = "Luminous imperial celadon jade with animated golden-cyan border.",
-        costCoins = 360,
+        description = "Luminous emerald crystal with cyan magnetic resonance borders.",
+        costCoins = 340,
         baseColorHex = 0xFFE2FCEF,
-        borderColorHex = 0xFF00B495,
-        textColorHex = 0xFF073B32,
+        borderColorHex = 0xFF10B981,
+        textColorHex = 0xFF064E3B,
         accentGlowHex = 0xFF00F5D4,
       ),
     )

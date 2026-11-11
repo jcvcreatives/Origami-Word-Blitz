@@ -5,10 +5,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val OrigamiColorScheme =
+private val LexiFillColorScheme =
   darkColorScheme(
-    primary = VermilionRed,
-    onPrimary = Color.White,
+    primary = SkyCyan,
+    onPrimary = IndigoNight,
     primaryContainer = IndigoElevated,
     onPrimaryContainer = WashiCream,
     secondary = KyotoGold,
@@ -28,10 +28,15 @@ private val OrigamiColorScheme =
   )
 
 @Composable
-fun OrigamiWordBlitzTheme(content: @Composable () -> Unit) {
+fun LexiFillTheme(content: @Composable () -> Unit) {
   MaterialTheme(
-    colorScheme = OrigamiColorScheme,
+    colorScheme = LexiFillColorScheme,
     typography = Typography,
     content = content,
   )
+}
+
+@Composable
+fun OrigamiWordBlitzTheme(content: @Composable () -> Unit) {
+  LexiFillTheme(content = content)
 }

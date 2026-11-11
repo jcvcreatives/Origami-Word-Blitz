@@ -1,6 +1,8 @@
 {
-  "name": "Origami: Word Blitz",
-  "description": "A fast-paced Scrabble-inspired crossword board game with rogue-lite multipliers, combo streaks, campaign AI opponents, multiplayer, and collectible origami tiles.",
+  "name": "LexiFill: Crossword Skeleton",
+  "description": "An addictive hybrid of Scrabble and Kriss-Kross Fill-In puzzles with dual-axis Trie intersection validation, magnetic slot snapping, and multiplier combos.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

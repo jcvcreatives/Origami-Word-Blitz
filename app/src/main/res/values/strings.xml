@@ -1,16 +1,15 @@
 <resources>
-    <string name="app_name">Origami: Word Blitz</string>
+    <string name="app_name">LexiFill: Crossword Skeleton</string>
     <string name="sign_in_with_google">Sign in with Google</string>
-    <string name="cd_hero_banner">Origami Word Blitz key art banner</string>
-    <string name="nav_arena">Blitz Board</string>
-    <string name="nav_campaign">Campaign</string>
-    <string name="nav_vault">Tile Vault</string>
-    <string name="nav_lexicon">Lexicon &amp; Cloud</string>
-    <string name="action_fold_word">FOLD WORD</string>
-    <string name="action_recall">Recall</string>
-    <string name="action_shuffle">Shuffle</string>
-    <string name="action_hint">Hint</string>
-    <string name="action_auto_fold">Auto-Fold</string>
-    <string name="action_pass">Pass</string>
+    <string name="cd_hero_banner">LexiFill Crossword Skeleton puzzle header</string>
+    <string name="nav_puzzle">Skeleton Grid</string>
+    <string name="nav_levels">Puzzle Vault</string>
+    <string name="nav_builder">Custom Skeleton</string>
+    <string name="nav_lexicon">Trie &amp; Stats</string>
+    <string name="action_recall">Recall Unlocked</string>
+    <string name="action_shuffle">Shuffle Rack</string>
+    <string name="action_hint">Smart Hint</string>
+    <string name="action_next_level">Next Puzzle</string>
+    <string name="action_reset_level">Reset Grid</string>
     <string name="sign_out">Sign Out</string>
 </resources>

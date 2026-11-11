@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Origami Word Blitz"
+rootProject.name = "LexiFill Crossword Skeleton"
 
 include(":app")

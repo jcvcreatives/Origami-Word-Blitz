@@ -1,12 +1,8 @@
 package com.example
 
-import com.example.domain.engine.BoardEvaluator
+import com.example.domain.engine.LexiFillEngine
 import com.example.domain.engine.WordTrieEngine
-import com.example.domain.model.Coordinate
-import com.example.domain.model.GameCatalog
-import com.example.domain.model.LexiBoardState
-import com.example.domain.model.RogueRelic
-import com.example.domain.model.Tile
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,46 +10,48 @@ import org.junit.Test
 class ExampleUnitTest {
 
   @Test
-  fun wordTrieEngine_validatesWordsAndFindsAnagrams() {
+  fun wordTrieEngine_validatesWordsAndMatchesSkeletonPatterns() {
     val trie = WordTrieEngine()
-    assertTrue(trie.isValidWord("ORIGAMI"))
-    assertTrue(trie.isValidWord("CRANE"))
-    assertTrue(trie.isValidWord("QI"))
+    assertTrue(trie.isValidWord("PLANET"))
+    assertTrue(trie.isValidWord("CROSS"))
+    assertTrue(trie.isValidWord("QUARTZ"))
     assertFalse(trie.isValidWord("XYZQWR"))
 
-    trie.insert("TSURU")
-    assertTrue(trie.isValidWord("TSURU"))
-
-    val anagrams = trie.findAnagrams("CRANE".toList(), minLength = 3)
-    assertTrue(anagrams.contains("CRANE"))
+    // Skeleton pattern matching with '_' blanks
+    assertTrue(trie.hasPatternMatch("P_AN_T"))
+    assertTrue(trie.hasPatternMatch("C_OSS"))
+    val matches = trie.matchesPattern("P_ANET")
+    assertTrue(matches.contains("PLANET"))
   }
 
   @Test
-  fun boardEvaluator_scoresFirstWordAcrossCenterStarWithDoubleWordMultiplier() {
-    val trie = WordTrieEngine()
-    val evaluator = BoardEvaluator(trie)
-    val baseBoard = LexiBoardState(squares = GameCatalog.createStandardBoard())
+  fun lexiFillEngine_validatesDualAxisIntersectionAndCompletesLevel() {
+    val engine = LexiFillEngine()
+    val level1 = engine.getLevelTemplate(1)
+    var state = engine.createPuzzleState(level1)
 
-    // Place "FOLD" horizontally across Center Star (7, 7) -> (6,7)=F, (7,7)=O, (8,7)=L, (9,7)=D
-    val pending =
-      mapOf(
-        Coordinate(6, 7) to Tile("t1", 'F', 4),
-        Coordinate(7, 7) to Tile("t2", 'O', 1),
-        Coordinate(8, 7) to Tile("t3", 'L', 1),
-        Coordinate(9, 7) to Tile("t4", 'D', 2),
-      )
+    // Coordinate (2, 1) is the intersection between Horizontal "PLANET" and Vertical "SLOPE" (expected 'L')
+    val cell21 = state.cellAt(2, 1)!!
+    assertTrue(cell21.isBlankTarget)
+    assertTrue(cell21.isIntersection)
+    assertEquals('L', cell21.expectedLetter)
 
-    val preview =
-      evaluator.evaluatePendingMove(
-        board = baseBoard.copy(pendingPlacements = pending),
-        activeRelics = emptyList(),
-        comboMultiplier = 1.0f,
-        turnTimeRemainingSec = 30,
-      )
+    // Dropping an invalid letter ('Z') at intersection (2, 1) should fail dual-axis validation
+    val wrongTile = state.rackState.tiles.first().copy(id = "wrong_z", char = 'Z')
+    val invalidPreview = engine.previewTileDrop(state, wrongTile, 2, 1)
+    assertFalse(invalidPreview.isDualAxisValid)
 
-    assertTrue(preview.isValidPosition)
-    assertTrue(preview.allWordsValid)
-    // (4 + 1 + 1 + 2) * 2 (Center Star DW) = 16
-    assertTrue(preview.totalTurnScore == 16)
+    // Dropping the matching 'L' tile from rack into (2, 1) should succeed
+    val tileL = state.rackState.tiles.first { it.char == 'L' }
+    val dropResult = engine.commitTileDrop(state, tileL.id, 2, 1)
+    assertEquals(LexiFillEngine.OutcomeType.TILE_SNAPPED, dropResult.outcome)
+    state = dropResult.updatedState
+    assertEquals('L', state.cellAt(2, 1)?.activeLetter)
+
+    // Completing the remaining blank of PLANET at (5, 1) ('E') should complete "PLANET"
+    val tileE = state.rackState.tiles.first { it.char == 'E' }
+    val completePlanet = engine.commitTileDrop(state, tileE.id, 5, 1)
+    assertEquals(LexiFillEngine.OutcomeType.WORD_COMPLETED, completePlanet.outcome)
+    assertTrue(completePlanet.completedWords.contains("PLANET"))
   }
 }
