@@ -610,9 +610,10 @@ class GameViewModel(
     val newComboStreak = state.scoreState.comboStreak + 1
     val nextComboMult =
       when {
-        newComboStreak >= 4 -> 2.0f
-        newComboStreak == 3 -> 1.5f
-        newComboStreak == 2 -> 1.25f
+        newComboStreak >= 4 -> 4.0f
+        newComboStreak == 3 -> 3.0f
+        newComboStreak == 2 -> 2.0f
+        newComboStreak == 1 -> 1.5f
         else -> 1.0f
       }
 
@@ -647,8 +648,10 @@ class GameViewModel(
         when {
           isTripleWord -> append("TRIPLE WORD!")
           preview.bingoBonusPoints > 0 -> append("ORIGAMI BINGO!")
+          newComboStreak >= 4 -> append("4x BLAZING COMBO!")
+          newComboStreak == 3 -> append("3x SUPER COMBO!")
           isDoubleWord -> append("DOUBLE WORD!")
-          newComboStreak >= 2 -> append("COMBO ×${state.scoreState.comboMultiplier}!")
+          newComboStreak == 2 -> append("COMBO ×${nextComboMult}!")
           else -> append(primaryWordStr)
         }
       }

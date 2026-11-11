@@ -1,6 +1,18 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,6 +77,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,9 +85,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -442,27 +461,11 @@ private fun ScoreAndTimerHud(
             )
           }
 
-          // Combo Streak Pill
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier =
-              Modifier.clip(CircleShape)
-                .background(KyotoGold.copy(alpha = 0.18f))
-                .border(1.dp, KyotoGold, CircleShape)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-          ) {
-            Icon(
-              imageVector = Icons.Default.LocalFireDepartment,
-              contentDescription = null,
-              tint = KyotoGold,
-              modifier = Modifier.size(14.dp),
-            )
-            Text(
-              text = "×${scoreState.comboMultiplier}",
-              style = MaterialTheme.typography.labelLarge,
-              color = KyotoGold,
-            )
-          }
+          // Combo Streak Pill with 3x/4x Icon-Bounce & Particle Burst
+          ComboStreakHudBadge(
+            comboStreak = scoreState.comboStreak,
+            comboMultiplier = scoreState.comboMultiplier,
+          )
         }
 
         Text(
@@ -499,6 +502,206 @@ private fun ScoreAndTimerHud(
           modifier = Modifier.testTag("opponent_score_text"),
         )
       }
+    }
+  }
+}
+
+@Composable
+private fun ComboStreakHudBadge(
+  comboStreak: Int,
+  comboMultiplier: Float,
+) {
+  val isHighCombo = comboStreak >= 3 || comboMultiplier >= 3.0f
+  val isMaxCombo = comboStreak >= 4 || comboMultiplier >= 4.0f
+
+  val pillScale = remember { Animatable(1f) }
+  val iconBounceY = remember { Animatable(0f) }
+  val iconRotation = remember { Animatable(0f) }
+  val burstProgress = remember { Animatable(1f) }
+
+  LaunchedEffect(comboStreak, comboMultiplier) {
+    if (isHighCombo) {
+      val peakScale = if (isMaxCombo) 1.46f else 1.32f
+      launch {
+        pillScale.snapTo(peakScale)
+        pillScale.animateTo(
+          targetValue = 1f,
+          animationSpec =
+            spring(
+              dampingRatio = Spring.DampingRatioHighBouncy,
+              stiffness = Spring.StiffnessMediumLow,
+            ),
+        )
+      }
+      launch {
+        iconBounceY.animateTo(
+          targetValue = 0f,
+          animationSpec =
+            keyframes {
+              durationMillis = 520
+              (-9f) at 90
+              4f at 200
+              (-6f) at 320
+              2f at 420
+              0f at 520
+            },
+        )
+      }
+      launch {
+        iconRotation.animateTo(
+          targetValue = 0f,
+          animationSpec =
+            keyframes {
+              durationMillis = 520
+              (-22f) at 80
+              22f at 180
+              (-15f) at 290
+              12f at 400
+              0f at 520
+            },
+        )
+      }
+      launch {
+        burstProgress.snapTo(0f)
+        burstProgress.animateTo(
+          targetValue = 1f,
+          animationSpec = tween(durationMillis = 820, easing = FastOutSlowInEasing),
+        )
+      }
+    } else if (comboStreak >= 1) {
+      pillScale.snapTo(1.15f)
+      pillScale.animateTo(
+        targetValue = 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+      )
+    }
+  }
+
+  val infiniteTransition = rememberInfiniteTransition(label = "hud_combo_ember")
+  val orbitPhase by
+    infiniteTransition.animateFloat(
+      initialValue = 0f,
+      targetValue = (2.0 * PI).toFloat(),
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(durationMillis = 1600, easing = LinearEasing),
+          repeatMode = RepeatMode.Restart,
+        ),
+      label = "orbit_phase",
+    )
+  val flamePulse by
+    infiniteTransition.animateFloat(
+      initialValue = 1f,
+      targetValue = if (isMaxCombo) 1.26f else if (isHighCombo) 1.16f else 1f,
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+          repeatMode = RepeatMode.Reverse,
+        ),
+      label = "flame_pulse",
+    )
+
+  val pillBorderBrush =
+    when {
+      isMaxCombo -> Brush.horizontalGradient(listOf(VermilionRed, KyotoGold, CeladonJade))
+      isHighCombo -> Brush.horizontalGradient(listOf(VermilionRed, KyotoGold))
+      else -> Brush.horizontalGradient(listOf(KyotoGold, KyotoGold))
+    }
+
+  val pillBgBrush =
+    when {
+      isMaxCombo ->
+        Brush.horizontalGradient(
+          listOf(VermilionRed.copy(alpha = 0.36f), KyotoGold.copy(alpha = 0.28f))
+        )
+      isHighCombo ->
+        Brush.horizontalGradient(
+          listOf(KyotoGold.copy(alpha = 0.30f), VermilionRed.copy(alpha = 0.24f))
+        )
+      else ->
+        Brush.horizontalGradient(
+          listOf(KyotoGold.copy(alpha = 0.18f), KyotoGold.copy(alpha = 0.18f))
+        )
+    }
+
+  Box(
+    contentAlignment = Alignment.Center,
+    modifier = Modifier.testTag("hud_combo_streak_badge"),
+  ) {
+    // Visual Particle Burst & Orbiting Ember Canvas behind/around the HUD Combo Pill
+    if (isHighCombo) {
+      Canvas(modifier = Modifier.size(width = 96.dp, height = 42.dp)) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val p = burstProgress.value
+
+        // 1. Explosive radial particle burst when reaching 3x or 4x combo
+        if (p < 0.99f) {
+          val count = if (isMaxCombo) 20 else 14
+          for (i in 0 until count) {
+            val angle = (2.0 * PI * i) / count
+            val distance = (size.width * 0.22f) + (size.width * 0.44f * p) * (if (i % 2 == 0) 1.1f else 0.8f)
+            val px = cx + (cos(angle) * distance).toFloat()
+            val py = cy + (sin(angle) * distance * 0.65f).toFloat()
+            val sparkColor =
+              when (i % 3) {
+                0 -> KyotoGold
+                1 -> VermilionRed
+                else -> if (isMaxCombo) CeladonJade else SakuraPink
+              }
+            val radius = (4.5f * (1f - p)).coerceAtLeast(1.2f)
+            drawCircle(
+              color = sparkColor.copy(alpha = (1f - p).coerceIn(0f, 1f)),
+              radius = radius,
+              center = Offset(px, py),
+            )
+          }
+        }
+
+        // 2. Continuous glowing ember sparks orbiting the pill while 3x/4x combo is active
+        val emberCount = if (isMaxCombo) 6 else 4
+        for (i in 0 until emberCount) {
+          val theta = orbitPhase + (2.0 * PI * i / emberCount).toFloat()
+          val ex = cx + cos(theta) * (size.width * 0.44f)
+          val ey = cy + sin(theta) * (size.height * 0.42f)
+          drawCircle(
+            color = if (i % 2 == 0) KyotoGold.copy(alpha = 0.85f) else VermilionRed.copy(alpha = 0.85f),
+            radius = if (isMaxCombo) 2.8f else 2.2f,
+            center = Offset(ex, ey),
+          )
+        }
+      }
+    }
+
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      modifier =
+        Modifier.scale(pillScale.value)
+          .clip(CircleShape)
+          .background(pillBgBrush)
+          .border(if (isHighCombo) 1.5.dp else 1.dp, pillBorderBrush, CircleShape)
+          .padding(horizontal = 9.dp, vertical = 4.dp),
+    ) {
+      Icon(
+        imageVector = Icons.Default.LocalFireDepartment,
+        contentDescription = null,
+        tint = if (isMaxCombo) VermilionRed else KyotoGold,
+        modifier =
+          Modifier.size(if (isHighCombo) 16.dp else 14.dp)
+            .graphicsLayer {
+              translationY = iconBounceY.value
+              rotationZ = iconRotation.value
+              scaleX = flamePulse
+              scaleY = flamePulse
+            },
+      )
+      Spacer(modifier = Modifier.width(2.dp))
+      Text(
+        text = "×${comboMultiplier}",
+        style = MaterialTheme.typography.labelLarge,
+        color = if (isMaxCombo) WashiCream else KyotoGold,
+        fontWeight = FontWeight.ExtraBold,
+      )
     }
   }
 }

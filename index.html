@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Origami: Word Blitz — Interactive Web &amp; Android Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --indigo-night: #121629;
+      --indigo-surface: #1B213A;
+      --indigo-card: #242C4C;
+      --indigo-elevated: #2E385E;
+      --vermilion: #FF5A36;
+      --kyoto-gold: #FFB703;
+      --celadon-jade: #00D6A3;
+      --sakura-pink: #FF7597;
+      --washi-cream: #FFF8EC;
+      --washi-muted: #C8C2D6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    body {
+      background: radial-gradient(circle at top, #1F274B 0%, var(--indigo-night) 70%);
+      color: var(--washi-cream);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+    }
+    .app-shell {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .top-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--indigo-card);
+      border: 1px solid rgba(255, 183, 3, 0.3);
+      border-radius: 16px;
+      padding: 10px 14px;
+    }
+    .brand-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.15rem;
+      color: var(--kyoto-gold);
+      letter-spacing: -0.02em;
+    }
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--washi-muted);
+    }
+    .mode-select {
+      background: var(--indigo-elevated);
+      color: var(--washi-cream);
+      border: 1px solid var(--kyoto-gold);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .hud-bar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      background: var(--indigo-card);
+      border: 1px solid var(--indigo-elevated);
+      border-radius: 16px;
+      padding: 10px 14px;
+    }
+    .score-box { display: flex; flex-direction: column; }
+    .score-box.right { text-align: right; }
+    .score-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--washi-muted);
+    }
+    .score-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 700;
+    }
+    .score-val.p1 { color: var(--celadon-jade); }
+    .score-val.p2 { color: var(--sakura-pink); }
+    .hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .pills-row { display: flex; gap: 6px; align-items: center; }
+    .pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--indigo-elevated);
+      border: 1px solid rgba(255, 183, 3, 0.45);
+      position: relative;
+      overflow: visible;
+    }
+    .pill.combo { color: var(--kyoto-gold); background: rgba(255, 183, 3, 0.16); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .pill.combo.high-combo {
+      background: linear-gradient(90deg, rgba(255, 90, 54, 0.35), rgba(255, 183, 3, 0.3));
+      border-color: var(--vermilion);
+      box-shadow: 0 0 14px rgba(255, 183, 3, 0.55);
+      animation: hudComboBounce 0.55s cubic-bezier(0.18, 0.89, 0.32, 1.35);
+    }
+    @keyframes hudComboBounce {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.42) rotate(-6deg); }
+      60%  { transform: scale(0.94) rotate(5deg); }
+      80%  { transform: scale(1.15) rotate(-3deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .hud-spark {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: hudSparkFly 0.75s ease-out forwards;
+    }
+    @keyframes hudSparkFly {
+      0%   { transform: translate(0, 0) scale(1.2); opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(0.1); opacity: 0; }
+    }
+    .pill.low-time { color: var(--vermilion); border-color: var(--vermilion); }
+    .relics-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+    }
+    .relic-tag {
+      background: var(--indigo-surface);
+      border: 1px solid rgba(255, 183, 3, 0.35);
+      padding: 4px 9px;
+      border-radius: 8px;
+      color: var(--washi-cream);
+    }
+    .board-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: var(--indigo-night);
+      border: 2px solid rgba(255, 183, 3, 0.4);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    }
+    canvas#boardCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .floating-burst {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, var(--vermilion), var(--kyoto-gold));
+      color: var(--indigo-night);
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      z-index: 10;
+      text-align: center;
+    }
+    .floating-burst.show {
+      opacity: 1;
+      top: 28px;
+      transform: translateX(-50%) scale(1.06);
+    }
+    .preview-bar {
+      background: var(--indigo-card);
+      border: 1.5px solid var(--indigo-elevated);
+      border-radius: 14px;
+      padding: 9px 12px;
+      min-height: 42px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .preview-bar.valid { border-color: var(--celadon-jade); }
+    .preview-bar.invalid { border-color: var(--vermilion); color: #FF9494; }
+    .preview-score-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--celadon-jade);
+      background: rgba(0, 214, 163, 0.16);
+      border: 1px solid var(--celadon-jade);
+      padding: 3px 9px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+    .rack-bar {
+      background: var(--indigo-card);
+      border: 1px solid rgba(255, 183, 3, 0.3);
+      border-radius: 18px;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      min-height: 74px;
+    }
+    .rack-tile {
+      width: 46px;
+      height: 54px;
+      background: #FFF6E5;
+      color: #2B1E16;
+      border: 2px solid #D9B382;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.35);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .rack-tile:hover { transform: translateY(-3px); }
+    .rack-tile.selected {
+      transform: translateY(-7px) scale(1.08);
+      border-color: var(--celadon-jade);
+      box-shadow: 0 8px 16px rgba(0, 214, 163, 0.35);
+    }
+    .rack-tile .char {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .rack-tile .pts {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+    .rack-tile .bonus-badge {
+      position: absolute;
+      top: 2px;
+      left: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      font-weight: 700;
+      background: var(--kyoto-gold);
+      color: var(--indigo-night);
+      padding: 1px 3px;
+      border-radius: 4px;
+    }
+    .actions-row {
+      display: flex;
+      gap: 7px;
+    }
+    .btn {
+      height: 46px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0 12px;
+      cursor: pointer;
+      background: var(--indigo-elevated);
+      color: var(--washi-cream);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: filter 0.15s;
+    }
+    .btn:hover { filter: brightness(1.12); }
+    .btn.hint { color: var(--kyoto-gold); }
+    .btn.autofold { color: var(--celadon-jade); }
+    .btn.submit {
+      flex: 1;
+      background: var(--vermilion);
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    .btn.submit:disabled {
+      background: var(--indigo-elevated);
+      color: var(--washi-muted);
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="top-banner">
+      <div>
+        <div class="brand-title">ORIGAMI: WORD BLITZ</div>
+        <div class="brand-sub">15×15 Crossword • Rogue Relics • Trie Engine</div>
+      </div>
+      <select id="skinSelect" class="mode-select" title="Cosmetic Tile Skin">
+        <option value="washi">Skin: Cream Washi</option>
+        <option value="sakura">Skin: Sakura Gold</option>
+        <option value="shogun">Skin: Obsidian Shogun</option>
+        <option value="jade">Skin: Celestial Jade</option>
+      </select>
+    </div>
+
+    <div class="hud-bar">
+      <div class="score-box">
+        <span class="score-label">YOU (P1)</span>
+        <span id="p1Score" class="score-val p1">0</span>
+      </div>
+      <div class="hud-center">
+        <div class="pills-row">
+          <span id="timerPill" class="pill">⏱ 45s</span>
+          <span id="comboPill" class="pill combo">🔥 ×1.0</span>
+        </div>
+        <span class="score-label" id="opponentLabel">vs Sensei Haiku (Goal 180)</span>
+      </div>
+      <div class="score-box right">
+        <span class="score-label">SENSEI AI</span>
+        <span id="p2Score" class="score-val p2">0</span>
+      </div>
+    </div>
+
+    <div class="relics-row">
+      <div>
+        <span class="relic-tag">✨ Vowel Lotus (+2 Vowels)</span>
+        <span class="relic-tag">⚡ Shogun Seal (5L+ ×1.5)</span>
+      </div>
+      <span id="bagCountLabel" style="color: var(--kyoto-gold);">Bag: 86</span>
+    </div>
+
+    <div class="board-container" id="boardWrapper">
+      <canvas id="boardCanvas" width="600" height="600"></canvas>
+      <div id="floatingBurst" class="floating-burst">+42! TRIPLE WORD!</div>
+    </div>
+
+    <div id="previewBar" class="preview-bar">
+      <span id="previewText">Tap a tile in your rack, then tap any square on the 15×15 board (start at ★ H8) — or click Auto-Fold!</span>
+      <span id="previewScoreBadge" class="preview-score-badge" style="display:none;">+0 PTS</span>
+    </div>
+
+    <div id="rackBar" class="rack-bar"></div>
+
+    <div class="actions-row">
+      <button id="recallBtn" class="btn">↩ Recall</button>
+      <button id="shuffleBtn" class="btn">🔀 Shuffle</button>
+      <button id="hintBtn" class="btn hint">💡 Hint</button>
+      <button id="autoFoldBtn" class="btn autofold">⚡ Auto-Fold</button>
+      <button id="passBtn" class="btn">⏭ Pass</button>
+      <button id="submitBtn" class="btn submit" disabled>✓ FOLD</button>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. HIGH-PERFORMANCE IN-MEMORY TRIE LEXICON ---
+    const LEXICON_WORDS = (
+      "AA AB AD AE AG AH AI AL AM AN AR AS AT AW AX AY BA BE BI BO BY DA DE DO ED EF EH EL EM EN ER ES ET EW EX FA FE GI GO HA HE HI HM HO ID IF IN IS IT JO KA KI LA LI LO MA ME MI MM MO MU MY NA NE NO NU OD OE OF OH OI OK OM ON OP OR OS OW OX OY PA PE PI PO QI RE SH SI SO TA TE TI TO UH UM UN UP US UT WE WO XI XU YA YE YO ZA ZO " +
+      "ORIGAMI CRANE PAPER FOLD FOLDS FOLDED BLITZ LOTUS SAKURA HAIKU ZEN SHOGUN KIMONO KATANA BAMBOO TEMPLE SHRINE SPIRIT DRAGON KITSUNE SENSEI SCROLL INK BRUSH SILK JADE AMBER GOLD SILVER RUBY ONYX OPAL PEARL CORAL " +
+      "ACE ACT ADD AGE AGO AID AIM AIR ALE ALL AND ANT ANY APE APT ARC ARE ARK ARM ART ASH ASK ATE AWE BAD BAG BAN BAR BAT BAY BED BEE BEG BET BID BIG BIN BIT BOA BOB BOG BOW BOX BOY BUD BUG BUN BUS BUT BUY CAB CAN CAP CAR CAT COB COD COG COP COT COW CRY CUB CUE CUP CUT DAB DAD DAM DAY DEN DEW DID DIE DIG DIM DIN DIP DOE DOG DON DOT DRY DUB DUE DUG DUO DYE EAR EAT EEL EGG EGO ELF ELM EMU END ERA EVE EYE " +
+      "FAN FAR FAT FAX FED FEE FEN FEW FIG FIN FIR FIT FLY FOE FOG FOR FOX FRY FUN FUR GAP GAS GEL GEM GET GIG GIN GOD GOT GUM GUN GUT GUY GYM HAD HAM HAS HAT HAY HEM HEN HER HEW HEX HID HIM HIP HIS HIT HOG HOP HOT HOW HUB HUE HUG HUM HUT ICE ICY ILL IMP INK INN ION IRE IVY " +
+      "JAM JAR JAW JAY JET JIG JOB JOG JOT JOY JUG KEY KID KIN KIT LAB LAD LAG LAP LAW LAX LAY LEA LED LEG LET LID LIE LIP LIT LOG LOP LOT LOW LUG MAD MAN MAP MAR MAT MAY MEN MET MID MIX MOB MOD MOM MOP MOW MUD MUG NAB NAG NAP NET NEW NIB NIL NIP NOD NOR NOT NOW NUN NUT OAK OAR OAT ODD ODE OFF OFT OIL OLD ONE OPT ORB ORE OUR OUT OWE OWL OWN " +
+      "PAD PAL PAN PAR PAT PAW PAY PEA PEG PEN PEP PET PIE PIG PIN PIT PLY POD POP POT PRO PRY PUB PUG PUN PUP PUT RAG RAM RAN RAP RAT RAW RAY RED REP RIB RID RIG RIM RIP ROB ROD ROE ROT ROW RUB RUG RUM RUN RUT RYE SAD SAG SAP SAT SAW SAY SEA SEE SET SEW SHE SHY SIN SIP SIR SIT SIX SKI SKY SLY SOB SOD SON SOP SOT SOW SOY SPA SPY SUB SUE SUM SUN SUP TAB TAG TAN TAP TAR TAX TEA TEE TEN THE TIE TIN TIP TOE TON TOO TOP TOT TOW TOY TRY TUB TUG TWO URN USE VAN VAT VET VEX VIA VIE VOW WAD WAG WAR WAS WAX WAY WEB WED WET WHO WHY WIG WIN WIT WOE WOK WON WOO WOW YAK YAM YAP YAW YEA YEN YES YET YEW YIN YOU ZAP ZED ZEN ZIG ZIP ZOO " +
+      "ABLE ACID ACRE AGED AIDE AIRY ALLY ALSO AMID ANEW APEX ARCH AREA ARIA ARMY ATOM AUNT AUTO AVID AWAY AXLE BACK BAIL BAIT BAKE BALD BALE BALL BALM BAND BANE BANG BANK BARE BARK BARN BASE BASH BASK BASS BATH BEAD BEAK BEAM BEAN BEAR BEAT BELL BELT BEND BENT BEST BETA BIAS BIDE BIKE BILL BIND BIRD BITE BLEW BLOB BLOG BLOT BLOW BLUE BLUR BOAR BOAT BODY BOIL BOLD BOLT BOND BONE BOOK BOOM BOON BOOT BORE BORN BOSS BOTH BOUT BOWL BRAD BRAG BRAN BRIM BROW BUCK BUFF BULB BULK BULL BUMP BUNK BURN BURY BUSH BUSY CAFE CAGE CAKE CALF CALL CALM CAME CAMP CANE CAPE CARD CARE CARP CART CASE CASH CASK CAST CAVE CELL CENT CHAT CHEF CHEW CHIN CHIP CHOP CITE CITY CLAD CLAM CLAN CLAP CLAW CLAY CLIP CLUB CLUE COAL COAT COAX CODE COIL COIN COLD COLT COMB COME CONE COOK COOL COOP COPE COPY CORD CORE CORK CORN COST COVE COWL CRAB CRAG CRAM CREW CRIB CROP CROW CUBE CUFF CULT CURB CURE CURL CUTE CYAN DALE DAME DAMP DARE DARK DARN DART DASH DATA DATE DAWN DAYS DAZE DEAD DEAF DEAL DEAN DEAR DEBT DECK DEED DEEM DEEP DEER DEFY DEMO DENS DENT DENY DESK DIAL DICE DIET DIME DINE DING DIRE DIRT DISC DISH DISK DIVE DOCK DOLE DOLL DOME DONE DOOM DOOR DOSE DOTE DOVE DOWN DOZE DRAG DRAW DREW DRIP DROP DRUG DRUM DUAL DUCK DUCT DUEL DUET DUKE DULL DULY DUMP DUNE DUNK DUSK DUST DUTY EACH EARL EARN EASE EAST EASY ECHO EDGE EDIT ELSE EMIT ENVY EPIC EVEN EVER EVIL EXAM EXIT EXPO FACE FACT FADE FAIL FAIR FAKE FALL FAME FANG FARE FARM FAST FATE FAUN FAWN FEAR FEAT FEED FEEL FEET FELL FELT FEND FERN FEST FEUD FILE FILL FILM FIND FINE FIRE FIRM FISH FIST FIVE FLAG FLAK FLAP FLAT FLAW FLAX FLEA FLED FLEE FLEW FLEX FLIP FLIT FLOE FLOG FLOP FLOW FLUX FOAL FOAM FOIL FOLD FOLK FOND FONT FOOD FOOL FOOT FORD FORE FORK FORM FORT FOUL FOUR FOWL FOXY FRAY FREE FRET FROG FROM FUEL FULL FUME FUND FUNK FURY FUSE GAIN GAIT GALA GALE GALL GAME GANG GATE GAVE GAZE GEAR GEMS GENE GIFT GILD GILL GILT GIRL GIVE GLAD GLEE GLEN GLOW GLUE GOAL GOAT GOLD GOLF GONE GONG GOOD GORE GOWN GRAB GRAD GRAM GRAY GREW GREY GRID GRIM GRIN GRIP GRIT GROW GRUB GULF GULL GULP GURU GUSH GUST HACK HAIL HAIR HALE HALF HALL HALO HALT HAND HANG HARD HARE HARK HARM HARP HASH HATE HAUL HAVE HAWK HAZE HEAD HEAL HEAP HEAR HEAT HEED HEEL HELD HELM HELP HERB HERD HERE HERO HIDE HIGH HIKE HILL HILT HIND HINT HIRE HISS HIVE HOAX HOLD HOLE HOLY HOME HONE HONK HOOD HOOF HOOK HOOP HOOT HOPE HORN HOSE HOST HOUR HOVE HOWL HUGE HULA HULK HULL HUMP HUNG HUNK HUNT HURL HURT HUSH HUSK HYMN IBEX ICON IDEA IDLE IDOL INCH INFO INTO IRIS IRON ISLE ITCH ITEM JACK JADE JAIL JAZZ JEAN JEEP JEER JERK JEST JINX JIVE JOIN JOKE JOLT JUDO JUMP JUNK JURY JUST JUTE KALE KEEL KEEN KEEP KELP KEPT KEYS KICK KILL KILN KILO KILT KIND KING KINK KISS KITE KNEE KNEW KNIT KNOB KNOT KNOW LACE LACK LADY LAID LAIR LAKE LAMB LAME LAMP LAND LANE LARK LASH LAST LATE LAVA LAWN LEAD LEAF LEAK LEAN LEAP LEFT LEND LENS LENT LESS LEVY LIAR LICE LICK LIFE LIFT LIKE LILY LIMB LIME LIMP LINE LINK LINT LION LIPS LIST LIVE LOAD LOAF LOAM LOAN LOBE LOCK LODE LOFT LOGO LOIN LONE LONG LOOK LOOM LOON LOOP LOOT LORD LORE LOSE LOSS LOST LOUD LOVE LUCK LULL LUMP LUNG LURE LURK LUSH LUTE LYNX LYRE MACE MADE MAID MAIL MAIN MAKE MALE MALL MALT MANE MANY MARE MARK MARS MART MASK MASS MAST MATE MAUL MAZE MEAD MEAL MEAN MEAT MEEK MEET MELD MELT MEMO MEND MENU MERE MESH MESS MICA MILD MILE MILK MILL MIME MIND MINE MINK MINT MIRE MISS MIST MITE MITT MOAN MOAT MOCK MODE MOLD MOLE MOLT MONK MOOD MOON MOOR MORE MORN MOST MOTH MOVE MUCH MUCK MULE MULL MUSE MUSH MUSK MUST MUTE MYTH NAIL NAME NAPE NAVY NEAR NEAT NECK NEED NEON NEST NEWS NEWT NEXT NICE NICK NIGH NINE NODE NONE NOOK NOON NORM NOSE NOTE NOUN NUDE NUKE NULL NUMB OATH OBEY OBOE ODOR OGRE OKAY OMEN OMIT ONCE ONLY ONTO ONUS ONYX OOZE OPAL OPEN ORAL ORCA OUST OVAL OVEN OVER PACE PACK PACT PAGE PAID PAIL PAIN PAIR PALE PALL PALM PANE PANG PANT PARE PARK PART PASS PAST PATH PAWN PEAK PEAL PEAR PEAT PECK PEEK PEEL PEER PELT PEND PENT PERK PERM PEST PICK PIER PIKE PILE PILL PINE PING PINK PINT PIPE PITH PITY PLAN PLAY PLEA PLOD PLOT PLOW PLOY PLUG PLUM PLUS POEM POET POKE POLE POLL POLO POMP POND PONY POOL POOR POPE PORE PORK PORT POSE POSH POST POUR POUT PRAY PREP PREY PRIM PROD PROP PROW PUCK PUFF PULL PULP PUMA PUMP PUNK PUNT PURE PURL PURR PUSH PYRE QUAD QUAY QUIT QUIZ RACE RACK RAGE RAID RAIL RAIN RAKE RAMP RANG RANK RANT RARE RASH RASP RATE RAVE RAYS RAZE READ REAL REAM REAP REAR REDO REED REEF REEK REEL REIN RELY REND RENT REST RICE RICH RIDE RIFE RIFT RILE RIME RIND RING RINK RIOT RIPE RISE RISK RITE ROAD ROAM ROAR ROBE ROCK RODE ROLE ROLL ROME ROOF ROOK ROOM ROOT ROPE ROSE ROSY ROTE ROUT ROVE RUBY RUDE RUIN RULE RUMP RUNG RUNT RUSE RUSH RUSK RUST SACK SAFE SAGA SAGE SAID SAIL SAKE SALE SALT SAME SAND SANE SANG SANK SASH SAVE SAWN SCAN SCAR SEAL SEAM SEAR SEAT SECT SEED SEEK SEEM SEEN SEEP SEER SELF SELL SEMI SEND SENT SEPT SERF SHAD SHAG SHAH SHAM SHED SHIN SHIP SHOE SHOP SHOT SHOW SHUN SHUT SICK SIDE SIFT SIGH SIGN SILK SILL SILO SILT SINE SING SINK SITE SIZE SKEW SKID SKIM SKIN SKIP SKIS SKIT SLAB SLAG SLAM SLAP SLAT SLAY SLED SLEW SLID SLIM SLIP SLIT SLOB SLOE SLOG SLOP SLOT SLOW SLUE SLUG SLUM SLUR SMOG SMUG SNAG SNAP SNIP SNOB SNOW SNUB SNUG SOAK SOAP SOAR SOCK SODA SOFA SOFT SOIL SOLD SOLE SOLO SOME SONG SOON SOOT SORE SORT SOUL SOUP SOUR SOWN SPAN SPAR SPAT SPEC SPED SPIN SPIT SPOT SPRY SPUD SPUN SPUR STAB STAG STAR STAT STAY STEM STEP STEW STIR STOP STOW STUB STUD STUN SUCH SUCK SUIT SULK SUMO SUMP SUNG SUNK SURE SURF SWAB SWAG SWAM SWAN SWAP SWAT SWAY SWIG SWIM SWOP SWUM TACK TACT TAIL TAKE TALE TALK TALL TAME TANG TANK TAPE TARE TARN TARO TARP TART TASK TAUT TAXI TEAK TEAL TEAM TEAR TECH TEEM TEEN TELL TEMP TEND TENT TERM TERN TEST TEXT THAN THAT THAW THEE THEM THEN THEY THIN THIS THUD THUG THUS TICK TIDE TIDY TIED TIER TILE TILL TILT TIME TINE TING TINT TINY TIRE TOAD TOFU TOGA TOIL TOLD TOLL TOMB TOME TONE TONG TOOK TOOL TOOT TORE TORN TORT TOSS TOTE TOUR TOUT TOWN TRAM TRAP TRAY TREE TREK TRIM TRIO TRIP TROD TROT TRUE TSAR TUCK TUFT TUNA TUNE TURF TURN TUSK TUTU TWIG TWIN TWIT TYPE TYPO UGLY UNDO UNIT UNTO UPON URGE USED USER VAIN VALE VAMP VANE VARY VASE VAST VEAL VEER VEIL VEIN VEND VENT VERB VERY VEST VETO VIAL VICE VIEW VILE VINE VISA VISE VOID VOLT VOTE WADE WAFT WAGE WAIL WAIT WAKE WALK WALL WAND WANE WANT WARD WARE WARM WARN WARP WART WARY WASH WASP WATT WAVE WAVY WAXY WEAK WEAL WEAN WEAR WEED WEEK WEEP WEFT WEIR WELD WELL WELT WEND WENT WERE WEST WHAM WHAT WHEN WHET WHEY WHIM WHIP WHIR WHIT WHIZ WHOA WHOM WICK WIDE WIFE WILD WILE WILL WILT WILY WIMP WIND WINE WING WINK WIPE WIRE WIRY WISE WISH WISP WITH WOKE WOLF WOMB WOOD WOOF WOOL WORD WORE WORK WORM WORN WORT WOVE WRAP WREN WRIT YANK YARD YARN YAWL YAWN YEAR YELL YELP YOGA YOKE YOLK YORE YOUR YOWL YULE ZANY ZEAL ZEBU ZERO ZEST ZETA ZINC ZINE ZING ZONE"
+    ).split(/\s+/);
+
+    const trieRoot = { children: {}, isWord: false };
+    for (const w of LEXICON_WORDS) {
+      if (!w) continue;
+      let node = trieRoot;
+      for (const ch of w) {
+        if (!node.children[ch]) node.children[ch] = { children: {}, isWord: false };
+        node = node.children[ch];
+      }
+      node.isWord = true;
+    }
+
+    function isValidWord(word) {
+      if (!word || word.length < 2) return false;
+      let node = trieRoot;
+      for (const ch of word.toUpperCase()) {
+        if (!node.children[ch]) return false;
+        node = node.children[ch];
+      }
+      return node.isWord;
+    }
+
+    function findAnagrams(chars, minLen = 2, maxCount = 35) {
+      const counts = {};
+      for (const c of chars) {
+        const up = c.toUpperCase();
+        counts[up] = (counts[up] || 0) + 1;
+      }
+      const results = [];
+      function dfs(node, prefix) {
+        if (results.length >= maxCount) return;
+        if (node.isWord && prefix.length >= minLen) results.push(prefix);
+        for (const ch of Object.keys(node.children)) {
+          if (counts[ch] > 0) {
+            counts[ch]--;
+            dfs(node.children[ch], prefix + ch);
+            counts[ch]++;
+          }
+        }
+      }
+      dfs(trieRoot, "");
+      return results.sort((a, b) => b.length - a.length);
+    }
+
+    // --- 2. BOARD & MULTIPLIERS ---
+    const BOARD_SIZE = 15;
+    const LETTER_SCORES = {
+      A:1, E:1, I:1, O:1, U:1, L:1, N:1, S:1, T:1, R:1,
+      D:2, G:2, B:3, C:3, M:3, P:3, F:4, H:4, V:4, W:4, Y:4,
+      K:5, J:8, X:8, Q:10, Z:10
+    };
+
+    const SKINS = {
+      washi:  { bg: "#FFF6E5", border: "#D9B382", text: "#2B1E16" },
+      sakura: { bg: "#FFE6EE", border: "#E06D94", text: "#4A152B" },
+      shogun: { bg: "#1F2430", border: "#FF5A36", text: "#FFF4EC" },
+      jade:   { bg: "#E2FCEF", border: "#00B495", text: "#073B32" }
+    };
+    let currentSkin = SKINS.washi;
+
+    const TW_SET = new Set(["0,0","7,0","14,0","0,7","14,7","0,14","7,14","14,14"]);
+    const DW_SET = new Set(["1,1","2,2","3,3","4,4","13,1","12,2","11,3","10,4","1,13","2,12","3,11","4,10","13,13","12,12","11,11","10,10"]);
+    const TL_SET = new Set(["5,1","9,1","1,5","5,5","9,5","13,5","1,9","5,9","9,9","13,9","5,13","9,13"]);
+    const DL_SET = new Set(["3,0","11,0","6,2","8,2","0,3","7,3","14,3","2,6","6,6","8,6","12,6","3,7","11,7","2,8","6,8","8,8","12,8","0,11","7,11","14,11","6,12","8,12","3,14","11,14"]);
+
+    function getMultiplier(x, y) {
+      if (x === 7 && y === 7) return "STAR";
+      const k = `${x},${y}`;
+      if (TW_SET.has(k)) return "TW";
+      if (DW_SET.has(k)) return "DW";
+      if (TL_SET.has(k)) return "TL";
+      if (DL_SET.has(k)) return "DL";
+      return "NONE";
+    }
+
+    let lockedGrid = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+    let pendingMap = new Map(); // "x,y" -> tile
+    let hintCoords = new Set();
+    let tileBag = [];
+    let playerRack = [];
+    let aiRack = [];
+    let selectedTileId = null;
+    let p1Score = 0;
+    let p2Score = 0;
+    let comboStreak = 0;
+    let comboMult = 1.0;
+    let turnTimer = 45;
+
+    function initBag() {
+      const dist = "AAAAAAAAABBCCDDDDEEEEEEEEEEEEFFGGGHHIIIIIIIIIJKLLLLMMNNNNNNOOOOOOOOPPQRRRRRRSSSSTTTTTTUUUUVVWWXYYZ";
+      tileBag = [];
+      for (let i = 0; i < dist.length; i++) {
+        const ch = dist[i];
+        tileBag.push({
+          id: "t_" + i + "_" + Math.random().toString(36).slice(2, 6),
+          char: ch,
+          score: LETTER_SCORES[ch] || 1,
+          bonus: i % 11 === 0 ? "+4" : (i % 17 === 0 ? "×1.5" : "")
+        });
+      }
+      tileBag.sort(() => Math.random() - 0.5);
+    }
+
+    function drawTiles(count, ensureVowels = 0) {
+      const out = [];
+      const vowels = new Set(["A","E","I","O","U"]);
+      for (let v = 0; v < ensureVowels && tileBag.length > 0; v++) {
+        const idx = tileBag.findIndex(t => vowels.has(t.char));
+        if (idx !== -1) out.push(tileBag.splice(idx, 1)[0]);
+      }
+      while (out.length < count && tileBag.length > 0) {
+        out.push(tileBag.pop());
+      }
+      return out;
+    }
+
+    function effectiveTileAt(x, y) {
+      if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return null;
+      return pendingMap.get(`${x},${y}`) || lockedGrid[y][x];
+    }
+
+    function hasAnyLocked() {
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        for (let x = 0; x < BOARD_SIZE; x++) {
+          if (lockedGrid[y][x]) return true;
+        }
+      }
+      return false;
+    }
+
+    function extractSpan(ox, oy, horizontal) {
+      let sx = ox, sy = oy;
+      if (horizontal) {
+        while (sx > 0 && effectiveTileAt(sx - 1, sy)) sx--;
+        const span = [];
+        while (sx < BOARD_SIZE && effectiveTileAt(sx, sy)) {
+          span.push([sx, sy]);
+          sx++;
+        }
+        return span;
+      } else {
+        while (sy > 0 && effectiveTileAt(sx, sy - 1)) sy--;
+        const span = [];
+        while (sy < BOARD_SIZE && effectiveTileAt(sx, sy)) {
+          span.push([sx, sy]);
+          sy++;
+        }
+        return span;
+      }
+    }
+
+    function evaluatePending() {
+      if (pendingMap.size === 0) return { validPos: false, msg: "Tap a rack tile, then tap a board square (or click Auto-Fold)!" };
+      const coords = Array.from(pendingMap.keys()).map(k => k.split(",").map(Number));
+      const sameRow = coords.every(c => c[1] === coords[0][1]);
+      const sameCol = coords.every(c => c[0] === coords[0][0]);
+      if (!sameRow && !sameCol) return { validPos: false, msg: "Tiles must be aligned in a single row or column" };
+
+      const anyLocked = hasAnyLocked();
+      if (!anyLocked) {
+        if (!pendingMap.has("7,7")) return { validPos: false, msg: "First word must cover the Center Star (★) at H8" };
+        if (pendingMap.size < 2) return { validPos: false, msg: "First word must be at least 2 letters" };
+      }
+
+      if (sameRow) {
+        const y = coords[0][1];
+        const minX = Math.min(...coords.map(c => c[0]));
+        const maxX = Math.max(...coords.map(c => c[0]));
+        for (let x = minX; x <= maxX; x++) {
+          if (!effectiveTileAt(x, y)) return { validPos: false, msg: "Tiles must form an unbroken line" };
+        }
+      } else {
+        const x = coords[0][0];
+        const minY = Math.min(...coords.map(c => c[1]));
+        const maxY = Math.max(...coords.map(c => c[1]));
+        for (let y = minY; y <= maxY; y++) {
+          if (!effectiveTileAt(x, y)) return { validPos: false, msg: "Tiles must form an unbroken line" };
+        }
+      }
+
+      if (anyLocked) {
+        let touches = false;
+        for (const [x, y] of coords) {
+          if (
+            (x > 0 && lockedGrid[y][x - 1]) ||
+            (x < 14 && lockedGrid[y][x + 1]) ||
+            (y > 0 && lockedGrid[y - 1][x]) ||
+            (y < 14 && lockedGrid[y + 1][x])
+          ) {
+            touches = true;
+            break;
+          }
+        }
+        if (!touches) return { validPos: false, msg: "New tiles must connect to an existing word" };
+      }
+
+      const horizontalPrimary = coords.length > 1 ? sameRow : Boolean(effectiveTileAt(coords[0][0] - 1, coords[0][1]) || effectiveTileAt(coords[0][0] + 1, coords[0][1]));
+      const seen = new Set();
+      const words = [];
+
+      function addSpan(span, isH) {
+        if (span.length < 2) return;
+        const key = `${isH}:${span[0][0]},${span[0][1]}-${span[span.length - 1][0]},${span[span.length - 1][1]}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        let wStr = "";
+        let sum = 0;
+        let wMult = 1;
+        let hasTriple = false;
+        for (const [x, y] of span) {
+          const t = effectiveTileAt(x, y);
+          wStr += t.char;
+          let pts = t.score;
+          if ("AEIOU".includes(t.char)) pts += 2; // Vowel Lotus relic
+          if (pendingMap.has(`${x},${y}`)) {
+            const m = getMultiplier(x, y);
+            if (m === "DL") pts *= 2;
+            if (m === "TL") pts *= 3;
+            if (m === "DW" || m === "STAR") wMult *= 2;
+            if (m === "TW") { wMult *= 3; hasTriple = true; }
+            if (t.bonus === "+4") pts += 4;
+            if (t.bonus === "×1.5") wMult = Math.round(wMult * 1.5);
+          }
+          sum += pts;
+        }
+        let total = sum * wMult;
+        if (span.length >= 5) total = Math.round(total * 1.5); // Shogun Seal relic
+        words.push({ word: wStr, base: sum, wMult, total, hasTriple });
+      }
+
+      addSpan(extractSpan(coords[0][0], coords[0][1], horizontalPrimary), horizontalPrimary);
+      for (const [x, y] of coords) {
+        addSpan(extractSpan(x, y, !horizontalPrimary), !horizontalPrimary);
+      }
+
+      if (words.length === 0) return { validPos: false, msg: "Place at least 2 connected letters" };
+      const invalid = words.filter(w => !isValidWord(w.word)).map(w => w.word);
+      if (invalid.length > 0) {
+        return { validPos: true, allValid: false, msg: `Not in Lexicon: ${invalid.join(", ")}`, words, totalScore: 0 };
+      }
+
+      const rawSum = words.reduce((acc, w) => acc + w.total, 0);
+      const totalScore = Math.round(rawSum * comboMult);
+      return {
+        validPos: true,
+        allValid: true,
+        words,
+        totalScore,
+        hasTriple: words.some(w => w.hasTriple)
+      };
+    }
+
+    // --- 3. CANVAS RENDERER ---
+    const canvas = document.getElementById("boardCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function drawBoard() {
+      const W = canvas.width;
+      const cell = W / BOARD_SIZE;
+      ctx.fillStyle = "#121629";
+      ctx.fillRect(0, 0, W, W);
+
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        for (let x = 0; x < BOARD_SIZE; x++) {
+          const m = getMultiplier(x, y);
+          const left = x * cell;
+          const top = y * cell;
+          const pad = cell * 0.05;
+          const sz = cell - pad * 2;
+
+          ctx.fillStyle =
+            m === "TW" ? "#9E2A2B" :
+            m === "DW" ? "#7C2D52" :
+            m === "TL" ? "#0E6BA8" :
+            m === "DL" ? "#174A6E" :
+            m === "STAR" ? "#B45309" : "#1E2540";
+
+          ctx.beginPath();
+          ctx.roundRect(left + pad, top + pad, sz, sz, 5);
+          ctx.fill();
+
+          const tile = effectiveTileAt(x, y);
+          if (!tile && m !== "NONE") {
+            ctx.fillStyle = "rgba(255, 248, 236, 0.88)";
+            ctx.font = `bold ${Math.floor(cell * 0.34)}px 'Space Grotesk', sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const label = m === "STAR" ? "★" : m === "TW" ? "3W" : m === "DW" ? "2W" : m === "TL" ? "3L" : "2L";
+            ctx.fillText(label, left + cell / 2, top + cell / 2 + 1);
+          }
+
+          if (!tile && hintCoords.has(`${x},${y}`)) {
+            ctx.strokeStyle = "#FFB703";
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(left + pad + 1, top + pad + 1, sz - 2, sz - 2);
+          }
+
+          if (tile) {
+            const isPending = pendingMap.has(`${x},${y}`);
+            ctx.fillStyle = currentSkin.bg;
+            ctx.beginPath();
+            ctx.roundRect(left + pad, top + pad, sz, sz, 6);
+            ctx.fill();
+
+            ctx.strokeStyle = isPending ? "#00D6A3" : currentSkin.border;
+            ctx.lineWidth = isPending ? 2.5 : 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = currentSkin.text;
+            ctx.font = `bold ${Math.floor(cell * 0.52)}px 'Space Grotesk', sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(tile.char, left + cell * 0.46, top + cell * 0.52);
+
+            ctx.font = `bold ${Math.floor(cell * 0.23)}px 'JetBrains Mono', monospace`;
+            ctx.textAlign = "right";
+            ctx.fillText(String(tile.score), left + cell * 0.9, top + cell * 0.82);
+          }
+        }
+      }
+    }
+
+    function renderRackAndUI() {
+      const rackEl = document.getElementById("rackBar");
+      rackEl.innerHTML = "";
+      for (const tile of playerRack) {
+        const div = document.createElement("div");
+        div.className = "rack-tile" + (selectedTileId === tile.id ? " selected" : "");
+        div.style.background = currentSkin.bg;
+        div.style.color = currentSkin.text;
+        div.style.borderColor = selectedTileId === tile.id ? "#00D6A3" : currentSkin.border;
+        if (tile.bonus) {
+          const b = document.createElement("span");
+          b.className = "bonus-badge";
+          b.textContent = tile.bonus;
+          div.appendChild(b);
+        }
+        const ch = document.createElement("span");
+        ch.className = "char";
+        ch.textContent = tile.char;
+        const pts = document.createElement("span");
+        pts.className = "pts";
+        pts.textContent = tile.score;
+        div.appendChild(ch);
+        div.appendChild(pts);
+        div.onclick = () => {
+          selectedTileId = selectedTileId === tile.id ? null : tile.id;
+          renderRackAndUI();
+        };
+        rackEl.appendChild(div);
+      }
+
+      document.getElementById("p1Score").textContent = p1Score;
+      document.getElementById("p2Score").textContent = p2Score;
+      document.getElementById("comboPill").textContent = `🔥 ×${comboMult.toFixed(2).replace(/\.00$/, ".0")}`;
+      document.getElementById("bagCountLabel").textContent = `Bag: ${tileBag.length}`;
+
+      const ev = evaluatePending();
+      const previewBar = document.getElementById("previewBar");
+      const previewText = document.getElementById("previewText");
+      const badge = document.getElementById("previewScoreBadge");
+      const submitBtn = document.getElementById("submitBtn");
+
+      previewBar.className = "preview-bar";
+      if (pendingMap.size === 0) {
+        badge.style.display = "none";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "✓ FOLD";
+      } else if (!ev.validPos || !ev.allValid) {
+        previewBar.classList.add("invalid");
+        previewText.textContent = ev.msg;
+        badge.style.display = "none";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "✓ FOLD";
+      } else {
+        previewBar.classList.add("valid");
+        previewText.textContent = ev.words.map(w => `${w.word} (${w.base}×${w.wMult}W)`).join(" • ");
+        badge.style.display = "inline-block";
+        badge.textContent = `+${ev.totalScore} PTS`;
+        submitBtn.disabled = false;
+        submitBtn.textContent = `✓ FOLD +${ev.totalScore}`;
+      }
+
+      drawBoard();
+    }
+
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor(((e.clientX - rect.left) / rect.width) * BOARD_SIZE);
+      const y = Math.floor(((e.clientY - rect.top) / rect.height) * BOARD_SIZE);
+      if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) return;
+      const key = `${x},${y}`;
+
+      if (pendingMap.has(key)) {
+        const t = pendingMap.get(key);
+        pendingMap.delete(key);
+        playerRack.push(t);
+        selectedTileId = t.id;
+        renderRackAndUI();
+        return;
+      }
+      if (lockedGrid[y][x]) return;
+
+      const tileId = selectedTileId || (playerRack[0] && playerRack[0].id);
+      if (!tileId) return;
+      const idx = playerRack.findIndex(t => t.id === tileId);
+      if (idx === -1) return;
+      const [tile] = playerRack.splice(idx, 1);
+      pendingMap.set(key, tile);
+      selectedTileId = playerRack[0] ? playerRack[0].id : null;
+      hintCoords.clear();
+      renderRackAndUI();
+    });
+
+    function findBestMoveForRack(rack) {
+      const fullRack = [...rack];
+      if (!hasAnyLocked()) {
+        const words = findAnagrams(fullRack.map(t => t.char), 2, 30);
+        if (words.length === 0) return null;
+        const bestWord = words[0];
+        const startX = Math.max(0, 7 - Math.floor(bestWord.length / 2));
+        const used = [];
+        const placements = [];
+        const pool = [...fullRack];
+        for (let i = 0; i < bestWord.length; i++) {
+          const ch = bestWord[i];
+          const tidx = pool.findIndex(t => t.char === ch);
+          if (tidx === -1) return null;
+          const [t] = pool.splice(tidx, 1);
+          placements.push({ x: startX + i, y: 7, tile: t });
+        }
+        return { word: bestWord, placements };
+      }
+
+      // Find an existing anchor tile
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        for (let x = 0; x < BOARD_SIZE; x++) {
+          const anchor = lockedGrid[y][x];
+          if (!anchor) continue;
+          const candidates = findAnagrams([...fullRack.map(t => t.char), anchor.char], 2, 25);
+          for (const w of candidates) {
+            const idx = w.indexOf(anchor.char);
+            if (idx === -1) continue;
+            for (const horiz of [true, false]) {
+              const sx = horiz ? x - idx : x;
+              const sy = horiz ? y : y - idx;
+              const ex = horiz ? sx + w.length - 1 : sx;
+              const ey = horiz ? sy : sy + w.length - 1;
+              if (sx < 0 || sy < 0 || ex >= BOARD_SIZE || ey >= BOARD_SIZE) continue;
+              const pool = [...fullRack];
+              const placements = [];
+              let ok = true;
+              for (let i = 0; i < w.length; i++) {
+                const cx = horiz ? sx + i : sx;
+                const cy = horiz ? sy : sy + i;
+                const existing = lockedGrid[cy][cx];
+                if (existing) {
+                  if (existing.char !== w[i]) { ok = false; break; }
+                } else {
+                  const tidx = pool.findIndex(t => t.char === w[i]);
+                  if (tidx === -1) { ok = false; break; }
+                  placements.push({ x: cx, y: cy, tile: pool.splice(tidx, 1)[0] });
+                }
+              }
+              if (ok && placements.length > 0) {
+                const backup = new Map(pendingMap);
+                pendingMap.clear();
+                for (const p of placements) pendingMap.set(`${p.x},${p.y}`, p.tile);
+                const ev = evaluatePending();
+                pendingMap = backup;
+                if (ev.validPos && ev.allValid) {
+                  return { word: w, placements, score: ev.totalScore };
+                }
+              }
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    function triggerBurst(text) {
+      const el = document.getElementById("floatingBurst");
+      el.textContent = text;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1600);
+    }
+
+    function triggerHudComboParticles(count) {
+      const pill = document.getElementById("comboPill");
+      pill.classList.remove("high-combo");
+      void pill.offsetWidth;
+      pill.classList.add("high-combo");
+      const colors = ["#FFB703", "#FF5A36", "#00D6A3", "#FF7597"];
+      for (let i = 0; i < count; i++) {
+        const spark = document.createElement("span");
+        spark.className = "hud-spark";
+        const angle = (Math.PI * 2 * i) / count;
+        const dist = 26 + Math.random() * 22;
+        spark.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+        spark.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+        spark.style.left = "50%";
+        spark.style.top = "50%";
+        spark.style.background = colors[i % colors.length];
+        pill.appendChild(spark);
+        setTimeout(() => spark.remove(), 780);
+      }
+    }
+
+    document.getElementById("recallBtn").onclick = () => {
+      for (const t of pendingMap.values()) playerRack.push(t);
+      pendingMap.clear();
+      renderRackAndUI();
+    };
+
+    document.getElementById("shuffleBtn").onclick = () => {
+      playerRack.sort(() => Math.random() - 0.5);
+      renderRackAndUI();
+    };
+
+    document.getElementById("hintBtn").onclick = () => {
+      for (const t of pendingMap.values()) playerRack.push(t);
+      pendingMap.clear();
+      const move = findBestMoveForRack(playerRack);
+      hintCoords.clear();
+      if (move) {
+        for (const p of move.placements) hintCoords.add(`${p.x},${p.y}`);
+        document.getElementById("previewText").textContent = `Trie Hint: Fold '${move.word}' on the gold highlighted squares!`;
+      } else {
+        document.getElementById("previewText").textContent = "No direct move found — try Shuffle or Pass!";
+      }
+      renderRackAndUI();
+    };
+
+    document.getElementById("autoFoldBtn").onclick = () => {
+      for (const t of pendingMap.values()) playerRack.push(t);
+      pendingMap.clear();
+      const move = findBestMoveForRack(playerRack);
+      if (!move) return;
+      for (const p of move.placements) {
+        const idx = playerRack.findIndex(t => t.id === p.tile.id);
+        if (idx !== -1) playerRack.splice(idx, 1);
+        pendingMap.set(`${p.x},${p.y}`, p.tile);
+      }
+      renderRackAndUI();
+    };
+
+    document.getElementById("submitBtn").onclick = () => {
+      const ev = evaluatePending();
+      if (!ev.validPos || !ev.allValid) return;
+      for (const [k, tile] of pendingMap.entries()) {
+        const [x, y] = k.split(",").map(Number);
+        lockedGrid[y][x] = tile;
+      }
+      pendingMap.clear();
+      p1Score += ev.totalScore;
+      comboStreak++;
+      comboMult = comboStreak >= 4 ? 4.0 : comboStreak === 3 ? 3.0 : comboStreak === 2 ? 2.0 : comboStreak === 1 ? 1.5 : 1.0;
+      playerRack.push(...drawTiles(7 - playerRack.length));
+      turnTimer = 45;
+
+      const primary = ev.words[0].word;
+      triggerBurst(`+${ev.totalScore}! ${ev.hasTriple ? "TRIPLE WORD!" : (comboStreak >= 3 ? `${comboMult}x COMBO!` : primary)}`);
+      renderRackAndUI();
+      if (comboStreak >= 3) {
+        triggerHudComboParticles(comboStreak >= 4 ? 20 : 14);
+      }
+
+      // AI Scribe response turn
+      setTimeout(() => {
+        const aiMove = findBestMoveForRack(aiRack);
+        if (aiMove) {
+          for (const p of aiMove.placements) {
+            lockedGrid[p.y][p.x] = p.tile;
+            const idx = aiRack.findIndex(t => t.id === p.tile.id);
+            if (idx !== -1) aiRack.splice(idx, 1);
+          }
+          const pts = aiMove.score || (aiMove.word.length * 4);
+          p2Score += pts;
+          aiRack.push(...drawTiles(7 - aiRack.length));
+          document.getElementById("previewText").textContent = `Sensei Haiku folded '${aiMove.word}' for +${pts} pts! Your turn.`;
+        }
+        renderRackAndUI();
+      }, 650);
+    };
+
+    document.getElementById("passBtn").onclick = () => {
+      for (const t of pendingMap.values()) playerRack.push(t);
+      pendingMap.clear();
+      comboStreak = 0;
+      comboMult = 1.0;
+      turnTimer = 45;
+      const swapped = playerRack.splice(0, Math.min(3, playerRack.length));
+      tileBag.push(...swapped);
+      playerRack.push(...drawTiles(swapped.length));
+      document.getElementById("previewText").textContent = "Passed turn & swapped 3 tiles.";
+      renderRackAndUI();
+    };
+
+    document.getElementById("skinSelect").onchange = (e) => {
+      currentSkin = SKINS[e.target.value] || SKINS.washi;
+      renderRackAndUI();
+    };
+
+    setInterval(() => {
+      if (turnTimer > 1) {
+        turnTimer--;
+      } else {
+        turnTimer = 45;
+        comboStreak = 0;
+        comboMult = 1.0;
+      }
+      const pill = document.getElementById("timerPill");
+      pill.textContent = `⏱ ${turnTimer}s`;
+      pill.className = "pill" + (turnTimer <= 10 ? " low-time" : "");
+    }, 1000);
+
+    // Initialize game
+    initBag();
+    playerRack = drawTiles(7, 2);
+    aiRack = drawTiles(7, 2);
+    renderRackAndUI();
+  </script>
+</body>
+</html>
