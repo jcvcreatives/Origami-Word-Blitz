@@ -1,6 +1,6 @@
 {
-  "name": "LexiFill: Crossword Skeleton",
-  "description": "An addictive hybrid of Scrabble and Kriss-Kross Fill-In puzzles with dual-axis Trie intersection validation, magnetic slot snapping, and multiplier combos.",
+  "name": "Crossword Origami",
+  "description": "A tactile paper-craft crossword puzzle game with floating origami letter tiles, magnetic slot snapping, and dual-axis Trie intersection validation.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

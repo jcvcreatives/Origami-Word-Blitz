@@ -31,10 +31,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -58,7 +61,9 @@ import com.example.ui.theme.CompletedWordBorder
 import com.example.ui.theme.FixedClueCellBg
 import com.example.ui.theme.FixedClueCellBorder
 import com.example.ui.theme.IndigoCard
+import com.example.ui.theme.IndigoElevated
 import com.example.ui.theme.IndigoNight
+import com.example.ui.theme.IndigoSurface
 import com.example.ui.theme.KyotoGold
 import com.example.ui.theme.SkyCyan
 import com.example.ui.theme.SquareDlBg
@@ -67,6 +72,7 @@ import com.example.ui.theme.SquareTlBg
 import com.example.ui.theme.SquareTwBg
 import com.example.ui.theme.VermilionRed
 import com.example.ui.theme.WashiCream
+import com.example.ui.theme.WashiMuted
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
@@ -76,8 +82,8 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * Reports the root window coordinates and cell metrics of the Crossword Skeleton canvas
- * so dragged rack tiles can perform <1ms magnetic hit-testing against unfilled blank slots.
+ * Reports the root window coordinates and cell metrics of the Crossword Origami Washi-paper board
+ * so dragged rack tiles can perform <1ms magnetic hit-testing and spring-physics snap attraction.
  */
 data class SkeletonBoardGeometry(
   val rootTopLeft: Offset = Offset.Zero,
@@ -87,22 +93,31 @@ data class SkeletonBoardGeometry(
   val boardHeight: Int = 8,
 ) {
   /**
+   * Returns the root-window screen center [Offset] of the given board [coord].
+   */
+  fun slotCenterInRoot(coord: Coordinate): Offset {
+    val cx = rootTopLeft.x + gridOffsetInCanvas.x + (coord.x + 0.5f) * cellSizePx
+    val cy = rootTopLeft.y + gridOffsetInCanvas.y + (coord.y + 0.5f) * cellSizePx
+    return Offset(cx, cy)
+  }
+
+  /**
    * Finds the best unfilled blank target coordinate within magnetic snap range of [rootPoint].
    */
   fun resolveMagneticSlot(rootPoint: Offset, state: PuzzleState): Coordinate? {
-    if (cellSizePx <= 1f) return null
+    return resolveMagneticPull(rootPoint, state).first
+  }
+
+  /**
+   * Resolves both the nearest valid open blank slot [Coordinate] AND a physical magnetic pull
+   * vector [Offset] that tugs the dragged tile toward the center of that slot when nearby.
+   */
+  fun resolveMagneticPull(rootPoint: Offset, state: PuzzleState): Pair<Coordinate?, Offset> {
+    if (cellSizePx <= 1f) return null to Offset.Zero
     val localX = rootPoint.x - rootTopLeft.x - gridOffsetInCanvas.x
     val localY = rootPoint.y - rootTopLeft.y - gridOffsetInCanvas.y
 
-    val exactCol = (localX / cellSizePx).toInt()
-    val exactRow = (localY / cellSizePx).toInt()
-
-    val directCell = state.cellAt(exactCol, exactRow)
-    if (directCell != null && directCell.isBlankTarget && !directCell.isLockedCompleted) {
-      return Coordinate(exactCol, exactRow)
-    }
-
-    val maxSnapDist = cellSizePx * 1.35f
+    val maxSnapDist = cellSizePx * 1.48f
     var bestCoord: Coordinate? = null
     var bestDist = Float.MAX_VALUE
 
@@ -119,7 +134,17 @@ data class SkeletonBoardGeometry(
         }
       }
     }
-    return bestCoord
+
+    val target = bestCoord ?: return null to Offset.Zero
+    val slotRoot = slotCenterInRoot(target)
+    val deltaX = slotRoot.x - rootPoint.x
+    val deltaY = slotRoot.y - rootPoint.y
+
+    // Smoothly ramp magnetic attraction strength as the tile enters the slot's gravity well
+    val normalizedProximity = (1f - (bestDist / maxSnapDist)).coerceIn(0f, 1f)
+    val pullStrength = 0.42f + 0.40f * normalizedProximity
+    val pullVector = Offset(deltaX * pullStrength, deltaY * pullStrength)
+    return target to pullVector
   }
 }
 
@@ -131,14 +156,14 @@ fun LexiFillBoardCanvas(
   onShakeConsumed: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val infiniteTransition = rememberInfiniteTransition(label = "skeleton_pulse")
+  val infiniteTransition = rememberInfiniteTransition(label = "origami_paper_pulse")
   val pulseAlpha by
     infiniteTransition.animateFloat(
       initialValue = 0.35f,
-      targetValue = 0.95f,
+      targetValue = 0.90f,
       animationSpec =
         infiniteRepeatable(
-          animation = tween(750, easing = FastOutSlowInEasing),
+          animation = tween(900, easing = FastOutSlowInEasing),
           repeatMode = RepeatMode.Reverse,
         ),
       label = "pulse_alpha",
@@ -150,13 +175,13 @@ fun LexiFillBoardCanvas(
       targetValue = 1f,
       animationSpec =
         infiniteRepeatable(
-          animation = tween(650, easing = FastOutSlowInEasing),
+          animation = tween(700, easing = FastOutSlowInEasing),
           repeatMode = RepeatMode.Reverse,
         ),
       label = "reticle_phase",
     )
 
-  // Frame clock tick for smooth tile-snap squash/stretch, shockwaves, cell flashes, popups, particles & center confetti
+  // Frame clock tick for smooth tile-snap squash/stretch, subtle paper shimmer & popups
   var frameNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
   LaunchedEffect(
     puzzleState.cellFlashTimestamps,
@@ -175,21 +200,21 @@ fun LexiFillBoardCanvas(
         puzzleState.confettiExplosions.isNotEmpty()
     if (hasActiveAnimations) {
       val start = System.currentTimeMillis()
-      while (System.currentTimeMillis() - start < 2100L) {
+      while (System.currentTimeMillis() - start < 1450L) {
         frameNowMs = System.currentTimeMillis()
         delay(16L)
       }
     }
   }
 
-  // Screen micro-shake on invalid intersection or tile snap / dual-axis clear
+  // Gentle paper micro-nudge on invalid intersection or dual-axis clear
   val shakeOffset = remember { Animatable(0f) }
   LaunchedEffect(puzzleState.boardShakeIntensity) {
     if (puzzleState.boardShakeIntensity > 0f) {
-      val mag = puzzleState.boardShakeIntensity * 10f
-      val keyframes = listOf(-mag, mag, -mag * 0.7f, mag * 0.7f, -mag * 0.35f, 0f)
+      val mag = puzzleState.boardShakeIntensity * 7f
+      val keyframes = listOf(-mag, mag, -mag * 0.6f, mag * 0.6f, 0f)
       for (target in keyframes) {
-        shakeOffset.animateTo(target, tween(34, easing = LinearEasing))
+        shakeOffset.animateTo(target, tween(32, easing = LinearEasing))
       }
       onShakeConsumed()
     }
@@ -198,7 +223,7 @@ fun LexiFillBoardCanvas(
   val letterPaint = remember {
     Paint(Paint.ANTI_ALIAS_FLAG).apply {
       textAlign = Paint.Align.CENTER
-      typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
     }
   }
   val subPaint = remember {
@@ -209,6 +234,8 @@ fun LexiFillBoardCanvas(
   }
 
   var currentGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
+  val dogEarPath = remember { Path() }
+  val petalPath = remember { Path() }
 
   val hoveredCorridorCoords =
     remember(puzzleState.hoverCoord, puzzleState.targetWords) {
@@ -231,24 +258,24 @@ fun LexiFillBoardCanvas(
   val aspectRatio =
     (puzzleState.boardWidth.toFloat() / puzzleState.boardHeight.toFloat()).coerceIn(0.85f, 1.35f)
 
+  // Handcrafted Washi Paper Board Sheet Container
   Box(
     modifier =
       modifier
         .fillMaxWidth()
         .aspectRatio(aspectRatio)
         .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
-        .clip(RoundedCornerShape(20.dp))
+        .shadow(elevation = 4.dp, shape = RoundedCornerShape(18.dp))
+        .clip(RoundedCornerShape(18.dp))
         .background(
-          androidx.compose.ui.graphics.Brush.verticalGradient(
-            listOf(Color(0xFF0E1629), IndigoNight)
+          Brush.verticalGradient(
+            listOf(IndigoSurface, Color(0xFFF6F0E2))
           )
         )
         .border(
           1.5.dp,
-          androidx.compose.ui.graphics.Brush.linearGradient(
-            listOf(Color(0xFF283A63), SkyCyan.copy(alpha = 0.38f), Color(0xFF283A63))
-          ),
-          RoundedCornerShape(20.dp),
+          IndigoElevated,
+          RoundedCornerShape(18.dp),
         )
         .padding(10.dp)
         .testTag("lexifill_board_canvas"),
@@ -296,7 +323,24 @@ fun LexiFillBoardCanvas(
       val originY = (size.height - gridH) / 2f
       val pad = cellSize * 0.06f
       val innerSize = cellSize - pad * 2f
-      val cornerRadius = CornerRadius(cellSize * 0.19f, cellSize * 0.19f)
+      val cornerRadius = CornerRadius(cellSize * 0.14f, cellSize * 0.14f)
+
+      // Subtle Origami diagonal paper-fold crease lines across the Washi sheet background
+      val creaseColor = IndigoElevated.copy(alpha = 0.28f)
+      drawLine(
+        color = creaseColor,
+        start = Offset(0f, 0f),
+        end = Offset(size.width, size.height),
+        strokeWidth = 1.dp.toPx(),
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
+      )
+      drawLine(
+        color = creaseColor,
+        start = Offset(size.width, 0f),
+        end = Offset(0f, size.height),
+        strokeWidth = 1.dp.toPx(),
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
+      )
 
       val skin = puzzleState.equippedSkin
       val skinBaseColor = Color(skin.baseColorHex)
@@ -311,9 +355,10 @@ fun LexiFillBoardCanvas(
           val cellCenter = Offset(topLeft.x + innerSize / 2f, topLeft.y + innerSize / 2f)
 
           if (!cell.isPlayable) {
+            // Subtle paper pin-dot on empty background grid intersections
             drawCircle(
-              color = IndigoCard.copy(alpha = 0.45f),
-              radius = cellSize * 0.042f,
+              color = IndigoElevated.copy(alpha = 0.45f),
+              radius = cellSize * 0.036f,
               center = cellCenter,
             )
             continue
@@ -326,18 +371,18 @@ fun LexiFillBoardCanvas(
           val flashStart = puzzleState.cellFlashTimestamps[coord]
           val flashElapsed = if (flashStart != null) (frameNowMs - flashStart) else 9999L
           val flashProgress =
-            if (flashElapsed in 0..850) 1f - (flashElapsed / 850f) else 0f
+            if (flashElapsed in 0..650) 1f - (flashElapsed / 650f) else 0f
 
           // Placement squash-and-stretch timing (when putting a tile into a slot)
           val placeStart = puzzleState.tilePlacementTimestamps[coord]
           val placeElapsed = if (placeStart != null) (frameNowMs - placeStart) else 9999L
           val (snapScaleX, snapScaleY) = computeSnapSquashStretch(placeElapsed)
 
-          // Focused clue corridor or drag corridor highlight
+          // Focused clue corridor or drag corridor highlight on the Washi paper
           if ((isInHoveredCorridor || isInFocusedWord) && !isHoveredTarget) {
             val corridorColor =
-              if (isInHoveredCorridor) SkyCyan.copy(alpha = 0.16f + 0.10f * reticlePhase)
-              else SkyCyan.copy(alpha = 0.10f)
+              if (isInHoveredCorridor) SkyCyan.copy(alpha = 0.14f + 0.08f * reticlePhase)
+              else SkyCyan.copy(alpha = 0.09f)
             drawRoundRect(
               color = corridorColor,
               topLeft = Offset(topLeft.x - pad * 0.65f, topLeft.y - pad * 0.65f),
@@ -347,19 +392,19 @@ fun LexiFillBoardCanvas(
           }
 
           when {
-            // 1. Permanent Fixed Clue Letter Cell (3D Beveled Obsidian Stone)
+            // 1. Permanent Fixed Clue Letter Cell (Folded Kraft Origami Paper Tile)
             cell.fixedLetter != null -> {
               val bgColor =
                 if (cell.isLockedCompleted) CompletedWordBg else FixedClueCellBg
               val borderColor =
                 if (cell.isLockedCompleted) CompletedWordBorder
-                else if (isInFocusedWord) SkyCyan.copy(alpha = 0.7f)
+                else if (isInFocusedWord) SkyCyan.copy(alpha = 0.65f)
                 else FixedClueCellBorder
 
-              // 3D Bottom Lip Shadow
+              // Soft paper drop shadow
               drawRoundRect(
-                color = Color.Black.copy(alpha = 0.42f),
-                topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.045f),
+                color = Color(0xFF8C7A5B).copy(alpha = 0.24f),
+                topLeft = Offset(topLeft.x + cellSize * 0.02f, topLeft.y + cellSize * 0.04f),
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
               )
@@ -369,20 +414,33 @@ fun LexiFillBoardCanvas(
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
               )
-              // Top inner specular highlight bevel
+
+              // Subtle diagonal origami fold crease inside the paper tile
               drawLine(
-                color = Color.White.copy(alpha = 0.14f),
-                start = Offset(topLeft.x + innerSize * 0.16f, topLeft.y + cellSize * 0.04f),
-                end = Offset(topLeft.x + innerSize * 0.84f, topLeft.y + cellSize * 0.04f),
-                strokeWidth = cellSize * 0.03f,
-                cap = StrokeCap.Round,
+                color = Color.White.copy(alpha = 0.45f),
+                start = Offset(topLeft.x + innerSize * 0.08f, topLeft.y + innerSize * 0.92f),
+                end = Offset(topLeft.x + innerSize * 0.92f, topLeft.y + innerSize * 0.08f),
+                strokeWidth = cellSize * 0.02f,
               )
+
+              // Origami dog-ear corner fold triangle in top-right corner
+              val foldSize = innerSize * 0.20f
+              dogEarPath.reset()
+              dogEarPath.moveTo(topLeft.x + innerSize - foldSize, topLeft.y)
+              dogEarPath.lineTo(topLeft.x + innerSize, topLeft.y + foldSize)
+              dogEarPath.lineTo(topLeft.x + innerSize - foldSize, topLeft.y + foldSize)
+              dogEarPath.close()
+              drawPath(
+                path = dogEarPath,
+                color = borderColor.copy(alpha = 0.42f),
+              )
+
               drawRoundRect(
                 color = borderColor,
                 topLeft = topLeft,
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
-                style = Stroke(width = cellSize * 0.042f),
+                style = Stroke(width = cellSize * 0.038f),
               )
 
               letterPaint.color = WashiCream.toArgb()
@@ -395,7 +453,7 @@ fun LexiFillBoardCanvas(
                 letterPaint,
               )
 
-              subPaint.color = WashiCream.copy(alpha = 0.55f).toArgb()
+              subPaint.color = WashiMuted.toArgb()
               subPaint.textSize = innerSize * 0.19f
               drawContext.canvas.nativeCanvas.drawText(
                 com.example.domain.model.GameCatalog.letterBaseScore(cell.fixedLetter).toString(),
@@ -405,43 +463,38 @@ fun LexiFillBoardCanvas(
               )
             }
 
-            // 2. Player Placed Tile inside a Blank Target Slot (3D Tactile Tile + Squash-and-Stretch!)
+            // 2. Player Placed Origami Tile inside a Blank Target Slot (with Squash-and-Stretch!)
             cell.placedTile != null -> {
               val tile = cell.placedTile
               withTransform({
                 scale(scaleX = snapScaleX, scaleY = snapScaleY, pivot = cellCenter)
               }) {
-                if (placeElapsed in 0..380) {
-                  val shadowExpand = (1f - placeElapsed / 380f) * cellSize * 0.12f
-                  drawRoundRect(
-                    color = SkyCyan.copy(alpha = (1f - placeElapsed / 380f) * 0.55f),
-                    topLeft = Offset(topLeft.x - shadowExpand, topLeft.y - shadowExpand),
-                    size = Size(innerSize + shadowExpand * 2f, innerSize + shadowExpand * 2f),
-                    cornerRadius = cornerRadius,
-                  )
-                }
-
-                // 3D Bottom Lip Shadow
+                // Paper shadow
                 drawRoundRect(
-                  color = Color.Black.copy(alpha = 0.45f),
-                  topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.05f),
+                  color = Color(0xFF7D6B4D).copy(alpha = 0.28f),
+                  topLeft = Offset(topLeft.x + cellSize * 0.02f, topLeft.y + cellSize * 0.045f),
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
                 )
                 drawRoundRect(
-                  color = skinBaseColor,
+                  color = if (cell.isLockedCompleted) CompletedWordBg else skinBaseColor,
                   topLeft = topLeft,
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
                 )
-                // Top inner specular highlight
-                drawLine(
-                  color = Color.White.copy(alpha = 0.45f),
-                  start = Offset(topLeft.x + innerSize * 0.15f, topLeft.y + cellSize * 0.045f),
-                  end = Offset(topLeft.x + innerSize * 0.85f, topLeft.y + cellSize * 0.045f),
-                  strokeWidth = cellSize * 0.032f,
-                  cap = StrokeCap.Round,
+
+                // Origami dog-ear corner fold on placed tile
+                val foldSize = innerSize * 0.19f
+                dogEarPath.reset()
+                dogEarPath.moveTo(topLeft.x + innerSize - foldSize, topLeft.y)
+                dogEarPath.lineTo(topLeft.x + innerSize, topLeft.y + foldSize)
+                dogEarPath.lineTo(topLeft.x + innerSize - foldSize, topLeft.y + foldSize)
+                dogEarPath.close()
+                drawPath(
+                  path = dogEarPath,
+                  color = (if (cell.isLockedCompleted) CeladonJade else skinBorderColor).copy(alpha = 0.35f),
                 )
+
                 val borderCol =
                   if (cell.isLockedCompleted) CeladonJade else skinBorderColor
                 drawRoundRect(
@@ -449,10 +502,12 @@ fun LexiFillBoardCanvas(
                   topLeft = topLeft,
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
-                  style = Stroke(width = cellSize * 0.055f),
+                  style = Stroke(width = cellSize * 0.048f),
                 )
 
-                letterPaint.color = skinTextColorArgb
+                val charColorArgb =
+                  if (cell.isLockedCompleted) WashiCream.toArgb() else skinTextColorArgb
+                letterPaint.color = charColorArgb
                 letterPaint.textSize = innerSize * 0.55f
                 val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
                 drawContext.canvas.nativeCanvas.drawText(
@@ -462,7 +517,7 @@ fun LexiFillBoardCanvas(
                   letterPaint,
                 )
 
-                subPaint.color = skinTextColorArgb
+                subPaint.color = charColorArgb
                 subPaint.textSize = innerSize * 0.20f
                 drawContext.canvas.nativeCanvas.drawText(
                   tile.baseScore.toString(),
@@ -473,14 +528,14 @@ fun LexiFillBoardCanvas(
               }
             }
 
-            // 3. Open Blank Target Socket (Needs a Letter!)
+            // 3. Open Blank Target Paper Cutout Socket (Needs a Letter!)
             else -> {
               val multBg =
                 when (cell.multiplier) {
-                  SquareMultiplier.TW -> SquareTwBg.copy(alpha = 0.55f)
-                  SquareMultiplier.DW -> SquareDwBg.copy(alpha = 0.55f)
-                  SquareMultiplier.TL -> SquareTlBg.copy(alpha = 0.55f)
-                  SquareMultiplier.DL -> SquareDlBg.copy(alpha = 0.55f)
+                  SquareMultiplier.TW -> SquareTwBg
+                  SquareMultiplier.DW -> SquareDwBg
+                  SquareMultiplier.TL -> SquareTlBg
+                  SquareMultiplier.DL -> SquareDlBg
                   else -> BlankSlotSocketBg
                 }
 
@@ -498,11 +553,11 @@ fun LexiFillBoardCanvas(
                   isHoveredTarget && preview != null && !preview.isDualAxisValid -> VermilionRed
                   isHintHighlighted -> KyotoGold
                   cell.isIntersection -> KyotoGold.copy(alpha = 0.65f + pulseAlpha * 0.25f)
-                  else -> BlankSlotSocketBorder.copy(alpha = 0.85f)
+                  else -> BlankSlotSocketBorder
                 }
 
               val strokeWidth =
-                if (isHoveredTarget || isHintHighlighted) cellSize * 0.075f else cellSize * 0.042f
+                if (isHoveredTarget || isHintHighlighted) cellSize * 0.068f else cellSize * 0.038f
 
               drawRoundRect(
                 color = strokeColor,
@@ -514,7 +569,7 @@ fun LexiFillBoardCanvas(
                     width = strokeWidth,
                     pathEffect =
                       if (isHoveredTarget) null
-                      else PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f),
+                      else PathEffect.dashPathEffect(floatArrayOf(9f, 6f), 0f),
                   ),
               )
 
@@ -522,20 +577,20 @@ fun LexiFillBoardCanvas(
               if (isHoveredTarget && preview != null) {
                 val activeColor = if (preview.isDualAxisValid) CeladonJade else VermilionRed
                 drawRoundRect(
-                  color = activeColor.copy(alpha = 0.26f + 0.12f * reticlePhase),
+                  color = activeColor.copy(alpha = 0.18f + 0.10f * reticlePhase),
                   topLeft = topLeft,
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
                 )
 
-                // Draw 4 animated magnetic corner lock-on brackets around the socket
-                val bracketInset = -cellSize * (0.04f + 0.04f * reticlePhase)
-                val bracketLen = innerSize * 0.28f
+                // Draw 4 animated magnetic corner lock-on brackets around the paper socket
+                val bracketInset = -cellSize * (0.03f + 0.035f * reticlePhase)
+                val bracketLen = innerSize * 0.26f
                 val bx0 = topLeft.x + bracketInset
                 val by0 = topLeft.y + bracketInset
                 val bx1 = topLeft.x + innerSize - bracketInset
                 val by1 = topLeft.y + innerSize - bracketInset
-                val bStroke = cellSize * 0.055f
+                val bStroke = cellSize * 0.05f
 
                 // Top-left bracket
                 drawLine(activeColor, Offset(bx0, by0), Offset(bx0 + bracketLen, by0), bStroke, StrokeCap.Round)
@@ -551,7 +606,7 @@ fun LexiFillBoardCanvas(
                 drawLine(activeColor, Offset(bx1, by1), Offset(bx1, by1 - bracketLen), bStroke, StrokeCap.Round)
 
                 letterPaint.color = activeColor.toArgb()
-                letterPaint.textSize = innerSize * (0.52f + 0.06f * reticlePhase)
+                letterPaint.textSize = innerSize * (0.52f + 0.05f * reticlePhase)
                 val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
                 drawContext.canvas.nativeCanvas.drawText(
                   preview.tileChar.toString(),
@@ -573,66 +628,59 @@ fun LexiFillBoardCanvas(
                 val badge =
                   if (cell.multiplier != SquareMultiplier.NONE) cell.multiplier.label
                   else if (cell.isIntersection) "◆"
-                  else "•"
+                  else "+"
                 subPaint.color =
-                  (if (cell.isIntersection) KyotoGold else WashiCream.copy(alpha = 0.65f)).toArgb()
+                  (if (cell.isIntersection) KyotoGold else WashiMuted.copy(alpha = 0.65f)).toArgb()
                 subPaint.textSize =
-                  if (cell.multiplier != SquareMultiplier.NONE) innerSize * 0.28f
-                  else innerSize * 0.30f
+                  if (cell.multiplier != SquareMultiplier.NONE) innerSize * 0.27f
+                  else innerSize * 0.26f
                 val by = cellCenter.y - (subPaint.descent() + subPaint.ascent()) / 2f
                 drawContext.canvas.nativeCanvas.drawText(badge, cellCenter.x, by, subPaint)
               }
             }
           }
 
-          // Word Completion Flash Animation Overlay on newly completed cells!
+          // Gentle, Non-Distracting Paper Shimmer on Newly Completed Cells
           if (flashProgress > 0f) {
             drawRoundRect(
-              color = KyotoGold.copy(alpha = flashProgress * 0.58f),
+              color = CeladonJade.copy(alpha = flashProgress * 0.22f),
               topLeft = topLeft,
               size = Size(innerSize, innerSize),
               cornerRadius = cornerRadius,
             )
             drawRoundRect(
-              color = CeladonJade.copy(alpha = flashProgress * 0.95f),
-              topLeft = Offset(topLeft.x - 2f, topLeft.y - 2f),
-              size = Size(innerSize + 4f, innerSize + 4f),
+              color = CeladonJade.copy(alpha = flashProgress * 0.65f),
+              topLeft = Offset(topLeft.x - 1.5f, topLeft.y - 1.5f),
+              size = Size(innerSize + 3f, innerSize + 3f),
               cornerRadius = cornerRadius,
-              style = Stroke(width = cellSize * 0.08f * flashProgress),
+              style = Stroke(width = cellSize * 0.05f * flashProgress),
             )
           }
 
-          // Concentric Tile Placement Shockwave Rings (when putting a tile!)
-          if (placeElapsed in 0..620) {
-            val t = placeElapsed / 620f
-            val ring1Radius = cellSize * (0.45f + 1.25f * t)
-            val ring2Radius = cellSize * (0.30f + 0.90f * t)
+          // Subtle Paper Ripple Ring when a tile snaps into place
+          if (placeElapsed in 0..420) {
+            val t = placeElapsed / 420f
+            val ringRadius = cellSize * (0.42f + 0.48f * t)
             val ringAlpha = (1f - t).coerceIn(0f, 1f)
             drawCircle(
-              color = SkyCyan.copy(alpha = ringAlpha * 0.85f),
-              radius = ring1Radius,
+              color = SkyCyan.copy(alpha = ringAlpha * 0.45f),
+              radius = ringRadius,
               center = cellCenter,
-              style = Stroke(width = cellSize * 0.06f * (1f - t * 0.5f)),
-            )
-            drawCircle(
-              color = KyotoGold.copy(alpha = ringAlpha * 0.75f),
-              radius = ring2Radius,
-              center = cellCenter,
-              style = Stroke(width = cellSize * 0.04f * (1f - t * 0.5f)),
+              style = Stroke(width = cellSize * 0.035f * (1f - t * 0.5f)),
             )
           }
 
-          // Crimson Rejection Ripple when dropping an invalid tile onto a slot
+          // Soft Vermilion Ripple when dropping an invalid tile onto a slot
           val rejectStart = puzzleState.rejectedSlotTimestamps[coord]
           val rejectElapsed = if (rejectStart != null) (frameNowMs - rejectStart) else 9999L
-          if (rejectElapsed in 0..550) {
-            val rt = rejectElapsed / 550f
+          if (rejectElapsed in 0..480) {
+            val rt = rejectElapsed / 480f
             val rAlpha = (1f - rt).coerceIn(0f, 1f)
             drawCircle(
-              color = VermilionRed.copy(alpha = rAlpha * 0.85f),
-              radius = cellSize * (0.45f + 1.15f * rt),
+              color = VermilionRed.copy(alpha = rAlpha * 0.55f),
+              radius = cellSize * (0.42f + 0.65f * rt),
               center = cellCenter,
-              style = Stroke(width = cellSize * 0.065f * rAlpha),
+              style = Stroke(width = cellSize * 0.045f * rAlpha),
             )
           }
         }
@@ -648,13 +696,13 @@ fun LexiFillBoardCanvas(
             size.width - cellSize * 1.3f,
           )
         val pillCenterY =
-          (originY + hc.y * cellSize - cellSize * 0.58f).coerceAtLeast(cellSize * 0.42f)
-        val pillW = cellSize * 2.15f
-        val pillH = cellSize * 0.52f
+          (originY + hc.y * cellSize - cellSize * 0.55f).coerceAtLeast(cellSize * 0.40f)
+        val pillW = cellSize * 2.1f
+        val pillH = cellSize * 0.50f
         val pillColor = if (hp.isDualAxisValid) CeladonJade else VermilionRed
 
         drawRoundRect(
-          color = IndigoNight.copy(alpha = 0.94f),
+          color = IndigoSurface.copy(alpha = 0.96f),
           topLeft = Offset(centerX - pillW / 2f, pillCenterY - pillH / 2f),
           size = Size(pillW, pillH),
           cornerRadius = CornerRadius(pillH / 2f, pillH / 2f),
@@ -664,142 +712,63 @@ fun LexiFillBoardCanvas(
           topLeft = Offset(centerX - pillW / 2f, pillCenterY - pillH / 2f),
           size = Size(pillW, pillH),
           cornerRadius = CornerRadius(pillH / 2f, pillH / 2f),
-          style = Stroke(width = cellSize * 0.045f),
+          style = Stroke(width = cellSize * 0.04f),
         )
 
         val calloutLabel =
           if (hp.isDualAxisValid) "${hp.tileChar} • +${hp.estimatedScoreGain}"
           else "${hp.tileChar} ✕"
         subPaint.color = pillColor.toArgb()
-        subPaint.textSize = cellSize * 0.25f
+        subPaint.textSize = cellSize * 0.24f
         val ty = pillCenterY - (subPaint.descent() + subPaint.ascent()) / 2f
         drawContext.canvas.nativeCanvas.drawText(calloutLabel, centerX, ty, subPaint)
       }
 
-      // Render Particle Bursts over placed tiles and completed intersections
-      for (burst in puzzleState.particleBursts) {
-        val elapsed = (frameNowMs - burst.createdAtMs).coerceAtLeast(0L)
-        if (elapsed in 0..1100) {
-          val t = elapsed / 1100f
-          val center =
-            Offset(
-              originX + (burst.boardCoord.x + 0.5f) * cellSize,
-              originY + (burst.boardCoord.y + 0.5f) * cellSize,
-            )
-          val maxRadius = cellSize * 2.1f
-          val baseColor = Color(burst.colorHex)
-          for (i in 0 until burst.particleCount) {
-            val angle = (2.0 * PI * i) / burst.particleCount + (i % 3) * 0.2f
-            val speedFactor = 0.55f + (i % 4) * 0.18f
-            val dist = maxRadius * t * speedFactor
-            val px = center.x + (cos(angle) * dist).toFloat()
-            val py = center.y + (sin(angle) * dist).toFloat()
-            val pColor = if (i % 2 == 0) baseColor else KyotoGold
-            drawCircle(
-              color = pColor.copy(alpha = (1f - t).coerceIn(0f, 1f)),
-              radius = cellSize * 0.09f * (1f - t * 0.6f),
-              center = Offset(px, py),
-            )
-          }
-        }
-      }
-
-      // Render Center-of-Grid Canvas Confetti Particle Explosion when a word is completed!
-      val gridCenter = Offset(originX + gridW / 2f, originY + gridH / 2f)
-      val confettiPalette =
+      // Gentle Origami Paper Petals Wafting on Word Completion (Non-Distracting & Localized!)
+      val origamiPetalPalette =
         listOf(
-          KyotoGold,
           CeladonJade,
+          KyotoGold,
           SkyCyan,
-          VermilionRed,
-          Color(0xFFFF7597),
-          WashiCream,
         )
 
       for (confetti in puzzleState.confettiExplosions) {
         val elapsed = (frameNowMs - confetti.createdAtMs).coerceAtLeast(0L)
-        if (elapsed in 0..1850) {
-          val t = elapsed / 1850f
-          val fadeAlpha = (1f - ((t - 0.58f).coerceAtLeast(0f) / 0.42f)).coerceIn(0f, 1f)
+        if (elapsed in 0..720) {
+          val t = elapsed / 720f
+          val fadeAlpha = (sin(t * PI).toFloat() * 0.42f).coerceIn(0f, 0.42f)
+          val gridCenter = Offset(originX + gridW / 2f, originY + gridH / 2f)
+          val count = confetti.fragmentCount.coerceAtMost(12)
 
-          // Center-of-grid ignition shockwave ring at explosion start
-          if (t < 0.32f) {
-            val ringT = t / 0.32f
-            val ringColor = if (confetti.isDualIntersection) KyotoGold else CeladonJade
-            drawCircle(
-              color = ringColor.copy(alpha = (1f - ringT) * 0.85f),
-              radius = cellSize * (0.4f + 2.6f * ringT),
-              center = gridCenter,
-              style = Stroke(width = cellSize * 0.08f * (1f - ringT * 0.6f)),
-            )
-          }
-
-          // Ballistic 3D tumbling confetti fragments spawned from the center of the grid
-          for (i in 0 until confetti.fragmentCount) {
-            val hash = ((i * 73856093) xor (confetti.seed * 19349663)) and 0x7FFFFFFF
-            val angleSpread =
-              (2.0 * PI * i) / confetti.fragmentCount + ((hash % 100) / 100.0 - 0.5) * 0.25
-            val speedFactor = 0.28f + ((hash % 1000) / 1000f) * 0.56f
-            val radialSpeed = min(gridW, gridH) * speedFactor
-
-            // Air drag deceleration on initial blast velocity + upward fountain impulse + gravity
-            val dragProgress = 1f - (1f - t) * (1f - t) * (1f - t)
-            val vx = cos(angleSpread).toFloat() * radialSpeed
-            val vy = sin(angleSpread).toFloat() * radialSpeed - gridH * 0.22f
-            val gravity = gridH * 0.82f
-
-            // Sinusoidal paper flutter as fragments drift downward
-            val flutterPhase = (hash % 360) * (PI / 180.0).toFloat()
-            val flutterFreq = 9f + (i % 5) * 2.5f
-            val flutterAmp = cellSize * (0.08f + (i % 3) * 0.05f) * t
-            val flutterX = sin(t * flutterFreq + flutterPhase) * flutterAmp
-
-            val px = gridCenter.x + vx * dragProgress + flutterX
-            val py = gridCenter.y + vy * dragProgress + 0.5f * gravity * t * t
-
-            // 3D spin & flip simulation
-            val spinDeg = ((hash % 360) + t * (340f + (i % 6) * 120f)) % 360f
-            val tumbleFlipX = cos(t * (11f + (i % 4) * 3f) + flutterPhase).coerceIn(-1f, 1f)
-            val fragColor = confettiPalette[i % confettiPalette.size].copy(alpha = fadeAlpha)
-
-            val fragW =
-              when (i % 3) {
-                0 -> cellSize * 0.24f // Ribbon rectangle
-                1 -> cellSize * 0.17f // Square/diamond shard
-                else -> cellSize * 0.30f // Long streamer strip
-              }
-            val fragH =
-              when (i % 3) {
-                0 -> cellSize * 0.12f
-                1 -> cellSize * 0.17f
-                else -> cellSize * 0.08f
-              }
+          for (i in 0 until count) {
+            val angle = (2.0 * PI * i) / count + t * 0.35
+            val dist = cellSize * (0.35f + 1.15f * t)
+            val px = gridCenter.x + (cos(angle) * dist).toFloat()
+            val py = gridCenter.y + (sin(angle) * dist * 0.65f).toFloat() - cellSize * 0.45f * t
+            val petalSize = cellSize * 0.11f * (1f - t * 0.35f)
+            val col = origamiPetalPalette[i % origamiPetalPalette.size].copy(alpha = fadeAlpha)
 
             withTransform({
               translate(left = px, top = py)
-              rotate(degrees = spinDeg, pivot = Offset.Zero)
-              scale(
-                scaleX = if (kotlin.math.abs(tumbleFlipX) < 0.18f) 0.18f else tumbleFlipX,
-                scaleY = 1f,
-                pivot = Offset.Zero,
-              )
+              rotate(degrees = (i * 45f + t * 90f) % 360f, pivot = Offset.Zero)
             }) {
-              drawRoundRect(
-                color = fragColor,
-                topLeft = Offset(-fragW / 2f, -fragH / 2f),
-                size = Size(fragW, fragH),
-                cornerRadius = CornerRadius(fragH * 0.25f, fragH * 0.25f),
-              )
+              // Tiny folded origami triangle petal
+              petalPath.reset()
+              petalPath.moveTo(0f, -petalSize)
+              petalPath.lineTo(petalSize * 0.85f, petalSize * 0.7f)
+              petalPath.lineTo(-petalSize * 0.85f, petalSize * 0.7f)
+              petalPath.close()
+              drawPath(path = petalPath, color = col)
             }
           }
         }
       }
 
-      // Render Floating Score Popups (+50 PTS · COMBO x2!)
+      // Render Compact Floating Score Popups (+50 PTS · COMBO x2!)
       for (popup in puzzleState.scorePopups) {
         val elapsed = (frameNowMs - popup.createdAtMs).coerceAtLeast(0L)
-        if (elapsed in 0..1500) {
-          val t = elapsed / 1500f
+        if (elapsed in 0..1050) {
+          val t = elapsed / 1050f
           val alpha = (1f - (t - 0.35f).coerceAtLeast(0f) / 0.65f).coerceIn(0f, 1f)
           val anchorX =
             (originX + (popup.coord.x + 0.5f) * cellSize).coerceIn(
@@ -807,27 +776,18 @@ fun LexiFillBoardCanvas(
               size.width - cellSize * 1.8f,
             )
           val anchorY =
-            (originY + popup.coord.y * cellSize - cellSize * 0.9f * t).coerceAtLeast(cellSize * 0.65f)
+            (originY + popup.coord.y * cellSize - cellSize * 0.65f * t).coerceAtLeast(cellSize * 0.55f)
 
           letterPaint.color =
             (if (popup.isDualAxisClear) KyotoGold else CeladonJade)
               .copy(alpha = alpha)
               .toArgb()
-          letterPaint.textSize = cellSize * (0.34f + 0.08f * sin(t * PI).toFloat())
+          letterPaint.textSize = cellSize * 0.30f
           drawContext.canvas.nativeCanvas.drawText(
             popup.headline,
             anchorX,
             anchorY,
             letterPaint,
-          )
-
-          subPaint.color = WashiCream.copy(alpha = alpha).toArgb()
-          subPaint.textSize = cellSize * 0.23f
-          drawContext.canvas.nativeCanvas.drawText(
-            popup.subline,
-            anchorX,
-            anchorY + cellSize * 0.28f,
-            subPaint,
           )
         }
       }
@@ -839,28 +799,25 @@ fun LexiFillBoardCanvas(
  * Computes physical squash-and-stretch scale factors when a tile snaps into a board socket.
  */
 private fun computeSnapSquashStretch(elapsedMs: Long): Pair<Float, Float> {
-  if (elapsedMs !in 0..420) return 1f to 1f
-  val t = elapsedMs / 420f
+  if (elapsedMs !in 0..380) return 1f to 1f
+  val t = elapsedMs / 380f
   return when {
-    // Phase 1 (0..0.28): Tile drops in from lifted scale (1.35x) to impact squash (1.16x wide, 0.85x tall)
     t < 0.28f -> {
       val p = t / 0.28f
-      val sx = 1.35f + (1.16f - 1.35f) * p
-      val sy = 1.35f + (0.85f - 1.35f) * p
+      val sx = 1.24f + (1.12f - 1.24f) * p
+      val sy = 1.24f + (0.89f - 1.24f) * p
       sx to sy
     }
-    // Phase 2 (0.28..0.62): Rebound stretch (0.93x wide, 1.09x tall)
     t < 0.62f -> {
       val p = (t - 0.28f) / 0.34f
-      val sx = 1.16f + (0.93f - 1.16f) * p
-      val sy = 0.85f + (1.09f - 0.85f) * p
+      val sx = 1.12f + (0.96f - 1.12f) * p
+      val sy = 0.89f + (1.05f - 0.89f) * p
       sx to sy
     }
-    // Phase 3 (0.62..1.0): Settle into socket (1.0x, 1.0x)
     else -> {
       val p = (t - 0.62f) / 0.38f
-      val sx = 0.93f + (1.0f - 0.93f) * p
-      val sy = 1.09f + (1.0f - 1.09f) * p
+      val sx = 0.96f + (1.0f - 0.96f) * p
+      val sy = 1.05f + (1.0f - 1.05f) * p
       sx to sy
     }
   }

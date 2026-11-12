@@ -43,19 +43,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -106,6 +106,7 @@ import com.example.ui.components.LiveIntersectionPreviewBanner
 import com.example.ui.components.SkeletonBoardGeometry
 import com.example.ui.feedback.AudioPlayer
 import com.example.ui.theme.CeladonJade
+import com.example.ui.theme.CompletedWordBg
 import com.example.ui.theme.IndigoCard
 import com.example.ui.theme.IndigoElevated
 import com.example.ui.theme.IndigoNight
@@ -176,7 +177,7 @@ fun LexiFillMainScreen(
         NavigationBarItem(
           selected = currentTab == LexiFillDestination.TRIE_EXPLORER,
           onClick = { currentTab = LexiFillDestination.TRIE_EXPLORER },
-          icon = { Icon(Icons.Filled.MenuBook, contentDescription = "Trie Solver") },
+          icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Trie Solver") },
           label = { Text("Trie") },
           modifier = Modifier.testTag("nav_tab_trie"),
         )
@@ -316,8 +317,9 @@ private fun SkeletonPuzzleArena(
         onTileTapped = onRackTileTapped,
         onTileDragStart = onTileDragStart,
         onTileDragMove = { tile, rootPoint ->
-          val magneticSlot = boardGeometry.resolveMagneticSlot(rootPoint, puzzleState)
+          val (magneticSlot, pullVector) = boardGeometry.resolveMagneticPull(rootPoint, puzzleState)
           onTileDragHover(tile, magneticSlot)
+          pullVector
         },
         onTileDragDrop = { tile, rootPoint ->
           val magneticSlot = boardGeometry.resolveMagneticSlot(rootPoint, puzzleState)
@@ -474,7 +476,8 @@ private fun LexiFillTopHud(
         ) {
           Icon(
             imageVector =
-              if (puzzleState.isSoundMuted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+              if (puzzleState.isSoundMuted) Icons.AutoMirrored.Filled.VolumeOff
+              else Icons.AutoMirrored.Filled.VolumeUp,
             contentDescription =
               if (puzzleState.isSoundMuted) "Unmute sound effects" else "Mute sound effects",
             tint = if (puzzleState.isSoundMuted) WashiMuted else CeladonJade,
@@ -542,9 +545,9 @@ private fun IntersectingCluesStrip(
       val isFocused = tw.id == focusedWordId
       val bg =
         when {
-          tw.isCompleted -> Color(0xFF0B3B2D)
-          isFocused -> Color(0xFF142D4C)
-          else -> IndigoCard
+          tw.isCompleted -> CompletedWordBg
+          isFocused -> Color(0xFFDFECF6)
+          else -> IndigoSurface
         }
       val border =
         when {
@@ -769,7 +772,7 @@ fun ComboStreakHudBadge(
       when {
         isMaxCombo -> Brush.horizontalGradient(listOf(VermilionRed, KyotoGold))
         isSuperCombo -> Brush.horizontalGradient(listOf(Color(0xFFD97706), KyotoGold))
-        isHighCombo -> Brush.horizontalGradient(listOf(IndigoElevated, Color(0xFF1E3A5F)))
+        isHighCombo -> Brush.horizontalGradient(listOf(Color(0xFFF7E9C8), Color(0xFFF3D592)))
         else -> Brush.horizontalGradient(listOf(IndigoCard, IndigoCard))
       }
 

@@ -1,36 +1,37 @@
 package com.example.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val LexiFillColorScheme =
-  darkColorScheme(
+private val CrosswordOrigamiPaperScheme =
+  lightColorScheme(
     primary = SkyCyan,
-    onPrimary = IndigoNight,
-    primaryContainer = IndigoElevated,
+    onPrimary = Color(0xFFFFFCF5),
+    primaryContainer = IndigoCard,
     onPrimaryContainer = WashiCream,
     secondary = KyotoGold,
-    onSecondary = IndigoNight,
-    secondaryContainer = Color(0xFF3D3118),
-    onSecondaryContainer = KyotoGoldSoft,
+    onSecondary = Color(0xFFFFFCF5),
+    secondaryContainer = Color(0xFFF7E9C8),
+    onSecondaryContainer = WashiCream,
     tertiary = CeladonJade,
-    onTertiary = IndigoNight,
+    onTertiary = Color(0xFFFFFCF5),
     background = IndigoNight,
     onBackground = WashiCream,
     surface = IndigoSurface,
     onSurface = WashiCream,
     surfaceVariant = IndigoCard,
     onSurfaceVariant = WashiMuted,
-    error = Color(0xFFFF6B6B),
+    outline = IndigoElevated,
+    error = VermilionRed,
     onError = Color.White,
   )
 
 @Composable
 fun LexiFillTheme(content: @Composable () -> Unit) {
   MaterialTheme(
-    colorScheme = LexiFillColorScheme,
+    colorScheme = CrosswordOrigamiPaperScheme,
     typography = Typography,
     content = content,
   )

@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">LexiFill: Crossword Skeleton</string>
+    <string name="app_name">Crossword Origami</string>
     <string name="sign_in_with_google">Sign in with Google</string>
-    <string name="cd_hero_banner">LexiFill Crossword Skeleton puzzle header</string>
+    <string name="cd_hero_banner">Crossword Origami puzzle header</string>
     <string name="nav_puzzle">Skeleton Grid</string>
     <string name="nav_levels">Puzzle Vault</string>
     <string name="nav_builder">Custom Skeleton</string>

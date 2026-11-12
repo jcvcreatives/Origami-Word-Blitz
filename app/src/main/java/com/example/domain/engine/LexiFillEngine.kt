@@ -493,18 +493,18 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           id = "burst_${nowMs}_${targetX}_${targetY}",
           boardCoord = dropCoord,
           colorHex = if (isDualIntersectionClear) 0xFFFFB703 else 0xFF10B981,
-          particleCount = if (isDualIntersectionClear) 28 else 20,
+          particleCount = if (isDualIntersectionClear) 10 else 8,
           createdAtMs = nowMs,
         )
       )
-      // Spawn center-of-grid Confetti Particle Explosion whenever a word is completed!
+      // Spawn subtle, non-distracting stardust shimmer when a word is completed
       newConfetti.add(
         com.example.domain.model.ConfettiExplosionEvent(
           id = "confetti_${nowMs}_${targetX}_${targetY}",
           wordLabel = wordNames,
           isDualIntersection = isDualIntersectionClear,
           comboCount = newComboStreak,
-          fragmentCount = if (isDualIntersectionClear) 84 else 56,
+          fragmentCount = if (isDualIntersectionClear) 14 else 10,
           seed = (nowMs.toInt() xor (targetX * 31 + targetY * 97)),
           createdAtMs = nowMs,
         )
@@ -521,13 +521,13 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           createdAtMs = nowMs,
         )
       )
-      // Emit crisp cyan/gold tile snap sparks on every tile placement
+      // Emit subtle tile snap sparks on placement
       newParticles.add(
         ParticleBurst(
           id = "snap_${nowMs}_${targetX}_${targetY}",
           boardCoord = dropCoord,
           colorHex = if (targetCell.isIntersection) 0xFFFFB703 else 0xFF38BDF8,
-          particleCount = 14,
+          particleCount = 6,
           createdAtMs = nowMs,
         )
       )
@@ -611,7 +611,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         confettiExplosions = newConfetti,
         cellFlashTimestamps = updatedFlashTimestamps,
         tilePlacementTimestamps = updatedPlacementTimestamps,
-        boardShakeIntensity = if (isDualIntersectionClear) 1.2f else if (newlyCompletedWords.isNotEmpty()) 0.6f else 0.25f,
+        boardShakeIntensity = if (isDualIntersectionClear) 0.45f else if (newlyCompletedWords.isNotEmpty()) 0.22f else 0f,
         statusMessage = statusText,
         isStatusError = false,
         isLevelCleared = allWordsCompleted,
