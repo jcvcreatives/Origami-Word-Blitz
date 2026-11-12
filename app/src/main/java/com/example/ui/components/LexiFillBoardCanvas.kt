@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,7 +36,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,7 +60,6 @@ import com.example.ui.theme.FixedClueCellBorder
 import com.example.ui.theme.IndigoCard
 import com.example.ui.theme.IndigoNight
 import com.example.ui.theme.KyotoGold
-import com.example.ui.theme.MagneticSnapGlow
 import com.example.ui.theme.SkyCyan
 import com.example.ui.theme.SquareDlBg
 import com.example.ui.theme.SquareDwBg
@@ -95,13 +97,11 @@ data class SkeletonBoardGeometry(
     val exactCol = (localX / cellSizePx).toInt()
     val exactRow = (localY / cellSizePx).toInt()
 
-    // Direct hit on an open or unlocked blank slot
     val directCell = state.cellAt(exactCol, exactRow)
     if (directCell != null && directCell.isBlankTarget && !directCell.isLockedCompleted) {
       return Coordinate(exactCol, exactRow)
     }
 
-    // Magnetic snap radius search (up to 1.35x cell width) for frictionless mobile drag-and-drop
     val maxSnapDist = cellSizePx * 1.35f
     var bestCoord: Coordinate? = null
     var bestDist = Float.MAX_VALUE
@@ -121,13 +121,6 @@ data class SkeletonBoardGeometry(
     }
     return bestCoord
   }
-
-  fun cellCenterInCanvas(coord: Coordinate): Offset {
-    return Offset(
-      x = gridOffsetInCanvas.x + (coord.x + 0.5f) * cellSizePx,
-      y = gridOffsetInCanvas.y + (coord.y + 0.5f) * cellSizePx,
-    )
-  }
 }
 
 @Composable
@@ -145,17 +138,37 @@ fun LexiFillBoardCanvas(
       targetValue = 0.95f,
       animationSpec =
         infiniteRepeatable(
-          animation = tween(850, easing = FastOutSlowInEasing),
+          animation = tween(750, easing = FastOutSlowInEasing),
           repeatMode = RepeatMode.Reverse,
         ),
       label = "pulse_alpha",
     )
 
-  // Frame clock tick for smooth word-completion cell flashes, floating score bursts & particles
+  val reticlePhase by
+    infiniteTransition.animateFloat(
+      initialValue = 0f,
+      targetValue = 1f,
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(650, easing = FastOutSlowInEasing),
+          repeatMode = RepeatMode.Reverse,
+        ),
+      label = "reticle_phase",
+    )
+
+  // Frame clock tick for smooth tile-snap squash/stretch, shockwaves, cell flashes, popups & particles
   var frameNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-  LaunchedEffect(puzzleState.cellFlashTimestamps, puzzleState.scorePopups, puzzleState.particleBursts) {
+  LaunchedEffect(
+    puzzleState.cellFlashTimestamps,
+    puzzleState.tilePlacementTimestamps,
+    puzzleState.rejectedSlotTimestamps,
+    puzzleState.scorePopups,
+    puzzleState.particleBursts,
+  ) {
     val hasActiveAnimations =
       puzzleState.cellFlashTimestamps.isNotEmpty() ||
+        puzzleState.tilePlacementTimestamps.isNotEmpty() ||
+        puzzleState.rejectedSlotTimestamps.isNotEmpty() ||
         puzzleState.scorePopups.isNotEmpty() ||
         puzzleState.particleBursts.isNotEmpty()
     if (hasActiveAnimations) {
@@ -167,14 +180,14 @@ fun LexiFillBoardCanvas(
     }
   }
 
-  // Screen micro-shake on invalid intersection or dual-axis clear
+  // Screen micro-shake on invalid intersection or tile snap / dual-axis clear
   val shakeOffset = remember { Animatable(0f) }
   LaunchedEffect(puzzleState.boardShakeIntensity) {
     if (puzzleState.boardShakeIntensity > 0f) {
       val mag = puzzleState.boardShakeIntensity * 10f
       val keyframes = listOf(-mag, mag, -mag * 0.7f, mag * 0.7f, -mag * 0.35f, 0f)
       for (target in keyframes) {
-        shakeOffset.animateTo(target, tween(36, easing = LinearEasing))
+        shakeOffset.animateTo(target, tween(34, easing = LinearEasing))
       }
       onShakeConsumed()
     }
@@ -193,9 +206,8 @@ fun LexiFillBoardCanvas(
     }
   }
 
-  var currentGeometry by remember { androidx.compose.runtime.mutableStateOf(SkeletonBoardGeometry()) }
+  var currentGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
 
-  // Identify all coordinates in the intersecting Horizontal & Vertical words when hovering a slot
   val hoveredCorridorCoords =
     remember(puzzleState.hoverCoord, puzzleState.targetWords) {
       val hc = puzzleState.hoverCoord
@@ -281,7 +293,6 @@ fun LexiFillBoardCanvas(
           val cellCenter = Offset(topLeft.x + innerSize / 2f, topLeft.y + innerSize / 2f)
 
           if (!cell.isPlayable) {
-            // Subtle architectural blueprint dot for non-playable skeleton space
             drawCircle(
               color = IndigoCard.copy(alpha = 0.55f),
               radius = cellSize * 0.045f,
@@ -298,12 +309,18 @@ fun LexiFillBoardCanvas(
           val flashProgress =
             if (flashElapsed in 0..850) 1f - (flashElapsed / 850f) else 0f
 
+          // Placement squash-and-stretch timing (when putting a tile into a slot)
+          val placeStart = puzzleState.tilePlacementTimestamps[coord]
+          val placeElapsed = if (placeStart != null) (frameNowMs - placeStart) else 9999L
+          val (snapScaleX, snapScaleY) = computeSnapSquashStretch(placeElapsed)
+
           // Corridor highlight under intersecting horizontal/vertical words during drag
           if (isInHoveredCorridor && !isHoveredTarget) {
+            val corridorAlpha = 0.14f + 0.10f * reticlePhase
             drawRoundRect(
-              color = SkyCyan.copy(alpha = 0.16f),
-              topLeft = Offset(topLeft.x - pad * 0.5f, topLeft.y - pad * 0.5f),
-              size = Size(innerSize + pad, innerSize + pad),
+              color = SkyCyan.copy(alpha = corridorAlpha),
+              topLeft = Offset(topLeft.x - pad * 0.6f, topLeft.y - pad * 0.6f),
+              size = Size(innerSize + pad * 1.2f, innerSize + pad * 1.2f),
               cornerRadius = cornerRadius,
             )
           }
@@ -330,7 +347,6 @@ fun LexiFillBoardCanvas(
                 style = Stroke(width = cellSize * 0.04f),
               )
 
-              // Draw permanent clue letter
               letterPaint.color = WashiCream.toArgb()
               letterPaint.textSize = innerSize * 0.54f
               val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
@@ -341,7 +357,6 @@ fun LexiFillBoardCanvas(
                 letterPaint,
               )
 
-              // Subtle point value subscript
               subPaint.color = WashiCream.copy(alpha = 0.55f).toArgb()
               subPaint.textSize = innerSize * 0.19f
               drawContext.canvas.nativeCanvas.drawText(
@@ -352,43 +367,58 @@ fun LexiFillBoardCanvas(
               )
             }
 
-            // 2. Player Placed Tile inside a Blank Target Slot
+            // 2. Player Placed Tile inside a Blank Target Slot (with Squash-and-Stretch Impact Physics!)
             cell.placedTile != null -> {
               val tile = cell.placedTile
-              drawRoundRect(
-                color = skinBaseColor,
-                topLeft = topLeft,
-                size = Size(innerSize, innerSize),
-                cornerRadius = cornerRadius,
-              )
-              val borderCol =
-                if (cell.isLockedCompleted) CeladonJade else skinBorderColor
-              drawRoundRect(
-                color = borderCol,
-                topLeft = topLeft,
-                size = Size(innerSize, innerSize),
-                cornerRadius = cornerRadius,
-                style = Stroke(width = cellSize * 0.055f),
-              )
+              withTransform({
+                scale(scaleX = snapScaleX, scaleY = snapScaleY, pivot = cellCenter)
+              }) {
+                // Impact under-shadow when landing
+                if (placeElapsed in 0..380) {
+                  val shadowExpand = (1f - placeElapsed / 380f) * cellSize * 0.12f
+                  drawRoundRect(
+                    color = SkyCyan.copy(alpha = (1f - placeElapsed / 380f) * 0.55f),
+                    topLeft = Offset(topLeft.x - shadowExpand, topLeft.y - shadowExpand),
+                    size = Size(innerSize + shadowExpand * 2f, innerSize + shadowExpand * 2f),
+                    cornerRadius = cornerRadius,
+                  )
+                }
 
-              letterPaint.color = skinTextColorArgb
-              letterPaint.textSize = innerSize * 0.55f
-              val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
-              drawContext.canvas.nativeCanvas.drawText(
-                tile.char.toString(),
-                cellCenter.x,
-                textY,
-                letterPaint,
-              )
+                drawRoundRect(
+                  color = skinBaseColor,
+                  topLeft = topLeft,
+                  size = Size(innerSize, innerSize),
+                  cornerRadius = cornerRadius,
+                )
+                val borderCol =
+                  if (cell.isLockedCompleted) CeladonJade else skinBorderColor
+                drawRoundRect(
+                  color = borderCol,
+                  topLeft = topLeft,
+                  size = Size(innerSize, innerSize),
+                  cornerRadius = cornerRadius,
+                  style = Stroke(width = cellSize * 0.055f),
+                )
 
-              subPaint.color = skinTextColorArgb
-              subPaint.textSize = innerSize * 0.20f
-              drawContext.canvas.nativeCanvas.drawText(
-                tile.baseScore.toString(),
-                topLeft.x + innerSize * 0.80f,
-                topLeft.y + innerSize * 0.88f,
-                subPaint,
-              )
+                letterPaint.color = skinTextColorArgb
+                letterPaint.textSize = innerSize * 0.55f
+                val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
+                drawContext.canvas.nativeCanvas.drawText(
+                  tile.char.toString(),
+                  cellCenter.x,
+                  textY,
+                  letterPaint,
+                )
+
+                subPaint.color = skinTextColorArgb
+                subPaint.textSize = innerSize * 0.20f
+                drawContext.canvas.nativeCanvas.drawText(
+                  tile.baseScore.toString(),
+                  topLeft.x + innerSize * 0.80f,
+                  topLeft.y + innerSize * 0.88f,
+                  subPaint,
+                )
+              }
             }
 
             // 3. Open Blank Target Socket (Needs a Letter!)
@@ -436,20 +466,40 @@ fun LexiFillBoardCanvas(
                   ),
               )
 
-              // If dragging a tile over this blank slot, draw magnetic Ghost Letter Preview!
+              // Magnetic Lock-On Ghost Letter & Target Reticle Brackets while Dragging!
               if (isHoveredTarget && preview != null) {
-                val ghostColor =
-                  if (preview.isDualAxisValid) CeladonJade.copy(alpha = 0.28f)
-                  else VermilionRed.copy(alpha = 0.28f)
+                val activeColor = if (preview.isDualAxisValid) CeladonJade else VermilionRed
                 drawRoundRect(
-                  color = ghostColor,
+                  color = activeColor.copy(alpha = 0.26f + 0.12f * reticlePhase),
                   topLeft = topLeft,
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
                 )
-                letterPaint.color =
-                  (if (preview.isDualAxisValid) CeladonJade else VermilionRed).toArgb()
-                letterPaint.textSize = innerSize * 0.54f
+
+                // Draw 4 animated magnetic corner lock-on brackets around the socket
+                val bracketInset = -cellSize * (0.04f + 0.04f * reticlePhase)
+                val bracketLen = innerSize * 0.28f
+                val bx0 = topLeft.x + bracketInset
+                val by0 = topLeft.y + bracketInset
+                val bx1 = topLeft.x + innerSize - bracketInset
+                val by1 = topLeft.y + innerSize - bracketInset
+                val bStroke = cellSize * 0.055f
+
+                // Top-left bracket
+                drawLine(activeColor, Offset(bx0, by0), Offset(bx0 + bracketLen, by0), bStroke, StrokeCap.Round)
+                drawLine(activeColor, Offset(bx0, by0), Offset(bx0, by0 + bracketLen), bStroke, StrokeCap.Round)
+                // Top-right bracket
+                drawLine(activeColor, Offset(bx1, by0), Offset(bx1 - bracketLen, by0), bStroke, StrokeCap.Round)
+                drawLine(activeColor, Offset(bx1, by0), Offset(bx1, by0 + bracketLen), bStroke, StrokeCap.Round)
+                // Bottom-left bracket
+                drawLine(activeColor, Offset(bx0, by1), Offset(bx0 + bracketLen, by1), bStroke, StrokeCap.Round)
+                drawLine(activeColor, Offset(bx0, by1), Offset(bx0, by1 - bracketLen), bStroke, StrokeCap.Round)
+                // Bottom-right bracket
+                drawLine(activeColor, Offset(bx1, by1), Offset(bx1 - bracketLen, by1), bStroke, StrokeCap.Round)
+                drawLine(activeColor, Offset(bx1, by1), Offset(bx1, by1 - bracketLen), bStroke, StrokeCap.Round)
+
+                letterPaint.color = activeColor.toArgb()
+                letterPaint.textSize = innerSize * (0.52f + 0.06f * reticlePhase)
                 val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
                 drawContext.canvas.nativeCanvas.drawText(
                   preview.tileChar.toString(),
@@ -458,7 +508,6 @@ fun LexiFillBoardCanvas(
                   letterPaint,
                 )
               } else if (isHintHighlighted && cell.expectedLetter != null) {
-                // Smart Hint ghost letter
                 letterPaint.color = KyotoGold.copy(alpha = pulseAlpha).toArgb()
                 letterPaint.textSize = innerSize * 0.52f
                 val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
@@ -469,7 +518,6 @@ fun LexiFillBoardCanvas(
                   letterPaint,
                 )
               } else {
-                // Draw Multiplier Label (2L, 3L, 2W, 3W) or Intersection Nexus Diamond (◆)
                 val badge =
                   if (cell.multiplier != SquareMultiplier.NONE) cell.multiplier.label
                   else if (cell.isIntersection) "◆"
@@ -501,10 +549,82 @@ fun LexiFillBoardCanvas(
               style = Stroke(width = cellSize * 0.08f * flashProgress),
             )
           }
+
+          // Concentric Tile Placement Shockwave Rings (when putting a tile!)
+          if (placeElapsed in 0..620) {
+            val t = placeElapsed / 620f
+            val ring1Radius = cellSize * (0.45f + 1.25f * t)
+            val ring2Radius = cellSize * (0.30f + 0.90f * t)
+            val ringAlpha = (1f - t).coerceIn(0f, 1f)
+            drawCircle(
+              color = SkyCyan.copy(alpha = ringAlpha * 0.85f),
+              radius = ring1Radius,
+              center = cellCenter,
+              style = Stroke(width = cellSize * 0.06f * (1f - t * 0.5f)),
+            )
+            drawCircle(
+              color = KyotoGold.copy(alpha = ringAlpha * 0.75f),
+              radius = ring2Radius,
+              center = cellCenter,
+              style = Stroke(width = cellSize * 0.04f * (1f - t * 0.5f)),
+            )
+          }
+
+          // Crimson Rejection Ripple when dropping an invalid tile onto a slot
+          val rejectStart = puzzleState.rejectedSlotTimestamps[coord]
+          val rejectElapsed = if (rejectStart != null) (frameNowMs - rejectStart) else 9999L
+          if (rejectElapsed in 0..550) {
+            val rt = rejectElapsed / 550f
+            val rAlpha = (1f - rt).coerceIn(0f, 1f)
+            drawCircle(
+              color = VermilionRed.copy(alpha = rAlpha * 0.85f),
+              radius = cellSize * (0.45f + 1.15f * rt),
+              center = cellCenter,
+              style = Stroke(width = cellSize * 0.065f * rAlpha),
+            )
+          }
         }
       }
 
-      // Render Particle Bursts over completed intersections
+      // Floating Magnifier Callout Pill above the Hovered Blank Slot during Drag
+      val hc = puzzleState.hoverCoord
+      val hp = puzzleState.hoverPreview
+      if (hc != null && hp != null && hp.isValidSlot) {
+        val centerX =
+          (originX + (hc.x + 0.5f) * cellSize).coerceIn(
+            cellSize * 1.3f,
+            size.width - cellSize * 1.3f,
+          )
+        val pillCenterY =
+          (originY + hc.y * cellSize - cellSize * 0.58f).coerceAtLeast(cellSize * 0.42f)
+        val pillW = cellSize * 2.15f
+        val pillH = cellSize * 0.52f
+        val pillColor = if (hp.isDualAxisValid) CeladonJade else VermilionRed
+
+        drawRoundRect(
+          color = IndigoNight.copy(alpha = 0.94f),
+          topLeft = Offset(centerX - pillW / 2f, pillCenterY - pillH / 2f),
+          size = Size(pillW, pillH),
+          cornerRadius = CornerRadius(pillH / 2f, pillH / 2f),
+        )
+        drawRoundRect(
+          color = pillColor,
+          topLeft = Offset(centerX - pillW / 2f, pillCenterY - pillH / 2f),
+          size = Size(pillW, pillH),
+          cornerRadius = CornerRadius(pillH / 2f, pillH / 2f),
+          style = Stroke(width = cellSize * 0.045f),
+        )
+
+        val calloutLabel =
+          if (hp.isDualAxisValid) "${hp.tileChar} • +${hp.estimatedScoreGain}"
+          else "${hp.tileChar} ✕"
+        subPaint.color = pillColor.toArgb()
+        subPaint.textSize = cellSize * 0.25f
+        val ty = pillCenterY - (subPaint.descent() + subPaint.ascent()) / 2f
+        drawContext.canvas.nativeCanvas.drawText(calloutLabel, centerX, ty, subPaint)
+      }
+
+      // Render Particle Bursts over placed tiles and completed intersections
       for (burst in puzzleState.particleBursts) {
         val elapsed = (frameNowMs - burst.createdAtMs).coerceAtLeast(0L)
         if (elapsed in 0..1100) {
@@ -568,6 +688,37 @@ fun LexiFillBoardCanvas(
           )
         }
       }
+    }
+  }
+}
+
+/**
+ * Computes physical squash-and-stretch scale factors when a tile snaps into a board socket.
+ */
+private fun computeSnapSquashStretch(elapsedMs: Long): Pair<Float, Float> {
+  if (elapsedMs !in 0..420) return 1f to 1f
+  val t = elapsedMs / 420f
+  return when {
+    // Phase 1 (0..0.28): Tile drops in from lifted scale (1.35x) to impact squash (1.16x wide, 0.85x tall)
+    t < 0.28f -> {
+      val p = t / 0.28f
+      val sx = 1.35f + (1.16f - 1.35f) * p
+      val sy = 1.35f + (0.85f - 1.35f) * p
+      sx to sy
+    }
+    // Phase 2 (0.28..0.62): Rebound stretch (0.93x wide, 1.09x tall)
+    t < 0.62f -> {
+      val p = (t - 0.28f) / 0.34f
+      val sx = 1.16f + (0.93f - 1.16f) * p
+      val sy = 0.85f + (1.09f - 0.85f) * p
+      sx to sy
+    }
+    // Phase 3 (0.62..1.0): Settle into socket (1.0x, 1.0x)
+    else -> {
+      val p = (t - 0.62f) / 0.38f
+      val sx = 0.93f + (1.0f - 0.93f) * p
+      val sy = 1.09f + (1.0f - 1.09f) * p
+      sx to sy
     }
   }
 }

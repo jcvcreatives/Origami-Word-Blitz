@@ -9,6 +9,7 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -69,6 +70,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -408,14 +411,17 @@ private fun SpringDraggableRackTile(
 ) {
   val scope = rememberCoroutineScope()
   val dragOffset = remember(tile.id) { Animatable(Offset.Zero, Offset.VectorConverter) }
+  val tiltZ = remember(tile.id) { Animatable(0f) }
   var isDragging by remember(tile.id) { mutableStateOf(false) }
   var tileRootCenter by remember(tile.id) { mutableStateOf(Offset.Zero) }
+  var dragVelocity by remember(tile.id) { mutableStateOf(Offset.Zero) }
+  var trailOffsets by remember(tile.id) { mutableStateOf<List<Offset>>(emptyList()) }
 
   val scale by
     animateFloatAsState(
       targetValue =
         when {
-          isDragging -> 1.24f
+          isDragging -> 1.28f
           isSelected -> 1.12f
           else -> 1.0f
         },
@@ -425,6 +431,15 @@ private fun SpringDraggableRackTile(
           stiffness = Spring.StiffnessMedium,
         ),
       label = "rack_tile_scale",
+    )
+
+  val infinite = rememberInfiniteTransition(label = "drag_halo_${tile.id}")
+  val haloPhase by
+    infinite.animateFloat(
+      initialValue = 0f,
+      targetValue = (2f * PI).toFloat(),
+      animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Restart),
+      label = "halo_phase",
     )
 
   val baseColor = Color(skin.baseColorHex)
@@ -439,55 +454,153 @@ private fun SpringDraggableRackTile(
   Box(
     modifier =
       Modifier.zIndex(if (isDragging) 50f else if (isSelected) 10f else 1f)
-        .offset {
-          IntOffset(
-            dragOffset.value.x.roundToInt(),
-            dragOffset.value.y.roundToInt(),
+        .size(50.dp),
+    contentAlignment = Alignment.Center,
+  ) {
+    // Render Comet Spark Trail & Magnetic Energy Halo while dragging!
+    if (isDragging && trailOffsets.isNotEmpty()) {
+      Canvas(modifier = Modifier.fillMaxSize()) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val currentPos = center + dragOffset.value
+
+        // Comet trail behind the dragged tile
+        trailOffsets.forEachIndexed { idx, pastOffset ->
+          val progress = (idx + 1).toFloat() / trailOffsets.size.toFloat()
+          val sparkCenter = center + pastOffset
+          val sparkColor = if (idx % 2 == 0) SkyCyan else KyotoGold
+          drawCircle(
+            color = sparkColor.copy(alpha = progress * 0.65f),
+            radius = (3.5f + 7.5f * progress).dp.toPx(),
+            center = sparkCenter,
           )
         }
-        .scale(scale)
-        .size(50.dp)
-        .shadow(
-          elevation = if (isDragging) 14.dp else 4.dp,
-          shape = RoundedCornerShape(12.dp),
+
+        // Pulsing magnetic energy halo & 4 orbiting sparks around the lifted tile
+        drawCircle(
+          color = SkyCyan.copy(alpha = 0.28f),
+          radius = 34.dp.toPx(),
+          center = currentPos,
+          style = Stroke(width = 2.dp.toPx()),
         )
-        .clip(RoundedCornerShape(12.dp))
-        .background(baseColor)
-        .border(
-          width = if (isDragging || isSelected) 2.5.dp else 1.5.dp,
-          color = borderColor,
-          shape = RoundedCornerShape(12.dp),
-        )
-        .onGloballyPositioned { coords ->
-          val pos = coords.positionInRoot()
-          tileRootCenter =
-            Offset(
-              pos.x + coords.size.width / 2f,
-              pos.y + coords.size.height / 2f,
-            )
+        for (i in 0 until 4) {
+          val angle = haloPhase + (i * PI / 2.0).toFloat()
+          val orbitR = 32.dp.toPx()
+          drawCircle(
+            color = if (i % 2 == 0) KyotoGold else SkyCyan,
+            radius = 3.dp.toPx(),
+            center =
+              Offset(
+                currentPos.x + cos(angle) * orbitR,
+                currentPos.y + sin(angle) * orbitR,
+              ),
+          )
         }
-        .clickable { onTap() }
-        .pointerInput(tile.id) {
-          detectDragGestures(
-            onDragStart = {
-              isDragging = true
-              onDragStart()
-            },
-            onDrag = { change, dragAmount ->
-              change.consume()
-              val nextOffset = dragOffset.value + dragAmount
-              scope.launch { dragOffset.snapTo(nextOffset) }
-              // Calculate finger center in root coordinates for magnetic board hit-testing
-              val currentRootPoint = tileRootCenter + nextOffset
-              onDragMove(currentRootPoint)
-            },
-            onDragEnd = {
-              val dropRootPoint = tileRootCenter + dragOffset.value
-              isDragging = false
-              val accepted = onDragDrop(dropRootPoint)
-              if (!accepted) {
-                // Spring back to rack slot with bouncy physics!
+      }
+    }
+
+    Box(
+      modifier =
+        Modifier.offset {
+            IntOffset(
+              dragOffset.value.x.roundToInt(),
+              dragOffset.value.y.roundToInt(),
+            )
+          }
+          .scale(scale)
+          .graphicsLayer {
+            rotationZ = tiltZ.value
+            rotationX = (-dragVelocity.y * 0.45f).coerceIn(-14f, 14f)
+            rotationY = (dragVelocity.x * 0.45f).coerceIn(-14f, 14f)
+          }
+          .size(50.dp)
+          .shadow(
+            elevation = if (isDragging) 18.dp else 4.dp,
+            shape = RoundedCornerShape(12.dp),
+          )
+          .clip(RoundedCornerShape(12.dp))
+          .background(baseColor)
+          .border(
+            width = if (isDragging || isSelected) 2.5.dp else 1.5.dp,
+            color = borderColor,
+            shape = RoundedCornerShape(12.dp),
+          )
+          .onGloballyPositioned { coords ->
+            val pos = coords.positionInRoot()
+            tileRootCenter =
+              Offset(
+                pos.x + coords.size.width / 2f,
+                pos.y + coords.size.height / 2f,
+              )
+          }
+          .clickable { onTap() }
+          .pointerInput(tile.id) {
+            detectDragGestures(
+              onDragStart = {
+                isDragging = true
+                dragVelocity = Offset.Zero
+                trailOffsets = listOf(dragOffset.value)
+                onDragStart()
+              },
+              onDrag = { change, dragAmount ->
+                change.consume()
+                val nextOffset = dragOffset.value + dragAmount
+                dragVelocity =
+                  Offset(
+                    x = dragVelocity.x * 0.55f + dragAmount.x * 0.45f,
+                    y = dragVelocity.y * 0.55f + dragAmount.y * 0.45f,
+                  )
+                trailOffsets = (trailOffsets + nextOffset).takeLast(9)
+                val targetTilt = (dragVelocity.x * 0.65f).coerceIn(-16f, 16f)
                 scope.launch {
+                  dragOffset.snapTo(nextOffset)
+                  tiltZ.snapTo(targetTilt)
+                }
+                val currentRootPoint = tileRootCenter + nextOffset
+                onDragMove(currentRootPoint)
+              },
+              onDragEnd = {
+                val dropRootPoint = tileRootCenter + dragOffset.value
+                isDragging = false
+                dragVelocity = Offset.Zero
+                trailOffsets = emptyList()
+                val accepted = onDragDrop(dropRootPoint)
+                if (!accepted) {
+                  // Elastic rejection wiggle + bouncy spring return to rack slot!
+                  scope.launch {
+                    launch {
+                      tiltZ.animateTo(
+                        targetValue = 0f,
+                        animationSpec =
+                          keyframes {
+                            durationMillis = 480
+                            (-16f) at 80
+                            16f at 170
+                            (-10f) at 270
+                            6f at 370
+                            0f at 480
+                          },
+                      )
+                    }
+                    dragOffset.animateTo(
+                      targetValue = Offset.Zero,
+                      animationSpec =
+                        spring(
+                          dampingRatio = Spring.DampingRatioMediumBouncy,
+                          stiffness = Spring.StiffnessMediumLow,
+                        ),
+                    )
+                  }
+                } else {
+                  scope.launch { tiltZ.snapTo(0f) }
+                }
+              },
+              onDragCancel = {
+                isDragging = false
+                dragVelocity = Offset.Zero
+                trailOffsets = emptyList()
+                onDragCancel()
+                scope.launch {
+                  launch { tiltZ.animateTo(0f, tween(220)) }
                   dragOffset.animateTo(
                     targetValue = Offset.Zero,
                     animationSpec =
@@ -497,55 +610,41 @@ private fun SpringDraggableRackTile(
                       ),
                   )
                 }
-              }
-            },
-            onDragCancel = {
-              isDragging = false
-              onDragCancel()
-              scope.launch {
-                dragOffset.animateTo(
-                  targetValue = Offset.Zero,
-                  animationSpec =
-                    spring(
-                      dampingRatio = Spring.DampingRatioMediumBouncy,
-                      stiffness = Spring.StiffnessMediumLow,
-                    ),
-                )
-              }
-            },
+              },
+            )
+          }
+          .testTag("rack_tile_${tile.char}_${tile.id}"),
+      contentAlignment = Alignment.Center,
+    ) {
+      Text(
+        text = tile.char.toString(),
+        fontSize = 23.sp,
+        fontWeight = FontWeight.ExtraBold,
+        color = textColor,
+      )
+      Text(
+        text = tile.baseScore.toString(),
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        color = textColor.copy(alpha = 0.72f),
+        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp),
+      )
+      if (tile.bonusEffect != TileBonusEffect.NONE) {
+        Box(
+          modifier =
+            Modifier.align(Alignment.TopStart)
+              .padding(2.dp)
+              .clip(RoundedCornerShape(4.dp))
+              .background(KyotoGold)
+              .padding(horizontal = 3.dp, vertical = 1.dp)
+        ) {
+          Text(
+            text = tile.bonusEffect.badge,
+            fontSize = 7.sp,
+            fontWeight = FontWeight.Black,
+            color = IndigoNight,
           )
         }
-        .testTag("rack_tile_${tile.char}_${tile.id}"),
-    contentAlignment = Alignment.Center,
-  ) {
-    Text(
-      text = tile.char.toString(),
-      fontSize = 23.sp,
-      fontWeight = FontWeight.ExtraBold,
-      color = textColor,
-    )
-    Text(
-      text = tile.baseScore.toString(),
-      fontSize = 10.sp,
-      fontWeight = FontWeight.Bold,
-      color = textColor.copy(alpha = 0.72f),
-      modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp),
-    )
-    if (tile.bonusEffect != TileBonusEffect.NONE) {
-      Box(
-        modifier =
-          Modifier.align(Alignment.TopStart)
-            .padding(2.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(KyotoGold)
-            .padding(horizontal = 3.dp, vertical = 1.dp)
-      ) {
-        Text(
-          text = tile.bonusEffect.badge,
-          fontSize = 7.sp,
-          fontWeight = FontWeight.Black,
-          color = IndigoNight,
-        )
       }
     }
   }

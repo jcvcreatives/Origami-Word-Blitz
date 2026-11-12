@@ -252,6 +252,8 @@ data class PuzzleState(
   val scorePopups: List<ScorePopupEvent> = emptyList(),
   val particleBursts: List<ParticleBurst> = emptyList(),
   val cellFlashTimestamps: Map<Coordinate, Long> = emptyMap(),
+  val tilePlacementTimestamps: Map<Coordinate, Long> = emptyMap(),
+  val rejectedSlotTimestamps: Map<Coordinate, Long> = emptyMap(),
   val boardShakeIntensity: Float = 0f,
   val statusMessage: String = "Drag letter tiles into open blanks to complete intersecting words!",
   val isStatusError: Boolean = false,

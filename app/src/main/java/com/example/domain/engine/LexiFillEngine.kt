@@ -339,8 +339,18 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
 
     val preview = previewTileDrop(state, tile, targetX, targetY)
     if (!preview.isDualAxisValid) {
-      // Invalid placement on one or both crossword axes -> bounce back to rack with feedback
+      // Invalid placement on one or both crossword axes -> bounce back to rack with crimson ripple & sparks
       val reason = preview.invalidReason ?: "Invalid intersection letter '${tile.char}'"
+      val rejectCoord = Coordinate(targetX, targetY)
+      val rejectParticles =
+        state.particleBursts.takeLast(4) +
+          ParticleBurst(
+            id = "reject_${nowMs}_${targetX}_${targetY}",
+            boardCoord = rejectCoord,
+            colorHex = 0xFFFF5A36,
+            particleCount = 12,
+            createdAtMs = nowMs,
+          )
       return DropResult(
         updatedState =
           state.copy(
@@ -350,6 +360,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
             comboStreak = 0,
             comboMultiplier = 1.0f,
             mistakesMade = state.mistakesMade + 1,
+            particleBursts = rejectParticles,
+            rejectedSlotTimestamps = state.rejectedSlotTimestamps + (rejectCoord to nowMs),
             boardShakeIntensity = 1.0f,
             statusMessage = reason,
             isStatusError = true,
@@ -426,6 +438,9 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
     }
     updatedFlashTimestamps[Coordinate(targetX, targetY)] = nowMs
 
+    val dropCoord = Coordinate(targetX, targetY)
+    val updatedPlacementTimestamps = state.tilePlacementTimestamps + (dropCoord to nowMs)
+
     val finalCells =
       updatedCellsStep1.map { row ->
         row.map { c ->
@@ -443,7 +458,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
     // Build floating ScorePopupEvents & ParticleBursts
     val newPopups = ArrayList(state.scorePopups.takeLast(4))
     val newParticles = ArrayList(state.particleBursts.takeLast(4))
-    val dropCoord = Coordinate(targetX, targetY)
 
     if (newlyCompletedWords.isNotEmpty()) {
       val wordNames = newlyCompletedWords.joinToString(" × ") { it.completedWordText ?: it.word }
@@ -477,7 +491,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           id = "burst_${nowMs}_${targetX}_${targetY}",
           boardCoord = dropCoord,
           colorHex = if (isDualIntersectionClear) 0xFFFFB703 else 0xFF10B981,
-          particleCount = if (isDualIntersectionClear) 28 else 18,
+          particleCount = if (isDualIntersectionClear) 28 else 20,
           createdAtMs = nowMs,
         )
       )
@@ -490,6 +504,16 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           subline = "${tile.char} SNAPPED",
           isDualAxisClear = false,
           comboCount = newComboStreak.coerceAtLeast(1),
+          createdAtMs = nowMs,
+        )
+      )
+      // Emit crisp cyan/gold tile snap sparks on every tile placement
+      newParticles.add(
+        ParticleBurst(
+          id = "snap_${nowMs}_${targetX}_${targetY}",
+          boardCoord = dropCoord,
+          colorHex = if (targetCell.isIntersection) 0xFFFFB703 else 0xFF38BDF8,
+          particleCount = 14,
           createdAtMs = nowMs,
         )
       )
@@ -565,7 +589,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         scorePopups = newPopups,
         particleBursts = newParticles,
         cellFlashTimestamps = updatedFlashTimestamps,
-        boardShakeIntensity = if (isDualIntersectionClear) 1.2f else if (newlyCompletedWords.isNotEmpty()) 0.6f else 0f,
+        tilePlacementTimestamps = updatedPlacementTimestamps,
+        boardShakeIntensity = if (isDualIntersectionClear) 1.2f else if (newlyCompletedWords.isNotEmpty()) 0.6f else 0.25f,
         statusMessage = statusText,
         isStatusError = false,
         isLevelCleared = allWordsCompleted,
