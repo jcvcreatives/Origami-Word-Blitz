@@ -3,24 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LexiFill: Crossword Skeleton</title>
+  <title>Crossword Origami</title>
   <style>
     :root {
-      --bg: #0b101e;
-      --surface: #131b30;
-      --card: #1a2540;
-      --elevated: #243356;
-      --cyan: #38bdf8;
-      --gold: #ffb703;
-      --emerald: #10b981;
-      --crimson: #ff5a36;
-      --cream: #fff8ec;
-      --muted: #b4c0d9;
+      --bg: #f6efe2;
+      --surface: #fdf9f0;
+      --card: #ede2ce;
+      --elevated: #d6c5a9;
+      --cyan: #1e5b88;
+      --gold: #c87d12;
+      --emerald: #1f7a58;
+      --crimson: #c93b2b;
+      --cream: #221d17;
+      --muted: #6e5f4f;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
+      position: relative;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(circle at top, #172342 0%, var(--bg) 70%);
+      background: radial-gradient(circle at top, #fbf6ec 0%, var(--bg) 75%);
       color: var(--cream);
       min-height: 100vh;
       display: flex;
@@ -28,7 +29,45 @@
       align-items: center;
       padding: 16px;
     }
+    /* Subtle 'paper-grain' CSS filter overlay on the main Washi-paper background */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.24;
+      mix-blend-mode: multiply;
+      filter: url(#paper-grain);
+    }
+    /* Subtle 'paper-grain' CSS filter overlay on all Origami card & tile components */
+    .hud-card,
+    .clue-chip,
+    .board-frame,
+    .status-banner,
+    .rack-card,
+    .tile {
+      position: relative;
+      overflow: hidden;
+    }
+    .hud-card::after,
+    .clue-chip::after,
+    .board-frame::after,
+    .status-banner::after,
+    .rack-card::after,
+    .tile::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0.18;
+      mix-blend-mode: multiply;
+      filter: url(#paper-grain);
+    }
     .app-shell {
+      position: relative;
+      z-index: 2;
       width: 100%;
       max-width: 560px;
       display: flex;
@@ -44,9 +83,10 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.08);
     }
     .lvl-badge {
-      background: rgba(56, 189, 248, 0.18);
+      background: rgba(30, 91, 136, 0.14);
       color: var(--cyan);
       font-weight: 800;
       font-size: 11px;
@@ -74,7 +114,7 @@
     .combo-pill.bounce {
       transform: scale(1.36);
       background: linear-gradient(90deg, var(--crimson), var(--gold));
-      color: #0b101e;
+      color: #fffdf8;
     }
     .score-box { text-align: right; }
     .score-val { font-size: 18px; font-weight: 900; color: var(--gold); }
@@ -85,7 +125,7 @@
       padding-bottom: 4px;
     }
     .clue-chip {
-      background: var(--card);
+      background: var(--surface);
       border: 1px solid var(--elevated);
       border-radius: 12px;
       padding: 7px 11px;
@@ -93,7 +133,7 @@
       flex-shrink: 0;
     }
     .clue-chip.done {
-      background: #0b3b2d;
+      background: #dcefe6;
       border-color: var(--emerald);
     }
     .clue-head {
@@ -109,13 +149,14 @@
     .clue-desc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .board-frame {
       position: relative;
-      background: var(--bg);
-      border: 2px solid var(--card);
+      background: #efe6d5;
+      border: 2px solid var(--elevated);
       border-radius: 18px;
       padding: 12px;
       display: grid;
       gap: 5px;
       aspect-ratio: 9 / 8;
+      box-shadow: inset 0 2px 6px rgba(74, 56, 35, 0.08);
     }
     .cell {
       border-radius: 9px;
@@ -316,6 +357,20 @@
   </style>
 </head>
 <body>
+  <!-- Inline SVG filter generating organic Washi paper-grain texture -->
+  <svg width="0" height="0" style="position:absolute; pointer-events:none;" aria-hidden="true">
+    <filter id="paper-grain" x="0%" y="0%" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="4" stitchTiles="stitch" result="noise" />
+      <feColorMatrix
+        type="matrix"
+        values="0.35 0 0 0 0.58
+                0.30 0 0 0 0.53
+                0.22 0 0 0 0.44
+                0    0 0 0.36 0"
+        in="noise"
+      />
+    </filter>
+  </svg>
   <div class="app-shell">
     <div class="hud-card">
       <div>

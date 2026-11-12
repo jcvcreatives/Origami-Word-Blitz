@@ -73,6 +73,7 @@ import com.example.ui.theme.SquareTwBg
 import com.example.ui.theme.VermilionRed
 import com.example.ui.theme.WashiCream
 import com.example.ui.theme.WashiMuted
+import com.example.ui.theme.paperGrainOverlay
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
@@ -272,6 +273,7 @@ fun LexiFillBoardCanvas(
             listOf(IndigoSurface, Color(0xFFF6F0E2))
           )
         )
+        .paperGrainOverlay(alpha = 0.055f, fiberCount = 72, speckleCount = 110, seed = 404)
         .border(
           1.5.dp,
           IndigoElevated,

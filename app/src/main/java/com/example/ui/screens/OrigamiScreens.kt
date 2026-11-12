@@ -116,6 +116,7 @@ import com.example.ui.theme.SkyCyan
 import com.example.ui.theme.VermilionRed
 import com.example.ui.theme.WashiCream
 import com.example.ui.theme.WashiMuted
+import com.example.ui.theme.paperGrainOverlay
 import com.example.ui.viewmodel.GameViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.PI
@@ -188,7 +189,8 @@ fun LexiFillMainScreen(
       modifier =
         Modifier.fillMaxSize()
           .padding(innerPadding)
-          .background(IndigoNight),
+          .background(IndigoNight)
+          .paperGrainOverlay(alpha = 0.055f, fiberCount = 92, speckleCount = 148, seed = 101),
       contentAlignment = Alignment.TopCenter,
     ) {
       when (currentTab) {
@@ -383,6 +385,7 @@ private fun LexiFillTopHud(
     modifier =
       Modifier.fillMaxWidth()
         .border(1.dp, IndigoElevated, RoundedCornerShape(18.dp))
+        .paperGrainOverlay(alpha = 0.046f, fiberCount = 36, speckleCount = 54, seed = 202)
         .testTag("lexifill_top_hud"),
   ) {
     Column {
@@ -565,6 +568,12 @@ private fun IntersectingCluesStrip(
               width = if (isFocused || tw.isCompleted) 1.6.dp else 1.dp,
               color = border,
               shape = RoundedCornerShape(12.dp),
+            )
+            .paperGrainOverlay(
+              alpha = 0.042f,
+              fiberCount = 14,
+              speckleCount = 22,
+              seed = 303 + tw.id.hashCode(),
             )
             .clickable { onSelectClueWord(tw.id) }
             .testTag("clue_chip_${tw.id}"),
@@ -851,7 +860,8 @@ private fun PuzzleVaultScreen(
               1.5.dp,
               Brush.horizontalGradient(listOf(SkyCyan, CeladonJade, KyotoGold)),
               RoundedCornerShape(18.dp),
-            ),
+            )
+            .paperGrainOverlay(alpha = 0.048f, fiberCount = 38, speckleCount = 56, seed = 404),
       ) {
         Row(
           modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -895,6 +905,12 @@ private fun PuzzleVaultScreen(
                   else -> IndigoCard
                 },
               shape = RoundedCornerShape(16.dp),
+            )
+            .paperGrainOverlay(
+              alpha = 0.044f,
+              fiberCount = 26,
+              speckleCount = 40,
+              seed = 500 + template.levelNumber,
             )
             .clickable { onSelectLevel(template.levelNumber) }
             .testTag("vault_level_${template.levelNumber}"),
@@ -1007,7 +1023,10 @@ private fun CustomStudioAndSkinsScreen(
       Surface(
         shape = RoundedCornerShape(18.dp),
         color = IndigoSurface,
-        modifier = Modifier.fillMaxWidth().border(1.dp, IndigoElevated, RoundedCornerShape(18.dp)),
+        modifier =
+          Modifier.fillMaxWidth()
+            .border(1.dp, IndigoElevated, RoundedCornerShape(18.dp))
+            .paperGrainOverlay(alpha = 0.046f, fiberCount = 32, speckleCount = 48, seed = 601),
       ) {
         Column(
           modifier = Modifier.padding(16.dp),
@@ -1053,7 +1072,10 @@ private fun CustomStudioAndSkinsScreen(
       Surface(
         shape = RoundedCornerShape(18.dp),
         color = IndigoSurface,
-        modifier = Modifier.fillMaxWidth().border(1.dp, IndigoElevated, RoundedCornerShape(18.dp)),
+        modifier =
+          Modifier.fillMaxWidth()
+            .border(1.dp, IndigoElevated, RoundedCornerShape(18.dp))
+            .paperGrainOverlay(alpha = 0.046f, fiberCount = 34, speckleCount = 52, seed = 602),
       ) {
         Column(
           modifier = Modifier.padding(16.dp),
@@ -1131,6 +1153,12 @@ private fun CustomStudioAndSkinsScreen(
               width = if (isEquipped) 2.dp else 1.dp,
               color = if (isEquipped) KyotoGold else IndigoElevated,
               shape = RoundedCornerShape(16.dp),
+            )
+            .paperGrainOverlay(
+              alpha = 0.044f,
+              fiberCount = 24,
+              speckleCount = 38,
+              seed = 700 + skin.id.hashCode(),
             ),
       ) {
         Row(
@@ -1241,7 +1269,10 @@ private fun TriePatternSolverScreen(
     Surface(
       shape = RoundedCornerShape(16.dp),
       color = IndigoSurface,
-      modifier = Modifier.fillMaxWidth().border(1.dp, IndigoElevated, RoundedCornerShape(16.dp)),
+      modifier =
+        Modifier.fillMaxWidth()
+          .border(1.dp, IndigoElevated, RoundedCornerShape(16.dp))
+          .paperGrainOverlay(alpha = 0.046f, fiberCount = 34, speckleCount = 50, seed = 801),
     ) {
       Column(
         modifier = Modifier.padding(14.dp),

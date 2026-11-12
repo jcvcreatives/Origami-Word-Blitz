@@ -108,6 +108,7 @@ import com.example.ui.theme.SkyCyan
 import com.example.ui.theme.VermilionRed
 import com.example.ui.theme.WashiCream
 import com.example.ui.theme.WashiMuted
+import com.example.ui.theme.paperGrainOverlay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -154,6 +155,7 @@ fun LiveIntersectionPreviewBanner(
       modifier
         .fillMaxWidth()
         .shadow(elevation = 2.dp, shape = RoundedCornerShape(14.dp))
+        .paperGrainOverlay(alpha = 0.045f, fiberCount = 32, speckleCount = 48, seed = 505)
         .border(1.2.dp, borderColor, RoundedCornerShape(14.dp))
         .testTag("intersection_preview_banner"),
     shape = RoundedCornerShape(14.dp),
@@ -399,6 +401,7 @@ fun LexiFillDraggableRack(
       modifier
         .fillMaxWidth()
         .shadow(elevation = 3.dp, shape = RoundedCornerShape(18.dp))
+        .paperGrainOverlay(alpha = 0.05f, fiberCount = 48, speckleCount = 72, seed = 606)
         .border(1.2.dp, IndigoElevated, RoundedCornerShape(18.dp))
         .testTag("lexifill_rack_container"),
     shape = RoundedCornerShape(18.dp),
@@ -802,6 +805,7 @@ private fun SpringDraggableRackTile(
           )
           .clip(RoundedCornerShape(10.dp))
           .background(baseColor)
+          .paperGrainOverlay(alpha = 0.05f, fiberCount = 10, speckleCount = 16, seed = 707 + tileIndex)
           .border(
             width = if (isDragging || isSelected) 2.2.dp else 1.4.dp,
             color = borderColor,
@@ -1053,6 +1057,7 @@ fun LevelClearFanfareOverlay(
         modifier =
           Modifier.fillMaxWidth()
             .shadow(elevation = 10.dp, shape = RoundedCornerShape(22.dp))
+            .paperGrainOverlay(alpha = 0.048f, fiberCount = 44, speckleCount = 68, seed = 808)
             .border(
               2.dp,
               Brush.linearGradient(listOf(KyotoGold, CeladonJade, SkyCyan)),
