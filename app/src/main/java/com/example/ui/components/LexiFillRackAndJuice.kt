@@ -89,6 +89,7 @@ import com.example.domain.model.LevelClearSummary
 import com.example.domain.model.PuzzleState
 import com.example.domain.model.Tile
 import com.example.domain.model.TileBonusEffect
+import com.example.domain.model.WordDirection
 import com.example.ui.theme.CeladonJade
 import com.example.ui.theme.IndigoCard
 import com.example.ui.theme.IndigoElevated
@@ -106,9 +107,9 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * Live Dual-Axis Intersection & Clue Status Banner.
+ * Live Dual-Axis Intersection & Active Clue Spotlight Banner.
  * Shows real-time horizontal + vertical word validation while hovering a dragged tile over a blank slot,
- * or shows the active unsolved crossword clue skeleton when idle.
+ * or displays a crisp interactive Active Clue Spotlight with boxed letter slots when idle.
  */
 @Composable
 fun LiveIntersectionPreviewBanner(
@@ -116,12 +117,19 @@ fun LiveIntersectionPreviewBanner(
   modifier: Modifier = Modifier,
 ) {
   val preview: DropPreviewEvaluation? = puzzleState.hoverPreview
+  val focusedWord =
+    remember(puzzleState.focusedWordId, puzzleState.targetWords) {
+      puzzleState.targetWords.find { it.id == puzzleState.focusedWordId }
+        ?: puzzleState.targetWords.firstOrNull { !it.isCompleted }
+        ?: puzzleState.targetWords.firstOrNull()
+    }
+
   val borderColor =
     when {
       preview != null && preview.isDualAxisValid -> CeladonJade
       preview != null && !preview.isDualAxisValid -> VermilionRed
       puzzleState.isStatusError -> VermilionRed
-      else -> IndigoElevated
+      else -> SkyCyan.copy(alpha = 0.45f)
     }
 
   val bgColor =
@@ -136,14 +144,14 @@ fun LiveIntersectionPreviewBanner(
     modifier =
       modifier
         .fillMaxWidth()
-        .border(1.2.dp, borderColor, RoundedCornerShape(14.dp))
+        .border(1.2.dp, borderColor, RoundedCornerShape(16.dp))
         .testTag("intersection_preview_banner"),
-    shape = RoundedCornerShape(14.dp),
+    shape = RoundedCornerShape(16.dp),
     color = bgColor,
   ) {
     if (preview != null && preview.isValidSlot) {
       Row(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
       ) {
@@ -207,41 +215,134 @@ fun LiveIntersectionPreviewBanner(
         }
       }
     } else {
-      // Idle state: show next unsolved TargetWord skeleton & status
-      val nextTarget = puzzleState.targetWords.firstOrNull { !it.isCompleted }
-      Row(
+      // Idle state: Active Clue Spotlight Card with boxed letter slots
+      Column(
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
       ) {
-        Icon(
-          imageVector =
-            if (puzzleState.isStatusError) Icons.Filled.WarningAmber else Icons.Filled.AutoAwesome,
-          contentDescription = "Puzzle status",
-          tint = if (puzzleState.isStatusError) VermilionRed else SkyCyan,
-          modifier = Modifier.size(20.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = puzzleState.statusMessage,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = if (puzzleState.isStatusError) Color(0xFFFFB4BC) else WashiCream,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
-          if (nextTarget != null) {
-            Text(
-              text =
-                "${nextTarget.direction.label.uppercase()}: ${nextTarget.formattedSkeleton(puzzleState.cells)} — ${nextTarget.clue}",
-              style = MaterialTheme.typography.bodySmall,
-              fontFamily = FontFamily.Monospace,
-              color = WashiMuted,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis,
-            )
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f),
+          ) {
+            if (focusedWord != null) {
+              val isAcross = focusedWord.direction == WordDirection.HORIZONTAL
+              Box(
+                modifier =
+                  Modifier.clip(RoundedCornerShape(6.dp))
+                    .background(
+                      if (focusedWord.isCompleted) CeladonJade.copy(alpha = 0.2f)
+                      else SkyCyan.copy(alpha = 0.18f)
+                    )
+                    .border(
+                      1.dp,
+                      if (focusedWord.isCompleted) CeladonJade else SkyCyan.copy(alpha = 0.6f),
+                      RoundedCornerShape(6.dp),
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+              ) {
+                Text(
+                  text = if (isAcross) "ACROSS →" else "DOWN ↓",
+                  fontSize = 9.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (focusedWord.isCompleted) CeladonJade else SkyCyan,
+                )
+              }
+              Text(
+                text = focusedWord.clue,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = WashiCream,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+              )
+            } else {
+              Icon(
+                imageVector =
+                  if (puzzleState.isStatusError) Icons.Filled.WarningAmber
+                  else Icons.Filled.AutoAwesome,
+                contentDescription = "Puzzle status",
+                tint = if (puzzleState.isStatusError) VermilionRed else SkyCyan,
+                modifier = Modifier.size(18.dp),
+              )
+              Text(
+                text = puzzleState.statusMessage,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (puzzleState.isStatusError) Color(0xFFFFB4BC) else WashiCream,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+              )
+            }
+          }
+
+          // Visual boxed letter slots for the focused word
+          if (focusedWord != null) {
+            Row(
+              horizontalArrangement = Arrangement.spacedBy(3.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              focusedWord.coordinates().forEachIndexed { idx, coord ->
+                val cell = puzzleState.cellAt(coord.x, coord.y)
+                val ch = cell?.activeLetter
+                val isBlank = idx in focusedWord.missingBlankIndices
+                Box(
+                  modifier =
+                    Modifier.size(20.dp)
+                      .clip(RoundedCornerShape(4.dp))
+                      .background(
+                        when {
+                          focusedWord.isCompleted -> CeladonJade.copy(alpha = 0.22f)
+                          ch != null && isBlank -> KyotoGold.copy(alpha = 0.24f)
+                          ch != null -> IndigoElevated
+                          else -> IndigoNight
+                        }
+                      )
+                      .border(
+                        width = 1.dp,
+                        color =
+                          when {
+                            focusedWord.isCompleted -> CeladonJade
+                            ch != null && isBlank -> KyotoGold
+                            ch != null -> IndigoElevated
+                            else -> SkyCyan.copy(alpha = 0.65f)
+                          },
+                        shape = RoundedCornerShape(4.dp),
+                      ),
+                  contentAlignment = Alignment.Center,
+                ) {
+                  Text(
+                    text = ch?.toString() ?: "_",
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.ExtraBold,
+                    color =
+                      when {
+                        focusedWord.isCompleted -> CeladonJade
+                        ch != null && isBlank -> KyotoGold
+                        ch != null -> WashiCream
+                        else -> SkyCyan
+                      },
+                  )
+                }
+              }
+            }
           }
         }
+
+        // Bottom status line
+        Text(
+          text = puzzleState.statusMessage,
+          style = MaterialTheme.typography.bodySmall,
+          color = if (puzzleState.isStatusError) Color(0xFFFF9EA8) else WashiMuted,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
       }
     }
   }
@@ -249,8 +350,8 @@ fun LiveIntersectionPreviewBanner(
 
 /**
  * Spring-physics Draggable Letter Rack for LexiFill: Crossword Skeleton.
- * Supports smooth 60/120 FPS drag-and-drop onto blank slots with magnetic ghost preview
- * and bouncy return-to-rack spring animation (`Animatable`) when released outside a valid slot.
+ * Features a Multiplier & Intersection Legend strip, a dark recessed tile tray well,
+ * 3D beveled physical tiles with velocity tilt & comet trail, and quick utility actions.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -271,66 +372,108 @@ fun LexiFillDraggableRack(
   modifier: Modifier = Modifier,
 ) {
   Surface(
-    modifier = modifier.fillMaxWidth().testTag("lexifill_rack_container"),
-    shape = RoundedCornerShape(18.dp),
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .border(1.dp, IndigoElevated, RoundedCornerShape(20.dp))
+        .testTag("lexifill_rack_container"),
+    shape = RoundedCornerShape(20.dp),
     color = IndigoSurface,
-    tonalElevation = 6.dp,
+    tonalElevation = 8.dp,
   ) {
     Column(
       modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+      // Top header + Board Multiplier Legend pills
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Text(
-          text = "LETTER INVENTORY (${tiles.size} REMAINING)",
-          style = MaterialTheme.typography.labelSmall,
-          fontWeight = FontWeight.Bold,
-          color = WashiMuted,
-        )
-        Text(
-          text = "Drag to blank slot or Tap tile → Tap slot",
-          style = MaterialTheme.typography.labelSmall,
-          color = SkyCyan,
-        )
-      }
-
-      if (tiles.isEmpty()) {
-        Box(
-          modifier =
-            Modifier.fillMaxWidth()
-              .height(58.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(IndigoNight.copy(alpha = 0.6f)),
-          contentAlignment = Alignment.Center,
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
           Text(
-            text = "All skeleton blanks filled! Level Complete!",
-            style = MaterialTheme.typography.labelLarge,
-            color = CeladonJade,
-            fontWeight = FontWeight.Bold,
+            text = "TILE RACK",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = WashiCream,
           )
-        }
-      } else {
-        FlowRow(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          for (tile in tiles) {
-            SpringDraggableRackTile(
-              tile = tile,
-              isSelected = tile.id == selectedTileId,
-              skin = equippedSkin,
-              onTap = { onTileTapped(tile) },
-              onDragStart = { onTileDragStart(tile) },
-              onDragMove = { rootPoint -> onTileDragMove(tile, rootPoint) },
-              onDragDrop = { rootPoint -> onTileDragDrop(tile, rootPoint) },
-              onDragCancel = onTileDragCancel,
+          Box(
+            modifier =
+              Modifier.clip(RoundedCornerShape(6.dp))
+                .background(SkyCyan.copy(alpha = 0.16f))
+                .padding(horizontal = 6.dp, vertical = 1.dp)
+          ) {
+            Text(
+              text = "${tiles.size} left",
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Bold,
+              color = SkyCyan,
             )
+          }
+        }
+
+        // Compact Multiplier & Nexus Legend
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(5.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          LegendMiniPill(label = "◆ Nexus", color = KyotoGold)
+          LegendMiniPill(label = "2L/3L", color = SkyCyan)
+          LegendMiniPill(label = "2W/3W", color = VermilionRed)
+        }
+      }
+
+      // Recessed Dark Tile Tray Well
+      Box(
+        modifier =
+          Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(IndigoNight.copy(alpha = 0.72f))
+            .border(1.dp, IndigoCard, RoundedCornerShape(14.dp))
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+      ) {
+        if (tiles.isEmpty()) {
+          Row(
+            modifier = Modifier.padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            Icon(
+              imageVector = Icons.Filled.CheckCircle,
+              contentDescription = "All blanks solved",
+              tint = CeladonJade,
+              modifier = Modifier.size(20.dp),
+            )
+            Text(
+              text = "All skeleton blanks filled! Level Complete!",
+              style = MaterialTheme.typography.labelLarge,
+              color = CeladonJade,
+              fontWeight = FontWeight.ExtraBold,
+            )
+          }
+        } else {
+          FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            for (tile in tiles) {
+              SpringDraggableRackTile(
+                tile = tile,
+                isSelected = tile.id == selectedTileId,
+                skin = equippedSkin,
+                onTap = { onTileTapped(tile) },
+                onDragStart = { onTileDragStart(tile) },
+                onDragMove = { rootPoint -> onTileDragMove(tile, rootPoint) },
+                onDragDrop = { rootPoint -> onTileDragDrop(tile, rootPoint) },
+                onDragCancel = onTileDragCancel,
+              )
+            }
           }
         }
       }
@@ -353,17 +496,17 @@ fun LexiFillDraggableRack(
             modifier = Modifier.size(18.dp),
           )
           Spacer(modifier = Modifier.width(6.dp))
-          Text("Shuffle", style = MaterialTheme.typography.labelLarge)
+          Text("Shuffle", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
 
         FilledTonalButton(
           onClick = onTriggerHint,
           enabled = hintsRemaining > 0 && tiles.isNotEmpty(),
-          modifier = Modifier.weight(1.15f).height(48.dp).testTag("btn_smart_hint"),
+          modifier = Modifier.weight(1.2f).height(48.dp).testTag("btn_smart_hint"),
           shape = RoundedCornerShape(12.dp),
           colors =
             ButtonDefaults.filledTonalButtonColors(
-              containerColor = KyotoGold.copy(alpha = 0.18f),
+              containerColor = KyotoGold.copy(alpha = 0.2f),
               contentColor = KyotoGold,
             ),
           contentPadding = PaddingValues(horizontal = 8.dp),
@@ -374,13 +517,17 @@ fun LexiFillDraggableRack(
             modifier = Modifier.size(18.dp),
           )
           Spacer(modifier = Modifier.width(6.dp))
-          Text("Hint ($hintsRemaining)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+          Text(
+            "Smart Hint ($hintsRemaining)",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold,
+          )
         }
 
         if (hasUnlockedPlacedTiles) {
           OutlinedButton(
             onClick = onRecallUnlocked,
-            modifier = Modifier.weight(1f).height(48.dp).testTag("btn_recall_unlocked"),
+            modifier = Modifier.weight(0.95f).height(48.dp).testTag("btn_recall_unlocked"),
             shape = RoundedCornerShape(12.dp),
             contentPadding = PaddingValues(horizontal = 8.dp),
           ) {
@@ -395,6 +542,24 @@ fun LexiFillDraggableRack(
         }
       }
     }
+  }
+}
+
+@Composable
+private fun LegendMiniPill(label: String, color: Color) {
+  Box(
+    modifier =
+      Modifier.clip(RoundedCornerShape(5.dp))
+        .background(color.copy(alpha = 0.15f))
+        .border(0.8.dp, color.copy(alpha = 0.55f), RoundedCornerShape(5.dp))
+        .padding(horizontal = 5.dp, vertical = 1.5.dp)
+  ) {
+    Text(
+      text = label,
+      fontSize = 8.5.sp,
+      fontWeight = FontWeight.Bold,
+      color = color,
+    )
   }
 }
 
@@ -454,7 +619,7 @@ private fun SpringDraggableRackTile(
   Box(
     modifier =
       Modifier.zIndex(if (isDragging) 50f else if (isSelected) 10f else 1f)
-        .size(50.dp),
+        .size(52.dp),
     contentAlignment = Alignment.Center,
   ) {
     // Render Comet Spark Trail & Magnetic Energy Halo while dragging!
@@ -514,7 +679,7 @@ private fun SpringDraggableRackTile(
           }
           .size(50.dp)
           .shadow(
-            elevation = if (isDragging) 18.dp else 4.dp,
+            elevation = if (isDragging) 18.dp else 5.dp,
             shape = RoundedCornerShape(12.dp),
           )
           .clip(RoundedCornerShape(12.dp))
@@ -616,6 +781,23 @@ private fun SpringDraggableRackTile(
           .testTag("rack_tile_${tile.char}_${tile.id}"),
       contentAlignment = Alignment.Center,
     ) {
+      // Top specular highlight bar for tactile 3D tile polish
+      Box(
+        modifier =
+          Modifier.align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .height(3.dp)
+            .background(Color.White.copy(alpha = 0.42f))
+      )
+      // Bottom 3D lip bevel shadow
+      Box(
+        modifier =
+          Modifier.align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .height(4.dp)
+            .background(Color.Black.copy(alpha = 0.18f))
+      )
+
       Text(
         text = tile.char.toString(),
         fontSize = 23.sp,
@@ -627,7 +809,7 @@ private fun SpringDraggableRackTile(
         fontSize = 10.sp,
         fontWeight = FontWeight.Bold,
         color = textColor.copy(alpha = 0.72f),
-        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp),
+        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 3.dp),
       )
       if (tile.bonusEffect != TileBonusEffect.NONE) {
         Box(

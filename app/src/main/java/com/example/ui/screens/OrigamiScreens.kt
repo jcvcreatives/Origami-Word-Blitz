@@ -7,6 +7,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,6 +54,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -99,13 +104,13 @@ import com.example.ui.components.LexiFillBoardCanvas
 import com.example.ui.components.LexiFillDraggableRack
 import com.example.ui.components.LiveIntersectionPreviewBanner
 import com.example.ui.components.SkeletonBoardGeometry
+import com.example.ui.feedback.AudioPlayer
 import com.example.ui.theme.CeladonJade
 import com.example.ui.theme.IndigoCard
 import com.example.ui.theme.IndigoElevated
 import com.example.ui.theme.IndigoNight
 import com.example.ui.theme.IndigoSurface
 import com.example.ui.theme.KyotoGold
-import com.example.ui.theme.SakuraPink
 import com.example.ui.theme.SkyCyan
 import com.example.ui.theme.VermilionRed
 import com.example.ui.theme.WashiCream
@@ -189,6 +194,7 @@ fun LexiFillMainScreen(
         LexiFillDestination.PUZZLE_GRID -> {
           SkeletonPuzzleArena(
             puzzleState = puzzleState,
+            onSelectClueWord = { wordId -> viewModel.selectClueWord(wordId, haptics) },
             onBoardCellTapped = { x, y -> viewModel.onBoardCellTapped(x, y, haptics) },
             onRackTileTapped = { tile -> viewModel.onRackTileTapped(tile, haptics) },
             onTileDragStart = { tile -> viewModel.onTileDragStart(tile, haptics) },
@@ -200,6 +206,7 @@ fun LexiFillMainScreen(
             onRecallUnlocked = { viewModel.recallAllUnlockedTiles(haptics) },
             onReplayLevel = { viewModel.replayCurrentLevel() },
             onNextLevel = { viewModel.advanceToNextLevel() },
+            onToggleSoundMute = { viewModel.toggleSoundMute(haptics) },
             onShakeConsumed = { viewModel.clearShake() },
           )
         }
@@ -220,6 +227,7 @@ fun LexiFillMainScreen(
               currentTab = LexiFillDestination.PUZZLE_GRID
             },
             onUnlockOrEquipSkin = { skin -> viewModel.unlockOrEquipSkin(skin, haptics) },
+            onAuditionSoundEffect = { effect -> viewModel.audioPlayer.play(effect) },
           )
         }
         LexiFillDestination.TRIE_EXPLORER -> {
@@ -238,6 +246,7 @@ fun LexiFillMainScreen(
 @Composable
 private fun SkeletonPuzzleArena(
   puzzleState: PuzzleState,
+  onSelectClueWord: (String) -> Unit,
   onBoardCellTapped: (Int, Int) -> Unit,
   onRackTileTapped: (com.example.domain.model.Tile) -> Unit,
   onTileDragStart: (com.example.domain.model.Tile) -> Unit,
@@ -249,6 +258,7 @@ private fun SkeletonPuzzleArena(
   onRecallUnlocked: () -> Unit,
   onReplayLevel: () -> Unit,
   onNextLevel: () -> Unit,
+  onToggleSoundMute: () -> Unit,
   onShakeConsumed: () -> Unit,
 ) {
   var boardGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
@@ -269,17 +279,20 @@ private fun SkeletonPuzzleArena(
           .padding(horizontal = 12.dp, vertical = 8.dp),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      // 1. Top HUD: Level Title, Score, Combo Streak Badge with Particle Burst, Reset/Skip
+      // 1. Top HUD: Level Title, Animated Score, Combo Streak Badge with Particle Burst, Progress Bar
       LexiFillTopHud(
         puzzleState = puzzleState,
+        onToggleSoundMute = onToggleSoundMute,
         onResetLevel = onReplayLevel,
         onSkipToNextLevel = onNextLevel,
       )
 
-      // 2. Intersecting Clues Horizontal Strip (Shows live P _ A N _ T & C _ O S S status)
+      // 2. Interactive Intersecting Clues Strip (Tap any clue to highlight its corridor on the board)
       IntersectingCluesStrip(
         targetWords = puzzleState.targetWords,
+        focusedWordId = puzzleState.focusedWordId,
         cells = puzzleState.cells,
+        onSelectClueWord = onSelectClueWord,
       )
 
       // 3. 100% Compose Canvas Crossword Skeleton Grid
@@ -290,10 +303,10 @@ private fun SkeletonPuzzleArena(
         onShakeConsumed = onShakeConsumed,
       )
 
-      // 4. Live Dual-Axis Intersection & Clue Preview Banner
+      // 4. Live Dual-Axis Intersection & Active Clue Spotlight Banner
       LiveIntersectionPreviewBanner(puzzleState = puzzleState)
 
-      // 5. Spring-Physics Draggable Letter Rack
+      // 5. Spring-Physics Draggable Letter Rack with Multiplier Legend & Recessed Tray Well
       LexiFillDraggableRack(
         tiles = puzzleState.rackState.tiles,
         selectedTileId = puzzleState.rackState.selectedTileId,
@@ -332,100 +345,179 @@ private fun SkeletonPuzzleArena(
 @Composable
 private fun LexiFillTopHud(
   puzzleState: PuzzleState,
+  onToggleSoundMute: () -> Unit,
   onResetLevel: () -> Unit,
   onSkipToNextLevel: () -> Unit,
 ) {
+  val animatedScore by
+    animateIntAsState(
+      targetValue = puzzleState.levelScore,
+      animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+      label = "hud_rolling_score",
+    )
+
+  val completionFraction =
+    if (puzzleState.totalBlanksCount > 0) {
+      (puzzleState.filledBlanksCount.toFloat() / puzzleState.totalBlanksCount.toFloat()).coerceIn(
+        0f,
+        1f,
+      )
+    } else 0f
+
+  val animatedProgress by
+    animateFloatAsState(
+      targetValue = completionFraction,
+      animationSpec =
+        spring(
+          dampingRatio = Spring.DampingRatioLowBouncy,
+          stiffness = Spring.StiffnessMediumLow,
+        ),
+      label = "hud_completion_progress",
+    )
+
   Surface(
-    shape = RoundedCornerShape(16.dp),
+    shape = RoundedCornerShape(18.dp),
     color = IndigoSurface,
     modifier =
       Modifier.fillMaxWidth()
-        .border(1.dp, IndigoElevated, RoundedCornerShape(16.dp))
+        .border(1.dp, IndigoElevated, RoundedCornerShape(18.dp))
         .testTag("lexifill_top_hud"),
   ) {
-    Row(
-      modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-      Column(modifier = Modifier.weight(1f)) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-          Box(
-            modifier =
-              Modifier.clip(RoundedCornerShape(6.dp))
-                .background(SkyCyan.copy(alpha = 0.18f))
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+    Column {
+      Row(
+        modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
           ) {
+            Box(
+              modifier =
+                Modifier.clip(RoundedCornerShape(6.dp))
+                  .background(SkyCyan.copy(alpha = 0.18f))
+                  .border(1.dp, SkyCyan.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                  .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+              Text(
+                text = "LVL ${puzzleState.levelTemplate.levelNumber}",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = SkyCyan,
+              )
+            }
             Text(
-              text = "LVL ${puzzleState.levelTemplate.levelNumber}",
-              style = MaterialTheme.typography.labelSmall,
+              text = puzzleState.levelTemplate.title,
+              style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.ExtraBold,
-              color = SkyCyan,
+              color = WashiCream,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
             )
           }
+          Spacer(modifier = Modifier.height(2.dp))
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            Text(
+              text =
+                "Words ${puzzleState.completedWordsCount}/${puzzleState.targetWords.size} · Blanks ${puzzleState.filledBlanksCount}/${puzzleState.totalBlanksCount}",
+              style = MaterialTheme.typography.bodySmall,
+              color = WashiMuted,
+            )
+            Box(
+              modifier =
+                Modifier.clip(RoundedCornerShape(5.dp))
+                  .background(KyotoGold.copy(alpha = 0.14f))
+                  .padding(horizontal = 5.dp, vertical = 1.dp)
+            ) {
+              Text(
+                text = "🪙 ${puzzleState.lexiCoins}",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = KyotoGold,
+              )
+            }
+          }
+        }
+
+        // Reactive Combo Streak HUD Badge with Particle Burst & Bounce on 2x/3x/4x
+        ComboStreakHudBadge(
+          comboStreak = puzzleState.comboStreak,
+          comboMultiplier = puzzleState.comboMultiplier,
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Rolling Score Counter Pill
+        Column(horizontalAlignment = Alignment.End) {
           Text(
-            text = puzzleState.levelTemplate.title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = WashiCream,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            text = "$animatedScore PTS",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = KyotoGold,
+          )
+          Text(
+            text = "Career ${puzzleState.totalCampaignScore}",
+            style = MaterialTheme.typography.labelSmall,
+            color = WashiMuted,
           )
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-          text =
-            "Words: ${puzzleState.completedWordsCount}/${puzzleState.targetWords.size}  •  Blanks: ${puzzleState.filledBlanksCount}/${puzzleState.totalBlanksCount}",
-          style = MaterialTheme.typography.bodySmall,
-          color = WashiMuted,
-        )
+
+        // Audio Mute/Unmute, Reset & Next puzzle icon buttons (48dp accessibility targets)
+        IconButton(
+          onClick = onToggleSoundMute,
+          modifier = Modifier.size(48.dp).testTag("btn_toggle_sound"),
+        ) {
+          Icon(
+            imageVector =
+              if (puzzleState.isSoundMuted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+            contentDescription =
+              if (puzzleState.isSoundMuted) "Unmute sound effects" else "Mute sound effects",
+            tint = if (puzzleState.isSoundMuted) WashiMuted else CeladonJade,
+          )
+        }
+        IconButton(
+          onClick = onResetLevel,
+          modifier = Modifier.size(48.dp).testTag("btn_reset_grid"),
+        ) {
+          Icon(
+            imageVector = Icons.Filled.Refresh,
+            contentDescription = "Reset current puzzle grid",
+            tint = WashiMuted,
+          )
+        }
+        IconButton(
+          onClick = onSkipToNextLevel,
+          modifier = Modifier.size(48.dp).testTag("btn_skip_level"),
+        ) {
+          Icon(
+            imageVector = Icons.Filled.SkipNext,
+            contentDescription = "Skip to next puzzle level",
+            tint = SkyCyan,
+          )
+        }
       }
 
-      // Reactive Combo Streak HUD Badge with Particle Burst & Bounce on 2x/3x/4x
-      ComboStreakHudBadge(
-        comboStreak = puzzleState.comboStreak,
-        comboMultiplier = puzzleState.comboMultiplier,
-      )
-
-      Spacer(modifier = Modifier.width(8.dp))
-
-      // Score Pill
-      Column(horizontalAlignment = Alignment.End) {
-        Text(
-          text = "${puzzleState.levelScore} PTS",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.ExtraBold,
-          color = KyotoGold,
-        )
-        Text(
-          text = "Total ${puzzleState.totalCampaignScore}",
-          style = MaterialTheme.typography.labelSmall,
-          color = WashiMuted,
-        )
-      }
-
-      // Reset & Next puzzle icon buttons (48dp accessibility targets)
-      IconButton(
-        onClick = onResetLevel,
-        modifier = Modifier.size(48.dp).testTag("btn_reset_grid"),
+      // Smooth Animated Level Completion Progress Bar at bottom of HUD card
+      Box(
+        modifier =
+          Modifier.fillMaxWidth()
+            .height(4.dp)
+            .background(IndigoNight.copy(alpha = 0.85f))
       ) {
-        Icon(
-          imageVector = Icons.Filled.Refresh,
-          contentDescription = "Reset current puzzle grid",
-          tint = WashiMuted,
-        )
-      }
-      IconButton(
-        onClick = onSkipToNextLevel,
-        modifier = Modifier.size(48.dp).testTag("btn_skip_level"),
-      ) {
-        Icon(
-          imageVector = Icons.Filled.SkipNext,
-          contentDescription = "Skip to next puzzle level",
-          tint = SkyCyan,
+        Box(
+          modifier =
+            Modifier.fillMaxWidth(animatedProgress)
+              .fillMaxHeight()
+              .background(
+                Brush.horizontalGradient(
+                  listOf(SkyCyan, CeladonJade, KyotoGold),
+                )
+              )
         )
       }
     }
@@ -435,7 +527,9 @@ private fun LexiFillTopHud(
 @Composable
 private fun IntersectingCluesStrip(
   targetWords: List<TargetWord>,
+  focusedWordId: String?,
   cells: List<List<com.example.domain.model.BoardCell>>,
+  onSelectClueWord: (String) -> Unit,
 ) {
   Row(
     modifier =
@@ -445,17 +539,35 @@ private fun IntersectingCluesStrip(
     horizontalArrangement = Arrangement.spacedBy(8.dp),
   ) {
     for (tw in targetWords) {
-      val bg = if (tw.isCompleted) Color(0xFF0B3B2D) else IndigoCard
-      val border = if (tw.isCompleted) CeladonJade else IndigoElevated
-      val dirTag = if (tw.direction == WordDirection.HORIZONTAL) "ACROSS" else "DOWN"
+      val isFocused = tw.id == focusedWordId
+      val bg =
+        when {
+          tw.isCompleted -> Color(0xFF0B3B2D)
+          isFocused -> Color(0xFF142D4C)
+          else -> IndigoCard
+        }
+      val border =
+        when {
+          tw.isCompleted -> CeladonJade
+          isFocused -> SkyCyan
+          else -> IndigoElevated
+        }
+      val dirTag = if (tw.direction == WordDirection.HORIZONTAL) "ACROSS →" else "DOWN ↓"
 
       Surface(
         shape = RoundedCornerShape(12.dp),
         color = bg,
-        modifier = Modifier.border(1.dp, border, RoundedCornerShape(12.dp)),
+        modifier =
+          Modifier.border(
+              width = if (isFocused || tw.isCompleted) 1.6.dp else 1.dp,
+              color = border,
+              shape = RoundedCornerShape(12.dp),
+            )
+            .clickable { onSelectClueWord(tw.id) }
+            .testTag("clue_chip_${tw.id}"),
       ) {
         Row(
-          modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+          modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -464,7 +576,7 @@ private fun IntersectingCluesStrip(
               imageVector = Icons.Filled.CheckCircle,
               contentDescription = "Completed word",
               tint = CeladonJade,
-              modifier = Modifier.size(15.dp),
+              modifier = Modifier.size(16.dp),
             )
           }
           Column {
@@ -476,7 +588,12 @@ private fun IntersectingCluesStrip(
                 text = dirTag,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (tw.isCompleted) CeladonJade else SkyCyan,
+                color =
+                  when {
+                    tw.isCompleted -> CeladonJade
+                    isFocused -> KyotoGold
+                    else -> SkyCyan
+                  },
               )
               Text(
                 text = tw.formattedSkeleton(cells),
@@ -497,7 +614,7 @@ private fun IntersectingCluesStrip(
             Text(
               text = tw.clue,
               fontSize = 10.sp,
-              color = WashiMuted,
+              color = if (isFocused) WashiCream.copy(alpha = 0.9f) else WashiMuted,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
             )
@@ -720,6 +837,43 @@ private fun PuzzleVaultScreen(
       )
     }
 
+    // Campaign Mastery Overview Card
+    item {
+      Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = IndigoSurface,
+        modifier =
+          Modifier.fillMaxWidth()
+            .border(
+              1.5.dp,
+              Brush.horizontalGradient(listOf(SkyCyan, CeladonJade, KyotoGold)),
+              RoundedCornerShape(18.dp),
+            ),
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(16.dp),
+          horizontalArrangement = Arrangement.SpaceEvenly,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          VaultStatColumn(
+            label = "CAREER SCORE",
+            value = "${puzzleState.totalCampaignScore}",
+            valueColor = KyotoGold,
+          )
+          VaultStatColumn(
+            label = "LEVELS SOLVED",
+            value = "${puzzleState.completedLevels.size}/${allLevels.size}",
+            valueColor = CeladonJade,
+          )
+          VaultStatColumn(
+            label = "LEXICOINS",
+            value = "🪙 ${puzzleState.lexiCoins}",
+            valueColor = SkyCyan,
+          )
+        }
+      }
+    }
+
     items(allLevels, key = { it.levelNumber }) { template: LevelTemplate ->
       val isSolved = template.levelNumber in puzzleState.completedLevels
       val isCurrent = template.levelNumber == puzzleState.levelTemplate.levelNumber
@@ -763,6 +917,14 @@ private fun PuzzleVaultScreen(
                 fontSize = 10.sp,
                 color = KyotoGold,
               )
+              if (isSolved) {
+                Text(
+                  text = "★★★",
+                  fontSize = 11.sp,
+                  color = KyotoGold,
+                  fontWeight = FontWeight.Bold,
+                )
+              }
             }
             Text(
               text = template.title,
@@ -800,10 +962,29 @@ private fun PuzzleVaultScreen(
 }
 
 @Composable
+private fun VaultStatColumn(label: String, value: String, valueColor: Color) {
+  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Text(
+      text = value,
+      style = MaterialTheme.typography.titleMedium,
+      fontWeight = FontWeight.ExtraBold,
+      color = valueColor,
+    )
+    Text(
+      text = label,
+      fontSize = 10.sp,
+      fontWeight = FontWeight.Bold,
+      color = WashiMuted,
+    )
+  }
+}
+
+@Composable
 private fun CustomStudioAndSkinsScreen(
   puzzleState: PuzzleState,
   onLoadCompactCode: (String) -> Unit,
   onUnlockOrEquipSkin: (com.example.domain.model.CosmeticTileSkin) -> Unit,
+  onAuditionSoundEffect: (AudioPlayer.SoundEffect) -> Unit,
 ) {
   var compactInput by
     rememberSaveable(puzzleState.levelTemplate.compactCode) {
@@ -819,6 +1000,52 @@ private fun CustomStudioAndSkinsScreen(
     verticalArrangement = Arrangement.spacedBy(14.dp),
     contentPadding = PaddingValues(bottom = 24.dp),
   ) {
+    item {
+      Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = IndigoSurface,
+        modifier = Modifier.fillMaxWidth().border(1.dp, IndigoElevated, RoundedCornerShape(18.dp)),
+      ) {
+        Column(
+          modifier = Modifier.padding(16.dp),
+          verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+          Text(
+            text = "AudioPlayer Sound Synthesizer",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = WashiCream,
+          )
+          Text(
+            text =
+              "Audition the 4 real-time synthesized PCM/SoundPool effects triggered on game events:",
+            style = MaterialTheme.typography.bodySmall,
+            color = WashiMuted,
+          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            for (sfx in AudioPlayer.SoundEffect.entries) {
+              OutlinedButton(
+                onClick = { onAuditionSoundEffect(sfx) },
+                modifier = Modifier.weight(1f).height(48.dp).testTag("btn_sfx_${sfx.id}"),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp),
+              ) {
+                Text(
+                  text = sfx.id.uppercase(),
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = SkyCyan,
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+
     item {
       Surface(
         shape = RoundedCornerShape(18.dp),

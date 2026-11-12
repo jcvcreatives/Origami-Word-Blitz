@@ -222,6 +222,12 @@ fun LexiFillBoardCanvas(
       }
     }
 
+  val focusedWordCoords =
+    remember(puzzleState.focusedWordId, puzzleState.targetWords) {
+      val fid = puzzleState.focusedWordId
+      puzzleState.targetWords.find { it.id == fid }?.coordinates()?.toSet().orEmpty()
+    }
+
   val aspectRatio =
     (puzzleState.boardWidth.toFloat() / puzzleState.boardHeight.toFloat()).coerceIn(0.85f, 1.35f)
 
@@ -231,10 +237,20 @@ fun LexiFillBoardCanvas(
         .fillMaxWidth()
         .aspectRatio(aspectRatio)
         .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
-        .clip(RoundedCornerShape(18.dp))
-        .background(IndigoNight)
-        .border(1.5.dp, IndigoCard, RoundedCornerShape(18.dp))
-        .padding(8.dp)
+        .clip(RoundedCornerShape(20.dp))
+        .background(
+          androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(Color(0xFF0E1629), IndigoNight)
+          )
+        )
+        .border(
+          1.5.dp,
+          androidx.compose.ui.graphics.Brush.linearGradient(
+            listOf(Color(0xFF283A63), SkyCyan.copy(alpha = 0.38f), Color(0xFF283A63))
+          ),
+          RoundedCornerShape(20.dp),
+        )
+        .padding(10.dp)
         .testTag("lexifill_board_canvas"),
     contentAlignment = Alignment.Center,
   ) {
@@ -280,7 +296,7 @@ fun LexiFillBoardCanvas(
       val originY = (size.height - gridH) / 2f
       val pad = cellSize * 0.06f
       val innerSize = cellSize - pad * 2f
-      val cornerRadius = CornerRadius(cellSize * 0.18f, cellSize * 0.18f)
+      val cornerRadius = CornerRadius(cellSize * 0.19f, cellSize * 0.19f)
 
       val skin = puzzleState.equippedSkin
       val skinBaseColor = Color(skin.baseColorHex)
@@ -296,8 +312,8 @@ fun LexiFillBoardCanvas(
 
           if (!cell.isPlayable) {
             drawCircle(
-              color = IndigoCard.copy(alpha = 0.55f),
-              radius = cellSize * 0.045f,
+              color = IndigoCard.copy(alpha = 0.45f),
+              radius = cellSize * 0.042f,
               center = cellCenter,
             )
             continue
@@ -305,6 +321,7 @@ fun LexiFillBoardCanvas(
 
           val isHoveredTarget = puzzleState.hoverCoord == coord
           val isInHoveredCorridor = coord in hoveredCorridorCoords
+          val isInFocusedWord = coord in focusedWordCoords
           val isHintHighlighted = puzzleState.highlightedHintCoord == coord
           val flashStart = puzzleState.cellFlashTimestamps[coord]
           val flashElapsed = if (flashStart != null) (frameNowMs - flashStart) else 9999L
@@ -316,37 +333,56 @@ fun LexiFillBoardCanvas(
           val placeElapsed = if (placeStart != null) (frameNowMs - placeStart) else 9999L
           val (snapScaleX, snapScaleY) = computeSnapSquashStretch(placeElapsed)
 
-          // Corridor highlight under intersecting horizontal/vertical words during drag
-          if (isInHoveredCorridor && !isHoveredTarget) {
-            val corridorAlpha = 0.14f + 0.10f * reticlePhase
+          // Focused clue corridor or drag corridor highlight
+          if ((isInHoveredCorridor || isInFocusedWord) && !isHoveredTarget) {
+            val corridorColor =
+              if (isInHoveredCorridor) SkyCyan.copy(alpha = 0.16f + 0.10f * reticlePhase)
+              else SkyCyan.copy(alpha = 0.10f)
             drawRoundRect(
-              color = SkyCyan.copy(alpha = corridorAlpha),
-              topLeft = Offset(topLeft.x - pad * 0.6f, topLeft.y - pad * 0.6f),
-              size = Size(innerSize + pad * 1.2f, innerSize + pad * 1.2f),
+              color = corridorColor,
+              topLeft = Offset(topLeft.x - pad * 0.65f, topLeft.y - pad * 0.65f),
+              size = Size(innerSize + pad * 1.3f, innerSize + pad * 1.3f),
               cornerRadius = cornerRadius,
             )
           }
 
           when {
-            // 1. Permanent Fixed Clue Letter Cell
+            // 1. Permanent Fixed Clue Letter Cell (3D Beveled Obsidian Stone)
             cell.fixedLetter != null -> {
               val bgColor =
                 if (cell.isLockedCompleted) CompletedWordBg else FixedClueCellBg
               val borderColor =
-                if (cell.isLockedCompleted) CompletedWordBorder else FixedClueCellBorder
+                if (cell.isLockedCompleted) CompletedWordBorder
+                else if (isInFocusedWord) SkyCyan.copy(alpha = 0.7f)
+                else FixedClueCellBorder
 
+              // 3D Bottom Lip Shadow
+              drawRoundRect(
+                color = Color.Black.copy(alpha = 0.42f),
+                topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.045f),
+                size = Size(innerSize, innerSize),
+                cornerRadius = cornerRadius,
+              )
               drawRoundRect(
                 color = bgColor,
                 topLeft = topLeft,
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
               )
+              // Top inner specular highlight bevel
+              drawLine(
+                color = Color.White.copy(alpha = 0.14f),
+                start = Offset(topLeft.x + innerSize * 0.16f, topLeft.y + cellSize * 0.04f),
+                end = Offset(topLeft.x + innerSize * 0.84f, topLeft.y + cellSize * 0.04f),
+                strokeWidth = cellSize * 0.03f,
+                cap = StrokeCap.Round,
+              )
               drawRoundRect(
                 color = borderColor,
                 topLeft = topLeft,
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
-                style = Stroke(width = cellSize * 0.04f),
+                style = Stroke(width = cellSize * 0.042f),
               )
 
               letterPaint.color = WashiCream.toArgb()
@@ -369,13 +405,12 @@ fun LexiFillBoardCanvas(
               )
             }
 
-            // 2. Player Placed Tile inside a Blank Target Slot (with Squash-and-Stretch Impact Physics!)
+            // 2. Player Placed Tile inside a Blank Target Slot (3D Tactile Tile + Squash-and-Stretch!)
             cell.placedTile != null -> {
               val tile = cell.placedTile
               withTransform({
                 scale(scaleX = snapScaleX, scaleY = snapScaleY, pivot = cellCenter)
               }) {
-                // Impact under-shadow when landing
                 if (placeElapsed in 0..380) {
                   val shadowExpand = (1f - placeElapsed / 380f) * cellSize * 0.12f
                   drawRoundRect(
@@ -386,11 +421,26 @@ fun LexiFillBoardCanvas(
                   )
                 }
 
+                // 3D Bottom Lip Shadow
+                drawRoundRect(
+                  color = Color.Black.copy(alpha = 0.45f),
+                  topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.05f),
+                  size = Size(innerSize, innerSize),
+                  cornerRadius = cornerRadius,
+                )
                 drawRoundRect(
                   color = skinBaseColor,
                   topLeft = topLeft,
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
+                )
+                // Top inner specular highlight
+                drawLine(
+                  color = Color.White.copy(alpha = 0.45f),
+                  start = Offset(topLeft.x + innerSize * 0.15f, topLeft.y + cellSize * 0.045f),
+                  end = Offset(topLeft.x + innerSize * 0.85f, topLeft.y + cellSize * 0.045f),
+                  strokeWidth = cellSize * 0.032f,
+                  cap = StrokeCap.Round,
                 )
                 val borderCol =
                   if (cell.isLockedCompleted) CeladonJade else skinBorderColor

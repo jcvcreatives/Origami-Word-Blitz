@@ -2,6 +2,9 @@ package com.example
 
 import com.example.domain.engine.LexiFillEngine
 import com.example.domain.engine.WordTrieEngine
+import com.example.domain.model.Coordinate
+import com.example.ui.feedback.AudioPlayer
+import com.example.ui.viewmodel.GameViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,5 +56,44 @@ class ExampleUnitTest {
     val completePlanet = engine.commitTileDrop(state, tileE.id, 5, 1)
     assertEquals(LexiFillEngine.OutcomeType.WORD_COMPLETED, completePlanet.outcome)
     assertTrue(completePlanet.completedWords.contains("PLANET"))
+  }
+
+  @Test
+  fun audioPlayer_triggersClickSnapThudAndFanfareOnGameEvents() {
+    val viewModel = GameViewModel()
+    viewModel.audioPlayer.resetStatsForTesting()
+
+    // 1. Tile selection triggers 'click'
+    val firstTile = viewModel.puzzleState.value.rackState.tiles.first()
+    viewModel.onRackTileTapped(firstTile)
+    assertEquals(AudioPlayer.SoundEffect.CLICK, viewModel.audioPlayer.lastPlayedEffect)
+    assertEquals("click", viewModel.puzzleState.value.lastSoundTriggered)
+
+    // 2. Invalid placement triggers 'thud' (dropping 'C' into (2, 1) which expects 'L' for PLANET/SLOPE)
+    val tileC = viewModel.puzzleState.value.rackState.tiles.first { it.char == 'C' }
+    val acceptedInvalid = viewModel.onTileDropOnCoord(tileC.id, Coordinate(2, 1))
+    assertFalse(acceptedInvalid)
+    assertEquals(AudioPlayer.SoundEffect.THUD, viewModel.audioPlayer.lastPlayedEffect)
+    assertEquals("thud", viewModel.puzzleState.value.lastSoundTriggered)
+
+    // 3. Valid placement triggers 'snap' (dropping 'L' into (2, 1))
+    val tileL = viewModel.puzzleState.value.rackState.tiles.first { it.char == 'L' }
+    val acceptedValid = viewModel.onTileDropOnCoord(tileL.id, Coordinate(2, 1))
+    assertTrue(acceptedValid)
+    assertEquals(AudioPlayer.SoundEffect.SNAP, viewModel.audioPlayer.lastPlayedEffect)
+    assertEquals("snap", viewModel.puzzleState.value.lastSoundTriggered)
+
+    // 4. Solving all remaining blanks in the level triggers 'fanfare'
+    while (!viewModel.puzzleState.value.isLevelCleared) {
+      val s = viewModel.puzzleState.value
+      val openBlank =
+        s.cells.flatten().first { it.isBlankTarget && it.placedTile == null && !it.isLockedCompleted }
+      val matchingTile =
+        s.rackState.tiles.first { it.char == openBlank.expectedLetter }
+      viewModel.onTileDropOnCoord(matchingTile.id, openBlank.coordinate)
+    }
+    assertTrue(viewModel.puzzleState.value.isLevelCleared)
+    assertEquals(AudioPlayer.SoundEffect.FANFARE, viewModel.audioPlayer.lastPlayedEffect)
+    assertEquals("fanfare", viewModel.puzzleState.value.lastSoundTriggered)
   }
 }

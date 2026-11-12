@@ -1,108 +1,72 @@
 package com.example.ui.feedback
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.SoundPool
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import java.io.File
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.sin
 
 /**
- * Snappy SoundPool audio synthesizer + progressive tactile haptics engine.
- * Synthesizes crisp wooden/paper percussion and chime WAV samples at startup
- * and loads them into Android's native SoundPool for <5ms playback latency.
+ * Coordinates the [AudioPlayer] ('click', 'snap', 'thud', 'fanfare') with progressive
+ * tactile [HapticFeedback] and [Vibrator] waveforms for "LexiFill: Crossword Skeleton".
  */
-class SoundAndHapticsEngine(context: Context) {
+class SoundAndHapticsEngine(
+  context: Context? = null,
+  val audioPlayer: AudioPlayer = AudioPlayer(context),
+) {
 
-  private val appContext = context.applicationContext
-  private var soundPool: SoundPool? = null
-  private var soundTilePickId: Int = 0
-  private var soundTileSnapId: Int = 0
-  private var soundWordScoreId: Int = 0
-  private var soundTripleWordId: Int = 0
-  private var soundInvalidId: Int = 0
+  private val appContext = context?.applicationContext
 
-  var isSoundEnabled: Boolean = true
+  var isSoundEnabled: Boolean
+    get() = !audioPlayer.isMuted
+    set(value) {
+      audioPlayer.isMuted = !value
+    }
+
   var isHapticsEnabled: Boolean = true
 
   private val vibrator: Vibrator? =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      val vm = appContext.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-      vm?.defaultVibrator
+    if (appContext != null) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val vm = appContext.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+        vm?.defaultVibrator
+      } else {
+        @Suppress("DEPRECATION")
+        appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+      }
     } else {
-      @Suppress("DEPRECATION")
-      appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+      null
     }
 
-  init {
-    try {
-      val attrs =
-        AudioAttributes.Builder()
-          .setUsage(AudioAttributes.USAGE_GAME)
-          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-          .build()
-      val pool = SoundPool.Builder().setMaxStreams(6).setAudioAttributes(attrs).build()
-      soundPool = pool
-
-      soundTilePickId = pool.load(createToneWav("sfx_pick.wav", listOf(540.0), 45), 1)
-      soundTileSnapId = pool.load(createToneWav("sfx_snap.wav", listOf(720.0, 960.0), 65), 1)
-      soundWordScoreId =
-        pool.load(createToneWav("sfx_score.wav", listOf(523.25, 659.25, 783.99), 180), 1)
-      soundTripleWordId =
-        pool.load(
-          createToneWav("sfx_triple.wav", listOf(523.25, 659.25, 783.99, 1046.50), 280),
-          1,
-        )
-      soundInvalidId = pool.load(createToneWav("sfx_invalid.wav", listOf(190.0, 155.0), 140), 1)
-    } catch (_: Throwable) {
-      // Safe fallback in headless unit test environments
-    }
-  }
-
-  fun onTilePickup(haptics: HapticFeedback?) {
-    if (isSoundEnabled && soundTilePickId != 0) {
-      soundPool?.play(soundTilePickId, 0.55f, 0.55f, 1, 0, 1.05f)
-    }
+  /**
+   * Triggers the 'click' sound effect and light selection haptic on tile pickup or selection.
+   */
+  fun onTilePickup(haptics: HapticFeedback?, pitchMultiplier: Float = 1.0f) {
+    audioPlayer.playClick(pitchMultiplier = pitchMultiplier)
     if (isHapticsEnabled) {
       haptics?.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
   }
 
+  /**
+   * Triggers the 'snap' sound effect and crisp lock-in haptic pulse on valid tile placement.
+   */
   fun onTileSnapToGrid(haptics: HapticFeedback?, pitchMultiplier: Float = 1.0f) {
-    if (isSoundEnabled && soundTileSnapId != 0) {
-      soundPool?.play(
-        soundTileSnapId,
-        0.75f,
-        0.75f,
-        1,
-        0,
-        pitchMultiplier.coerceIn(0.85f, 1.35f),
-      )
-    }
+    audioPlayer.playSnap(pitchMultiplier = pitchMultiplier)
     if (isHapticsEnabled) {
       haptics?.performHapticFeedback(HapticFeedbackType.LongPress)
-      vibratePulse(durationMs = 14L, amplitude = 110)
+      vibratePulse(durationMs = 16L, amplitude = 125)
     }
   }
 
+  /**
+   * Triggers a pitched 'snap' sound effect and multi-stage haptic burst when a word is completed.
+   */
   fun onWordScored(score: Int, isTripleWord: Boolean, comboStreak: Int, haptics: HapticFeedback?) {
-    if (isSoundEnabled) {
-      val rate = (1.0f + (comboStreak - 1) * 0.06f).coerceIn(1.0f, 1.4f)
-      val id = if (isTripleWord || score >= 40) soundTripleWordId else soundWordScoreId
-      if (id != 0) {
-        soundPool?.play(id, 0.9f, 0.9f, 2, 0, rate)
-      }
-    }
+    val rate = (1.05f + (comboStreak - 1) * 0.08f).coerceIn(1.0f, 1.42f)
+    audioPlayer.playSnap(pitchMultiplier = rate)
     if (isHapticsEnabled) {
       haptics?.performHapticFeedback(HapticFeedbackType.LongPress)
       when {
@@ -115,13 +79,28 @@ class SoundAndHapticsEngine(context: Context) {
     }
   }
 
+  /**
+   * Triggers the 'thud' sound effect and double-pulse rejection vibration on invalid placement.
+   */
   fun onInvalidWord(haptics: HapticFeedback?) {
-    if (isSoundEnabled && soundInvalidId != 0) {
-      soundPool?.play(soundInvalidId, 0.7f, 0.7f, 1, 0, 1.0f)
-    }
+    audioPlayer.playThud()
     if (isHapticsEnabled) {
       haptics?.performHapticFeedback(HapticFeedbackType.LongPress)
       vibrateWaveform(longArrayOf(0, 35, 40, 35), intArrayOf(0, 190, 0, 140))
+    }
+  }
+
+  /**
+   * Triggers the celebratory 'fanfare' sound effect and triumphant haptic cadence on level completion.
+   */
+  fun onLevelClearedFanfare(haptics: HapticFeedback?) {
+    audioPlayer.playFanfare()
+    if (isHapticsEnabled) {
+      haptics?.performHapticFeedback(HapticFeedbackType.LongPress)
+      vibrateWaveform(
+        longArrayOf(0, 30, 40, 35, 40, 50, 45, 90),
+        intArrayOf(0, 160, 0, 190, 0, 220, 0, 255),
+      )
     }
   }
 
@@ -151,51 +130,7 @@ class SoundAndHapticsEngine(context: Context) {
     } catch (_: Throwable) {}
   }
 
-  private fun createToneWav(fileName: String, frequencies: List<Double>, durationMs: Int): String {
-    val file = File(appContext.cacheDir, fileName)
-    if (file.exists() && file.length() > 44) return file.absolutePath
-
-    val sampleRate = 22050
-    val numSamples = (sampleRate * durationMs) / 1000
-    val pcmData = ByteArray(numSamples * 2)
-    val step = maxOf(1, numSamples / frequencies.size)
-
-    for (i in 0 until numSamples) {
-      val freqIdx = (i / step).coerceAtMost(frequencies.lastIndex)
-      val freq = frequencies[freqIdx]
-      val t = i.toDouble() / sampleRate
-      val localProgress = (i % step).toDouble() / step
-      val envelope = exp(-3.8 * localProgress)
-      val sampleVal = (sin(2.0 * PI * freq * t) * envelope * 24000.0).toInt().coerceIn(-32767, 32767)
-      pcmData[i * 2] = (sampleVal and 0xFF).toByte()
-      pcmData[i * 2 + 1] = ((sampleVal shr 8) and 0xFF).toByte()
-    }
-
-    FileOutputStream(file).use { out ->
-      val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
-      header.put("RIFF".toByteArray(Charsets.US_ASCII))
-      header.putInt(36 + pcmData.size)
-      header.put("WAVE".toByteArray(Charsets.US_ASCII))
-      header.put("fmt ".toByteArray(Charsets.US_ASCII))
-      header.putInt(16) // PCM chunk size
-      header.putShort(1) // AudioFormat = 1 (PCM)
-      header.putShort(1) // NumChannels = 1 (Mono)
-      header.putInt(sampleRate)
-      header.putInt(sampleRate * 2) // ByteRate
-      header.putShort(2) // BlockAlign
-      header.putShort(16) // BitsPerSample
-      header.put("data".toByteArray(Charsets.US_ASCII))
-      header.putInt(pcmData.size)
-      out.write(header.array())
-      out.write(pcmData)
-    }
-    return file.absolutePath
-  }
-
   fun release() {
-    try {
-      soundPool?.release()
-      soundPool = null
-    } catch (_: Throwable) {}
+    audioPlayer.release()
   }
 }

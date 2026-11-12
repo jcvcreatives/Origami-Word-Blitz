@@ -187,6 +187,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
       hintsRemaining = 3,
       completedLevels = completedLevels,
       highestUnlockedLevel = highestUnlockedLevel,
+      focusedWordId = normalizedTargetWords.firstOrNull()?.id,
       equippedSkin = skin,
       unlockedSkinIds = unlockedSkinIds,
       lexiCoins = lexiCoins,
@@ -599,6 +600,12 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         hoverCoord = null,
         hoverPreview = null,
         highlightedHintCoord = null,
+        focusedWordId =
+          updatedTargetWords
+            .firstOrNull { !it.isCompleted && it.containsCoordinate(targetX, targetY) }
+            ?.id
+            ?: updatedTargetWords.firstOrNull { !it.isCompleted }?.id
+            ?: state.focusedWordId,
         scorePopups = newPopups,
         particleBursts = newParticles,
         confettiExplosions = newConfetti,

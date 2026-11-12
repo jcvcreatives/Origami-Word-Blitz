@@ -15,6 +15,7 @@ import com.example.domain.model.GameCatalog
 import com.example.domain.model.LevelTemplate
 import com.example.domain.model.PuzzleState
 import com.example.domain.model.Tile
+import com.example.ui.feedback.AudioPlayer
 import com.example.ui.feedback.SoundAndHapticsEngine
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlin.coroutines.cancellation.CancellationException
@@ -48,8 +49,11 @@ sealed interface CloudUiState<out T> {
 class GameViewModel(
   private val repository: OrigamiCloudRepository? = null,
   private val currentUserId: String? = null,
-  private val soundEngine: SoundAndHapticsEngine? = null,
+  private val soundEngine: SoundAndHapticsEngine = SoundAndHapticsEngine(),
 ) : ViewModel() {
+
+  val audioPlayer: AudioPlayer
+    get() = soundEngine.audioPlayer
 
   val trieEngine = WordTrieEngine()
   val lexiFillEngine = LexiFillEngine(trieEngine)
@@ -184,12 +188,26 @@ class GameViewModel(
     loadLevel(nextNum)
   }
 
+  fun toggleSoundMute(haptics: HapticFeedback? = null) {
+    val muted = audioPlayer.toggleMute()
+    if (!muted) {
+      soundEngine.onTilePickup(haptics)
+    }
+    _puzzleState.update { s ->
+      s.copy(
+        isSoundMuted = muted,
+        lastSoundTriggered = if (!muted) AudioPlayer.SoundEffect.CLICK.id else s.lastSoundTriggered,
+      )
+    }
+  }
+
   fun onRackTileTapped(tile: Tile, haptics: HapticFeedback? = null) {
-    soundEngine?.onTilePickup(haptics)
+    soundEngine.onTilePickup(haptics)
     _puzzleState.update { s ->
       val nextSelected = if (s.rackState.selectedTileId == tile.id) null else tile.id
       s.copy(
         rackState = s.rackState.copy(selectedTileId = nextSelected),
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
         statusMessage =
           if (nextSelected != null) {
             "Selected '${tile.char}' (${tile.baseScore} pts) — tap an open blank slot on the grid!"
@@ -203,7 +221,7 @@ class GameViewModel(
 
   fun onTileDragStart(tile: Tile, haptics: HapticFeedback? = null) {
     lastHoverCoord = null
-    soundEngine?.onTilePickup(haptics)
+    soundEngine.onTilePickup(haptics)
     _puzzleState.update { s ->
       s.copy(
         rackState =
@@ -212,6 +230,7 @@ class GameViewModel(
             selectedTileId = tile.id,
           ),
         highlightedHintCoord = null,
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
       )
     }
   }
@@ -237,13 +256,14 @@ class GameViewModel(
       return
     }
 
-    // Subtle haptic tick when magnetically snapping onto a new open blank target
-    soundEngine?.onTilePickup(haptics)
+    // Subtle 'click' tick when magnetically locking onto a new open blank target
+    soundEngine.onTilePickup(haptics, pitchMultiplier = 1.12f)
     val preview = lexiFillEngine.previewTileDrop(state, tile, targetCoord.x, targetCoord.y)
     _puzzleState.update { s ->
       s.copy(
         hoverCoord = targetCoord,
         hoverPreview = preview,
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
       )
     }
   }
@@ -270,7 +290,9 @@ class GameViewModel(
   ): Boolean {
     lastHoverCoord = null
     if (targetCoord == null) {
+      soundEngine.onInvalidWord(haptics)
       onTileDragCancel()
+      _puzzleState.update { it.copy(lastSoundTriggered = AudioPlayer.SoundEffect.THUD.id) }
       return false
     }
 
@@ -283,46 +305,50 @@ class GameViewModel(
         targetY = targetCoord.y,
       )
 
-    _puzzleState.value = result.updatedState
-
     return when (result.outcome) {
-      LexiFillEngine.OutcomeType.NO_OP,
-      LexiFillEngine.OutcomeType.RETURNED_OUTSIDE_SLOT -> {
+      LexiFillEngine.OutcomeType.NO_OP -> {
+        _puzzleState.value = result.updatedState
         false
       }
+      LexiFillEngine.OutcomeType.RETURNED_OUTSIDE_SLOT,
       LexiFillEngine.OutcomeType.INVALID_INTERSECTION -> {
-        soundEngine?.onInvalidWord(haptics)
+        soundEngine.onInvalidWord(haptics)
+        _puzzleState.value =
+          result.updatedState.copy(lastSoundTriggered = AudioPlayer.SoundEffect.THUD.id)
         false
       }
       LexiFillEngine.OutcomeType.TILE_SNAPPED -> {
-        soundEngine?.onTileSnapToGrid(haptics, 1.05f)
+        soundEngine.onTileSnapToGrid(haptics, 1.05f)
+        _puzzleState.value =
+          result.updatedState.copy(lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id)
         true
       }
       LexiFillEngine.OutcomeType.WORD_COMPLETED -> {
-        soundEngine?.onWordScored(
+        soundEngine.onWordScored(
           score = result.scoreGained,
           isTripleWord = false,
           comboStreak = result.updatedState.comboStreak,
           haptics = haptics,
         )
+        _puzzleState.value =
+          result.updatedState.copy(lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id)
         true
       }
       LexiFillEngine.OutcomeType.DUAL_WORD_COMPLETED -> {
-        soundEngine?.onWordScored(
+        soundEngine.onWordScored(
           score = result.scoreGained,
           isTripleWord = true,
           comboStreak = result.updatedState.comboStreak,
           haptics = haptics,
         )
+        _puzzleState.value =
+          result.updatedState.copy(lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id)
         true
       }
       LexiFillEngine.OutcomeType.LEVEL_CLEARED -> {
-        soundEngine?.onWordScored(
-          score = result.scoreGained,
-          isTripleWord = true,
-          comboStreak = result.updatedState.comboStreak,
-          haptics = haptics,
-        )
+        soundEngine.onLevelClearedFanfare(haptics)
+        _puzzleState.value =
+          result.updatedState.copy(lastSoundTriggered = AudioPlayer.SoundEffect.FANFARE.id)
         syncCompletedLevelIfSignedIn(result.updatedState)
         startAutoAdvanceCountdown()
         true
@@ -336,18 +362,52 @@ class GameViewModel(
    * - If the cell is an open blank target and a rack tile is selected (or uses the matching hint tile),
    *   drops the selected tile into that cell.
    */
+  fun selectClueWord(wordId: String, haptics: HapticFeedback? = null) {
+    soundEngine.onTilePickup(haptics)
+    _puzzleState.update { s ->
+      val target = s.targetWords.find { it.id == wordId }
+      s.copy(
+        focusedWordId = wordId,
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
+        statusMessage =
+          if (target != null) {
+            "${target.direction.label.uppercase()}: ${target.formattedSkeleton(s.cells)} — ${target.clue}"
+          } else {
+            s.statusMessage
+          },
+        isStatusError = false,
+      )
+    }
+  }
+
   fun onBoardCellTapped(x: Int, y: Int, haptics: HapticFeedback? = null) {
     val state = _puzzleState.value
     val cell = state.cellAt(x, y) ?: return
 
     // Recall unlocked placed tile if tapped
     if (cell.placedTile != null && !cell.isLockedCompleted) {
-      soundEngine?.onTilePickup(haptics)
-      _puzzleState.value = lexiFillEngine.recallPlacedTileAt(state, x, y)
+      soundEngine.onTilePickup(haptics)
+      _puzzleState.value =
+        lexiFillEngine
+          .recallPlacedTileAt(state, x, y)
+          .copy(lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id)
       return
     }
 
-    if (!cell.isBlankTarget || cell.isLockedCompleted) return
+    // If tapping a fixed clue or locked cell, focus/cycle the word passing through (x, y)
+    if (!cell.isBlankTarget || cell.isLockedCompleted) {
+      val wordsHere = state.targetWords.filter { it.containsCoordinate(x, y) }
+      if (wordsHere.isNotEmpty()) {
+        val nextWord =
+          if (wordsHere.size >= 2 && wordsHere.first().id == state.focusedWordId) {
+            wordsHere[1]
+          } else {
+            wordsHere.first()
+          }
+        selectClueWord(nextWord.id, haptics)
+      }
+      return
+    }
 
     val selectedTileId =
       state.rackState.selectedTileId ?: state.rackState.tiles.firstOrNull()?.id ?: return
@@ -355,10 +415,11 @@ class GameViewModel(
   }
 
   fun shuffleRack(haptics: HapticFeedback? = null) {
-    soundEngine?.onTilePickup(haptics)
+    soundEngine.onTilePickup(haptics)
     _puzzleState.update { s ->
       s.copy(
         rackState = s.rackState.copy(tiles = s.rackState.tiles.shuffled()),
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
         statusMessage = "Shuffled letter inventory.",
         isStatusError = false,
       )
@@ -380,11 +441,12 @@ class GameViewModel(
         }
       }
     if (unlockedTiles.isEmpty()) return
-    soundEngine?.onTilePickup(haptics)
+    soundEngine.onTilePickup(haptics)
     _puzzleState.update { s ->
       s.copy(
         cells = updatedCells,
         rackState = s.rackState.copy(tiles = s.rackState.tiles + unlockedTiles),
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
         statusMessage = "Recalled ${unlockedTiles.size} unlocked tile(s) to rack.",
         isStatusError = false,
       )
@@ -409,12 +471,13 @@ class GameViewModel(
     val matchingTile =
       state.rackState.tiles.firstOrNull { it.char.equals(expectedChar, ignoreCase = true) }
 
-    soundEngine?.onTileSnapToGrid(haptics, 1.25f)
+    soundEngine.onTileSnapToGrid(haptics, 1.25f)
     _puzzleState.update { s ->
       s.copy(
         hintsRemaining = (s.hintsRemaining - 1).coerceAtLeast(0),
         highlightedHintCoord = targetBlank.coordinate,
         rackState = s.rackState.copy(selectedTileId = matchingTile?.id),
+        lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id,
         statusMessage =
           "Hint: Drop '$expectedChar' at (${targetBlank.x + 1}, ${targetBlank.y + 1}) — tap the glowing gold slot to place!",
         isStatusError = false,
@@ -442,15 +505,21 @@ class GameViewModel(
 
   fun unlockOrEquipSkin(skin: CosmeticTileSkin, haptics: HapticFeedback? = null) {
     val state = _puzzleState.value
-    soundEngine?.onTileSnapToGrid(haptics, 1.15f)
+    soundEngine.onTileSnapToGrid(haptics, 1.15f)
     if (skin.id in state.unlockedSkinIds) {
-      _puzzleState.update { it.copy(equippedSkin = skin) }
+      _puzzleState.update {
+        it.copy(
+          equippedSkin = skin,
+          lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id,
+        )
+      }
     } else if (state.lexiCoins >= skin.costCoins) {
       _puzzleState.update { s ->
         s.copy(
           lexiCoins = s.lexiCoins - skin.costCoins,
           unlockedSkinIds = s.unlockedSkinIds + skin.id,
           equippedSkin = skin,
+          lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id,
         )
       }
     }
@@ -474,7 +543,7 @@ class GameViewModel(
   override fun onCleared() {
     super.onCleared()
     autoAdvanceJob?.cancel()
-    soundEngine?.release()
+    soundEngine.release()
   }
 
   private companion object {

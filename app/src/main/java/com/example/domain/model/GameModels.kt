@@ -260,6 +260,7 @@ data class PuzzleState(
   val hoverCoord: Coordinate? = null,
   val hoverPreview: DropPreviewEvaluation? = null,
   val highlightedHintCoord: Coordinate? = null,
+  val focusedWordId: String? = null,
   val scorePopups: List<ScorePopupEvent> = emptyList(),
   val particleBursts: List<ParticleBurst> = emptyList(),
   val confettiExplosions: List<ConfettiExplosionEvent> = emptyList(),
@@ -276,6 +277,8 @@ data class PuzzleState(
   val unlockedSkinIds: Set<String> = setOf("washi_classic"),
   val lexiCoins: Int = 160,
   val strictTrieValidation: Boolean = true,
+  val isSoundMuted: Boolean = false,
+  val lastSoundTriggered: String? = null,
 ) {
   fun cellAt(x: Int, y: Int): BoardCell? {
     if (y !in 0 until boardHeight || x !in 0 until boardWidth) return null
