@@ -2,69 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crossword Origami</title>
   <style>
     :root {
-      --bg: #f6efe2;
-      --surface: #fdf9f0;
-      --card: #ede2ce;
-      --elevated: #d6c5a9;
-      --cyan: #1e5b88;
-      --gold: #c87d12;
-      --emerald: #1f7a58;
-      --crimson: #c93b2b;
-      --cream: #221d17;
-      --muted: #6e5f4f;
+      /* Crossword Origami — Handcrafted Washi Paper, Folded Kraft, Sumi Ink & Origami Dye Palette */
+      --washi-desk: #f3ede0;
+      --washi-sheet: #fffcf5;
+      --kraft-card: #e7dec9;
+      --kraft-border: #d0c3a8;
+      --sumi-ink: #231e18;
+      --walnut-muted: #6b5e4c;
+
+      --aizome-indigo: #1d5b8f;
+      --matcha-jade: #157f4b;
+      --kyoto-gold: #c87d0a;
+      --torii-vermilion: #d9381e;
+
+      /* Crossword Origami Paper Board Cell Tokens */
+      --fixed-cell-bg: #e6dcca;
+      --fixed-cell-border: #b5a489;
+      --blank-slot-bg: #ede6d6;
+      --blank-slot-border: #9c8b70;
+      --completed-word-bg: #d9efe2;
+      --completed-word-border: #157f4b;
+
+      /* Multiplier Paper Stamp Colors */
+      --mult-dl-bg: #d0e6f5;
+      --mult-tl-bg: #b3d7f0;
+      --mult-dw-bg: #f7d6e0;
+      --mult-tw-bg: #f5cbcb;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100dvh;
+      background: var(--washi-desk);
+      color: var(--sumi-ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+    }
+
     body {
       position: relative;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(circle at top, #fbf6ec 0%, var(--bg) 75%);
-      color: var(--cream);
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 16px;
+      padding: 10px 10px 76px 10px;
     }
-    /* Subtle 'paper-grain' CSS filter overlay on the main Washi-paper background */
+
+    /* Subtle 'paper-grain' CSS filter overlay on the main Washi-paper desk background */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 1;
-      opacity: 0.24;
+      opacity: 0.22;
       mix-blend-mode: multiply;
       filter: url(#paper-grain);
     }
+
     /* Subtle 'paper-grain' CSS filter overlay on all Origami card & tile components */
-    .hud-card,
-    .clue-chip,
-    .board-frame,
-    .status-banner,
-    .rack-card,
-    .tile {
+    .paper-surface {
       position: relative;
       overflow: hidden;
     }
-    .hud-card::after,
-    .clue-chip::after,
-    .board-frame::after,
-    .status-banner::after,
-    .rack-card::after,
-    .tile::after {
+    .paper-surface::after {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: inherit;
       pointer-events: none;
-      opacity: 0.18;
+      opacity: 0.16;
       mix-blend-mode: multiply;
       filter: url(#paper-grain);
+      z-index: 1;
     }
+    .paper-surface > * {
+      position: relative;
+      z-index: 2;
+    }
+
     .app-shell {
       position: relative;
       z-index: 2;
@@ -72,101 +100,252 @@
       max-width: 560px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 9px;
     }
+
+    /* Top HUD Card */
     .hud-card {
-      background: var(--surface);
-      border: 1px solid var(--elevated);
-      border-radius: 16px;
-      padding: 12px 14px;
+      background: var(--washi-sheet);
+      border: 1.2px solid var(--kraft-border);
+      border-radius: 18px;
+      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+    .hud-main {
+      padding: 8px 8px 6px 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.08);
+      gap: 6px;
     }
-    .lvl-badge {
-      background: rgba(30, 91, 136, 0.14);
-      color: var(--cyan);
-      font-weight: 800;
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 6px;
-      display: inline-block;
-      margin-bottom: 3px;
+    .hud-left {
+      flex: 1;
+      min-width: 0;
     }
-    .hud-title { font-size: 16px; font-weight: 800; }
-    .hud-sub { font-size: 12px; color: var(--muted); }
-    .combo-pill {
-      position: relative;
-      background: var(--card);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: 6px 10px;
-      font-weight: 800;
-      font-size: 13px;
-      color: var(--gold);
+    .hud-title-row {
       display: flex;
       align-items: center;
-      gap: 4px;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+    .lvl-badge {
+      background: rgba(29, 91, 143, 0.15);
+      border: 1px solid rgba(29, 91, 143, 0.48);
+      color: var(--aizome-indigo);
+      font-weight: 800;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .hud-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--sumi-ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hud-sub-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--walnut-muted);
+    }
+    .coins-pill {
+      background: rgba(200, 125, 10, 0.14);
+      color: var(--kyoto-gold);
+      font-weight: 800;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 5px;
+    }
+    .combo-pill {
+      background: var(--kraft-card);
+      border: 1px solid var(--kraft-border);
+      border-radius: 12px;
+      padding: 5px 8px;
+      font-weight: 800;
+      font-size: 12px;
+      color: var(--sumi-ink);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+      white-space: nowrap;
+    }
+    .combo-pill.high {
+      background: linear-gradient(90deg, #f7e9c8, #f3d592);
+      border-color: var(--kyoto-gold);
     }
     .combo-pill.bounce {
-      transform: scale(1.36);
-      background: linear-gradient(90deg, var(--crimson), var(--gold));
-      color: #fffdf8;
+      transform: scale(1.32);
+      background: linear-gradient(90deg, var(--torii-vermilion), var(--kyoto-gold));
+      color: #fffcf5;
     }
-    .score-box { text-align: right; }
-    .score-val { font-size: 18px; font-weight: 900; color: var(--gold); }
+    .score-box {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .score-val {
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--kyoto-gold);
+    }
+    .score-career {
+      font-size: 10px;
+      color: var(--walnut-muted);
+    }
+    .hud-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--walnut-muted);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.12s ease;
+    }
+    .icon-btn:active {
+      transform: scale(0.92);
+      background: rgba(0, 0, 0, 0.06);
+    }
+    .hud-progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(243, 237, 224, 0.85);
+    }
+    .hud-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--aizome-indigo), var(--matcha-jade), var(--kyoto-gold));
+      transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Intersecting Clues Strip */
     .clues-strip {
       display: flex;
       gap: 8px;
       overflow-x: auto;
-      padding-bottom: 4px;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .clues-strip::-webkit-scrollbar {
+      display: none;
     }
     .clue-chip {
-      background: var(--surface);
-      border: 1px solid var(--elevated);
+      background: var(--washi-sheet);
+      border: 1px solid var(--kraft-border);
       border-radius: 12px;
-      padding: 7px 11px;
-      min-width: 175px;
+      padding: 6px 10px;
+      min-width: 168px;
       flex-shrink: 0;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.15s ease;
+    }
+    .clue-chip.focused {
+      background: #dfecf6;
+      border: 1.6px solid var(--aizome-indigo);
     }
     .clue-chip.done {
-      background: #dcefe6;
-      border-color: var(--emerald);
+      background: var(--completed-word-bg);
+      border: 1.6px solid var(--matcha-jade);
     }
     .clue-head {
       display: flex;
-      justify-content: space-between;
-      font-family: monospace;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-weight: 800;
-      font-size: 13px;
+      font-size: 12px;
+      color: var(--sumi-ink);
       margin-bottom: 2px;
     }
-    .clue-dir { color: var(--cyan); font-size: 10px; }
-    .clue-chip.done .clue-dir { color: var(--emerald); }
-    .clue-desc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .clue-dir {
+      color: var(--aizome-indigo);
+      font-size: 9px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 800;
+    }
+    .clue-chip.focused .clue-dir {
+      color: var(--kyoto-gold);
+    }
+    .clue-chip.done .clue-dir {
+      color: var(--matcha-jade);
+    }
+    .clue-desc {
+      font-size: 10px;
+      color: var(--walnut-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Handcrafted Washi-Paper Board Container */
     .board-frame {
       position: relative;
-      background: #efe6d5;
-      border: 2px solid var(--elevated);
+      background: linear-gradient(180deg, var(--washi-sheet) 0%, #f6f0e2 100%);
+      border: 1.5px solid var(--kraft-border);
       border-radius: 18px;
-      padding: 12px;
+      padding: 10px;
       display: grid;
       gap: 5px;
       aspect-ratio: 9 / 8;
-      box-shadow: inset 0 2px 6px rgba(74, 56, 35, 0.08);
+      box-shadow: 0 4px 12px rgba(74, 56, 35, 0.10);
+      touch-action: none;
     }
+    .board-frame.shake {
+      animation: boardShake 0.24s linear;
+    }
+    @keyframes boardShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .board-creases-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .board-grid-layer {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      gap: 5px;
+    }
+
+    /* Origami Board Cells */
     .cell {
-      border-radius: 9px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
-      font-size: 20px;
+      font-family: Georgia, "Noto Serif", serif;
+      font-size: clamp(15px, 4.2vw, 21px);
       position: relative;
-      transition: transform 0.18s ease, background 0.2s ease, border-color 0.2s ease;
+      transition: transform 0.16s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+    .cell.corridor {
+      box-shadow: 0 0 0 2.5px rgba(29, 91, 143, 0.18);
     }
     .cell.void {
       background: transparent;
@@ -176,135 +355,405 @@
       width: 4px;
       height: 4px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.12);
+      background: rgba(208, 195, 168, 0.58);
     }
+
+    /* 1. Permanent Fixed Clue Letter Cell (Folded Kraft Origami Paper Tile) */
     .cell.fixed {
-      background: #1f2d4d;
-      border: 2px solid #3b5180;
-      color: var(--cream);
+      background: var(--fixed-cell-bg);
+      border: 1.8px solid var(--fixed-cell-border);
+      color: var(--sumi-ink);
+      box-shadow: 1px 2px 3px rgba(140, 122, 91, 0.22);
+      overflow: hidden;
     }
+    /* Diagonal paper crease line */
+    .cell.fixed::before,
+    .cell.placed::before,
+    .tile::before {
+      content: "";
+      position: absolute;
+      width: 120%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.52);
+      transform: rotate(-45deg);
+      pointer-events: none;
+    }
+    /* Origami dog-ear corner fold triangle in top-right corner */
+    .dog-ear {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 21%;
+      height: 21%;
+      background: linear-gradient(225deg, rgba(181, 164, 137, 0.55) 50%, rgba(181, 164, 137, 0.35) 50%);
+      clip-path: polygon(0 0, 100% 100%, 0 100%);
+      pointer-events: none;
+    }
+
+    /* 2. Open Blank Target Paper Cutout Socket */
     .cell.blank {
-      background: #0e1729;
-      border: 2px dashed #4f6da8;
-      color: var(--gold);
+      background: var(--blank-slot-bg);
+      border: 1.8px dashed var(--blank-slot-border);
+      color: var(--walnut-muted);
       cursor: pointer;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
+    .cell.blank.mult-2W { background: var(--mult-dw-bg); }
+    .cell.blank.mult-3W { background: var(--mult-tw-bg); }
+    .cell.blank.mult-2L { background: var(--mult-dl-bg); }
+    .cell.blank.mult-3L { background: var(--mult-tl-bg); }
     .cell.blank.intersection {
-      border-color: var(--gold);
-      box-shadow: inset 0 0 10px rgba(255, 183, 3, 0.16);
+      border-color: var(--kyoto-gold);
+      color: var(--kyoto-gold);
     }
-    .cell.blank:hover, .cell.blank.drag-over {
+    .cell.blank.hint-glow {
       border-style: solid;
-      border-color: var(--emerald);
-      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--kyoto-gold);
+      background: rgba(200, 125, 10, 0.18);
+      color: var(--kyoto-gold);
+      animation: hintPulse 0.9s infinite alternate ease-in-out;
+    }
+    @keyframes hintPulse {
+      from { transform: scale(0.97); }
+      to { transform: scale(1.05); }
+    }
+    .cell.blank.magnetic-valid {
+      border-style: solid;
+      border-width: 2.4px;
+      border-color: var(--matcha-jade);
+      background: rgba(21, 127, 75, 0.20);
+      color: var(--matcha-jade);
       transform: scale(1.06);
     }
+    .cell.blank.magnetic-invalid {
+      border-style: solid;
+      border-width: 2.4px;
+      border-color: var(--torii-vermilion);
+      background: rgba(217, 56, 30, 0.18);
+      color: var(--torii-vermilion);
+      transform: scale(1.04);
+    }
+
+    /* 3. Player Placed Origami Tile */
     .cell.placed {
-      background: #fff8ec;
-      border: 2px solid #d9b382;
-      color: #1e293b;
+      background: var(--skin-base, #fff8ec);
+      border: 2px solid var(--skin-border, #d9b382);
+      color: var(--skin-text, #231e18);
+      box-shadow: 1px 2.5px 4px rgba(125, 107, 77, 0.28);
       cursor: pointer;
+      overflow: hidden;
     }
+
+    /* 4. Completed & Locked Word Cell (Folded Sage Matcha Paper) */
     .cell.locked {
-      background: #0d3b2e;
-      border: 2px solid var(--emerald);
-      color: var(--cream);
+      background: var(--completed-word-bg) !important;
+      border: 2px solid var(--completed-word-border) !important;
+      color: var(--sumi-ink) !important;
     }
-    .cell.flash {
-      animation: cellFlash 0.75s ease;
+    .cell.locked .dog-ear {
+      background: rgba(21, 127, 75, 0.35);
     }
+
     .cell.snapped {
-      animation: tileSnapImpact 0.44s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: tileSnapSquash 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    @keyframes tileSnapImpact {
-      0% { transform: scale(1.38); box-shadow: 0 0 24px var(--cyan); }
-      32% { transform: scale(1.16, 0.85); }
-      65% { transform: scale(0.93, 1.09); }
-      100% { transform: scale(1); }
+    @keyframes tileSnapSquash {
+      0% { transform: scale(1.24, 1.24); }
+      28% { transform: scale(1.12, 0.89); }
+      62% { transform: scale(0.96, 1.05); }
+      100% { transform: scale(1, 1); }
     }
-    @keyframes cellFlash {
-      0% { transform: scale(1); box-shadow: 0 0 0 rgba(255,183,3,0); }
-      40% { transform: scale(1.14); background: var(--gold); color: #0b101e; box-shadow: 0 0 22px var(--gold); }
-      100% { transform: scale(1); }
+
+    .cell.flash {
+      animation: cellEmeraldShimmer 0.65s ease-out;
     }
-    .shockwave-ring {
-      position: absolute;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 3px solid var(--cyan);
-      pointer-events: none;
-      transform: translate(-50%, -50%) scale(0.4);
-      animation: shockwaveExpand 0.58s ease-out forwards;
-      z-index: 25;
+    @keyframes cellEmeraldShimmer {
+      0% { box-shadow: 0 0 0 0 rgba(21, 127, 75, 0.65); }
+      45% { box-shadow: 0 0 0 5px rgba(21, 127, 75, 0.32); transform: scale(1.06); }
+      100% { box-shadow: 0 0 0 0 rgba(21, 127, 75, 0); transform: scale(1); }
     }
-    @keyframes shockwaveExpand {
-      0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.4); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(2.3); }
-    }
-    .drag-spark {
-      position: fixed;
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 99;
-      animation: sparkFade 0.45s ease-out forwards;
-    }
-    @keyframes sparkFade {
-      0% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.1); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.15); }
-    }
+
     .mult-tag {
-      font-size: 10px;
-      font-family: monospace;
-      opacity: 0.85;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
     .pts-sub {
       position: absolute;
       bottom: 2px;
-      right: 4px;
-      font-size: 9px;
-      opacity: 0.7;
+      right: 3px;
+      font-size: 8.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 700;
+      opacity: 0.72;
     }
+
+    /* Magnetic Callout Pill above Hovered Slot */
+    .hover-callout-pill {
+      position: absolute;
+      transform: translate(-50%, -135%);
+      background: var(--washi-sheet);
+      border: 2px solid var(--matcha-jade);
+      color: var(--matcha-jade);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 35;
+      box-shadow: 0 3px 8px rgba(35, 30, 24, 0.16);
+    }
+    .hover-callout-pill.invalid {
+      border-color: var(--torii-vermilion);
+      color: var(--torii-vermilion);
+    }
+
+    /* Subtle Paper Ripple Ring */
+    .shockwave-ring {
+      position: absolute;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2.2px solid var(--aizome-indigo);
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(0.45);
+      animation: shockwaveExpand 0.44s ease-out forwards;
+      z-index: 25;
+    }
+    @keyframes shockwaveExpand {
+      0% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.45); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.85); }
+    }
+
+    .floating-popup {
+      position: absolute;
+      pointer-events: none;
+      font-weight: 900;
+      font-size: 14px;
+      color: var(--matcha-jade);
+      text-shadow: 0 1px 4px rgba(255, 252, 245, 0.95);
+      animation: floatUp 1.05s ease-out forwards;
+      z-index: 30;
+      white-space: nowrap;
+    }
+    .floating-popup.dual {
+      color: var(--kyoto-gold);
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
+      30% { transform: translate(-50%, -12px) scale(1.08); }
+      100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+    }
+
+    /* Live Intersection Preview & Active Clue Spotlight Banner */
     .status-banner {
-      background: var(--surface);
-      border: 1px solid var(--elevated);
-      border-radius: 13px;
-      padding: 9px 12px;
-      font-size: 13px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .status-banner.error {
-      background: #2d141c;
-      border-color: var(--crimson);
-      color: #ffb4bc;
-    }
-    .rack-card {
-      background: var(--surface);
-      border: 1px solid var(--elevated);
-      border-radius: 18px;
-      padding: 12px;
+      background: var(--washi-sheet);
+      border: 1.2px solid var(--kraft-border);
+      border-radius: 14px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 6px rgba(74, 56, 35, 0.06);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 4px;
     }
-    .rack-row {
+    .status-banner.valid-preview {
+      background: var(--completed-word-bg);
+      border-color: var(--matcha-jade);
+    }
+    .status-banner.error {
+      background: #fce8e6;
+      border-color: var(--torii-vermilion);
+    }
+    .spotlight-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .spotlight-clue {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+    }
+    .dir-badge {
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--aizome-indigo);
+      background: rgba(29, 91, 143, 0.12);
+      border: 1px solid rgba(29, 91, 143, 0.45);
+      padding: 2px 5px;
+      border-radius: 5px;
+      white-space: nowrap;
+    }
+    .clue-spotlight-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--sumi-ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mini-slots-row {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .mini-slot {
+      width: 19px;
+      height: 19px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--kraft-card);
+      border: 1px solid var(--kraft-border);
+      color: var(--sumi-ink);
+    }
+    .mini-slot.open {
+      background: var(--washi-desk);
+      border-color: rgba(29, 91, 143, 0.55);
+      color: var(--aizome-indigo);
+    }
+    .mini-slot.placed {
+      background: rgba(200, 125, 10, 0.18);
+      border-color: var(--kyoto-gold);
+      color: var(--kyoto-gold);
+    }
+    .status-subline {
+      font-size: 11px;
+      color: var(--walnut-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status-banner.error .status-subline {
+      color: var(--torii-vermilion);
+      font-weight: 600;
+    }
+    .status-banner.valid-preview .status-subline {
+      color: var(--matcha-jade);
+      font-weight: 700;
+    }
+
+    /* Origami Washi-Paper Rack Card */
+    .rack-card {
+      background: var(--washi-sheet);
+      border: 1.2px solid var(--kraft-border);
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .rack-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .rack-title-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rack-title {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--sumi-ink);
+      letter-spacing: 0.3px;
+    }
+    .tile-count-badge {
+      background: rgba(29, 91, 143, 0.14);
+      color: var(--aizome-indigo);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+    .legend-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .legend-pill {
+      font-size: 8.5px;
+      font-weight: 700;
+      padding: 1.5px 5px;
+      border-radius: 5px;
+      border: 1px solid;
+    }
+    .legend-pill.gold {
+      color: var(--kyoto-gold);
+      background: rgba(200, 125, 10, 0.12);
+      border-color: rgba(200, 125, 10, 0.45);
+    }
+    .legend-pill.indigo {
+      color: var(--aizome-indigo);
+      background: rgba(29, 91, 143, 0.12);
+      border-color: rgba(29, 91, 143, 0.45);
+    }
+    .legend-pill.vermilion {
+      color: var(--torii-vermilion);
+      background: rgba(217, 56, 30, 0.12);
+      border-color: rgba(217, 56, 30, 0.45);
+    }
+
+    /* Recessed Kraft Paper Tile Tray Well */
+    .rack-well {
+      background: rgba(231, 222, 201, 0.78);
+      border: 1px solid var(--kraft-border);
+      border-radius: 14px;
+      padding: 10px 8px;
+      min-height: 68px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      align-items: center;
       justify-content: center;
-      min-height: 54px;
+      perspective: 600px;
     }
+
+    /* Subtle continuous 'float' animation for idle tiles sitting in the rack */
+    @keyframes idlePaperFloat {
+      0%, 100% {
+        transform: translateY(-2.6px) rotate(-1.3deg);
+      }
+      50% {
+        transform: translateY(2.6px) rotate(1.3deg);
+      }
+    }
+
+    /* 3D Origami Flip & Fan Shuffle Animation when shuffling tiles */
+    @keyframes origamiShuffleFlip {
+      0% {
+        transform: translate(0, 0) scale(1) rotateY(0deg) rotateZ(0deg);
+      }
+      35% {
+        transform: translate(var(--shuf-x, 14px), var(--shuf-y, -18px)) scale(1.18) rotateY(180deg) rotateZ(var(--shuf-rot, 14deg));
+      }
+      72% {
+        transform: translate(calc(var(--shuf-x, 14px) * -0.35), -4px) scale(1.05) rotateY(330deg) rotateZ(calc(var(--shuf-rot, 14deg) * -0.5));
+      }
+      100% {
+        transform: translate(0, 0) scale(1) rotateY(360deg) rotateZ(0deg);
+      }
+    }
+
     .tile {
       width: 48px;
       height: 48px;
-      border-radius: 12px;
-      background: #fff8ec;
-      border: 2px solid #d9b382;
-      color: #1e293b;
+      border-radius: 10px;
+      background: var(--skin-base, #fff8ec);
+      border: 1.6px solid var(--skin-border, #d9b382);
+      color: var(--skin-text, #231e18);
       font-weight: 900;
       font-size: 22px;
       display: flex;
@@ -312,47 +761,238 @@
       justify-content: center;
       position: relative;
       cursor: grab;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+      touch-action: none;
+      box-shadow: 0 3px 7px rgba(74, 56, 35, 0.22);
+      animation: idlePaperFloat 2.5s ease-in-out infinite;
+      animation-delay: var(--float-delay, 0s);
+      transform-style: preserve-3d;
+    }
+    .tile.shuffling {
+      animation: origamiShuffleFlip 0.44s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+      animation-delay: var(--shuf-delay, 0ms) !important;
     }
     .tile.selected {
-      transform: translateY(-6px) scale(1.1);
-      border-color: var(--gold);
-      box-shadow: 0 8px 18px rgba(255, 183, 3, 0.35);
+      animation: none;
+      transform: translateY(-5px) scale(1.10);
+      border: 2.2px solid var(--kyoto-gold);
+      box-shadow: 0 7px 14px rgba(200, 125, 10, 0.30);
     }
+    .tile.dragging-source {
+      opacity: 0.25;
+      animation: none;
+    }
+
+    /* Floating Drag Proxy Tile with Magnetic-Snap Physics */
+    .drag-proxy-tile {
+      position: fixed;
+      width: 54px;
+      height: 54px;
+      border-radius: 11px;
+      background: var(--skin-base, #fff8ec);
+      border: 2.4px solid var(--aizome-indigo);
+      color: var(--skin-text, #231e18);
+      font-weight: 900;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 999;
+      box-shadow: 0 12px 24px rgba(35, 30, 24, 0.32);
+      transform: translate(-50%, -50%) scale(1.16);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .drag-proxy-tile.magnet-snapped {
+      border-color: var(--matcha-jade);
+      box-shadow: 0 0 0 6px rgba(21, 127, 75, 0.24), 0 10px 22px rgba(35, 30, 24, 0.28);
+    }
+
+    /* Action Buttons Row */
     .btn-row {
       display: flex;
       gap: 8px;
     }
-    button {
+    .action-btn {
       flex: 1;
-      height: 42px;
-      border-radius: 10px;
-      border: 1px solid var(--elevated);
-      background: var(--card);
-      color: var(--cream);
+      height: 44px;
+      border-radius: 12px;
+      border: 1.2px solid var(--kraft-border);
+      background: var(--washi-sheet);
+      color: var(--sumi-ink);
+      font-weight: 700;
+      font-size: 12.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: transform 0.12s ease, background 0.15s ease;
+    }
+    .action-btn:active {
+      transform: scale(0.96);
+    }
+    .action-btn.hint-btn {
+      flex: 1.25;
+      background: rgba(200, 125, 10, 0.16);
+      border-color: rgba(200, 125, 10, 0.45);
+      color: var(--kyoto-gold);
+      font-weight: 800;
+    }
+    .shuffle-icon {
+      display: inline-block;
+      transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Bottom Navigation Bar matching Android App */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 62px;
+      background: var(--washi-sheet);
+      border-top: 1.2px solid var(--kraft-border);
+      display: flex;
+      justify-content: center;
+      z-index: 90;
+      box-shadow: 0 -2px 10px rgba(74, 56, 35, 0.06);
+    }
+    .bottom-nav-inner {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+    }
+    .nav-item {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--walnut-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 11px;
       font-weight: 700;
       cursor: pointer;
     }
-    button.primary {
-      background: var(--cyan);
-      color: #0b101e;
+    .nav-item.active {
+      color: var(--aizome-indigo);
+      font-weight: 800;
+    }
+    .nav-icon {
+      font-size: 17px;
+      padding: 2px 14px;
+      border-radius: 999px;
+      transition: background 0.18s ease;
+    }
+    .nav-item.active .nav-icon {
+      background: rgba(29, 91, 143, 0.15);
+    }
+
+    /* Secondary Screens (Levels, Studio, Trie) */
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .tab-panel.active {
+      display: flex;
+    }
+    .panel-card {
+      background: var(--washi-sheet);
+      border: 1.2px solid var(--kraft-border);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .level-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .play-btn {
+      background: var(--aizome-indigo);
+      color: #fffcf5;
       border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-weight: 800;
+      cursor: pointer;
     }
-    .floating-popup {
-      position: absolute;
-      pointer-events: none;
+    .play-btn.solved {
+      background: var(--matcha-jade);
+    }
+    .sfx-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .sfx-btn {
+      height: 42px;
+      border-radius: 10px;
+      border: 1.2px solid var(--kraft-border);
+      background: var(--kraft-card);
+      color: var(--aizome-indigo);
+      font-weight: 800;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    /* Level Clear Origami Fanfare Modal */
+    .fanfare-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(35, 30, 24, 0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 200;
+    }
+    .fanfare-backdrop.visible {
+      display: flex;
+    }
+    .fanfare-modal {
+      width: 100%;
+      max-width: 400px;
+      background: var(--washi-sheet);
+      border: 2px solid var(--kyoto-gold);
+      border-radius: 22px;
+      padding: 22px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+    .stars-row {
+      font-size: 28px;
+      color: var(--kyoto-gold);
+      letter-spacing: 6px;
+    }
+    .breakdown-box {
+      background: var(--kraft-card);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .stat-line {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    .stat-line.total {
       font-weight: 900;
-      font-size: 16px;
-      color: var(--gold);
-      text-shadow: 0 2px 8px rgba(0,0,0,0.85);
-      animation: floatUp 1.2s ease-out forwards;
-      z-index: 30;
-    }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translate(-50%, 0) scale(0.85); }
-      30% { transform: translate(-50%, -14px) scale(1.15); }
-      100% { opacity: 0; transform: translate(-50%, -44px) scale(1); }
+      color: var(--kyoto-gold);
+      border-top: 1px solid var(--kraft-border);
+      padding-top: 6px;
     }
   </style>
 </head>
@@ -366,48 +1006,256 @@
         values="0.35 0 0 0 0.58
                 0.30 0 0 0 0.53
                 0.22 0 0 0 0.44
-                0    0 0 0.36 0"
+                0    0 0 0.34 0"
         in="noise"
       />
     </filter>
   </svg>
+
   <div class="app-shell">
-    <div class="hud-card">
-      <div>
-        <span class="lvl-badge" id="lvlBadge">LVL 1 · STARTER SKELETON</span>
-        <div class="hud-title" id="lvlTitle">Orbital Crossing</div>
-        <div class="hud-sub" id="lvlProgress">Words: 0/5 • Blanks: 0/8</div>
+    <!-- TAB 1: SKELETON PUZZLE ARENA -->
+    <div class="tab-panel active" id="tab-skeleton">
+      <div class="hud-card paper-surface">
+        <div class="hud-main">
+          <div class="hud-left">
+            <div class="hud-title-row">
+              <span class="lvl-badge" id="lvlBadge">LVL 1</span>
+              <span class="hud-title" id="lvlTitle">Orbital Crossing</span>
+            </div>
+            <div class="hud-sub-row">
+              <span id="lvlProgress">Words 0/5 · Blanks 0/8</span>
+              <span class="coins-pill" id="coinsBadge">🪙 160</span>
+            </div>
+          </div>
+
+          <div class="combo-pill" id="comboPill">🔥 <span id="comboText">×1.0</span></div>
+
+          <div class="score-box">
+            <div class="score-val" id="scoreVal">0 PTS</div>
+            <div class="score-career" id="totalScoreVal">Career 0</div>
+          </div>
+
+          <div class="hud-actions">
+            <button class="icon-btn" id="muteBtn" onclick="toggleSoundMute()" title="Mute/Unmute Audio">🔊</button>
+            <button class="icon-btn" onclick="resetLevel()" title="Reset Current Grid">↻</button>
+            <button class="icon-btn" onclick="nextLevel()" title="Skip to Next Puzzle" style="color:var(--aizome-indigo);">⏭</button>
+          </div>
+        </div>
+        <div class="hud-progress-track">
+          <div class="hud-progress-fill" id="hudProgressBar"></div>
+        </div>
       </div>
-      <div class="combo-pill" id="comboPill">🔥 <span id="comboText">×1.0</span></div>
-      <div class="score-box">
-        <div class="score-val" id="scoreVal">0 PTS</div>
-        <div class="hud-sub" id="totalScoreVal">Career: 0</div>
+
+      <div class="clues-strip" id="cluesStrip"></div>
+
+      <div class="board-frame paper-surface" id="boardFrame">
+        <!-- Diagonal Origami Paper Creases across the Washi board -->
+        <svg class="board-creases-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1="0" y1="0" x2="100" y2="100" stroke="#d0c3a8" stroke-width="0.4" stroke-dasharray="3,2.2" opacity="0.55" />
+          <line x1="100" y1="0" x2="0" y2="100" stroke="#d0c3a8" stroke-width="0.4" stroke-dasharray="3,2.2" opacity="0.55" />
+        </svg>
+        <div class="board-grid-layer" id="boardGrid"></div>
+      </div>
+
+      <div class="status-banner paper-surface" id="statusBanner">
+        <div class="spotlight-top" id="spotlightTop">
+          <div class="spotlight-clue">
+            <span class="dir-badge" id="spotlightDir">ACROSS →</span>
+            <span class="clue-spotlight-text" id="spotlightClue">Celestial world in solar orbit</span>
+          </div>
+          <div class="mini-slots-row" id="spotlightMiniSlots"></div>
+        </div>
+        <div class="status-subline" id="statusText">Drag letter tiles into open blanks to complete intersecting words!</div>
+      </div>
+
+      <div class="rack-card paper-surface">
+        <div class="rack-header">
+          <div class="rack-title-group">
+            <span class="rack-title">ORIGAMI PAPER RACK</span>
+            <span class="tile-count-badge" id="rackCountBadge">8 tiles</span>
+          </div>
+          <div class="legend-group">
+            <span class="legend-pill gold">◆ Crossing</span>
+            <span class="legend-pill indigo">2L/3L</span>
+            <span class="legend-pill vermilion">2W/3W</span>
+          </div>
+        </div>
+
+        <div class="rack-well" id="rackRow"></div>
+
+        <div class="btn-row">
+          <button class="action-btn" onclick="shuffleRack()">
+            <span class="shuffle-icon" id="shuffleIcon">🔀</span>
+            <span>Shuffle</span>
+          </button>
+          <button class="action-btn hint-btn" id="hintBtn" onclick="triggerSmartHint()">
+            <span>💡</span>
+            <span id="hintBtnText">Smart Hint (3)</span>
+          </button>
+          <button class="action-btn" id="recallBtn" onclick="recallUnlockedTiles()" style="display:none;">
+            <span>↩</span>
+            <span>Recall</span>
+          </button>
+        </div>
       </div>
     </div>
 
-    <div class="clues-strip" id="cluesStrip"></div>
-
-    <div class="board-frame" id="boardGrid"></div>
-
-    <div class="status-banner" id="statusBanner">
-      <span id="statusText">Drag a letter tile into an open blank slot (or tap tile → tap blank)!</span>
+    <!-- TAB 2: LEVELS VAULT -->
+    <div class="tab-panel" id="tab-levels">
+      <div class="panel-card paper-surface">
+        <h2 style="font-size:20px; font-weight:900;">Crossword Origami Vault</h2>
+        <p style="font-size:12px; color:var(--aizome-indigo); font-weight:700;">100% Offline-First Kriss-Kross Fill-In Grids · Zero Network Quota</p>
+      </div>
+      <div id="levelsVaultList" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 
-    <div class="rack-card">
-      <div class="rack-row" id="rackRow"></div>
-      <div class="btn-row">
-        <button onclick="shuffleRack()">Shuffle Rack</button>
-        <button onclick="triggerSmartHint()">Smart Hint 💡</button>
-        <button onclick="resetLevel()">Reset Grid</button>
-        <button class="primary" onclick="nextLevel()">Next Puzzle →</button>
+    <!-- TAB 3: STUDIO & AUDIOPLAYER SYNTHESIZER -->
+    <div class="tab-panel" id="tab-studio">
+      <div class="panel-card paper-surface">
+        <h3 style="font-size:16px; font-weight:800;">AudioPlayer Sound Synthesizer</h3>
+        <p style="font-size:12px; color:var(--walnut-muted);">Audition the 4 real-time synthesized sound effects triggered on game events:</p>
+        <div class="sfx-grid">
+          <button class="sfx-btn" onclick="AudioPlayer.play('click')">CLICK</button>
+          <button class="sfx-btn" onclick="AudioPlayer.play('snap')">SNAP</button>
+          <button class="sfx-btn" onclick="AudioPlayer.play('thud')">THUD</button>
+          <button class="sfx-btn" onclick="AudioPlayer.play('fanfare')">FANFARE</button>
+        </div>
+      </div>
+
+      <div class="panel-card paper-surface">
+        <h3 style="font-size:16px; font-weight:800;">Cosmetic Origami Tile Materials</h3>
+        <div id="skinsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB 4: TRIE SOLVER -->
+    <div class="tab-panel" id="tab-trie">
+      <div class="panel-card paper-surface">
+        <h3 style="font-size:18px; font-weight:800;">&lt;1ms In-Memory Trie Engine</h3>
+        <p style="font-size:12px; color:var(--walnut-muted);">Test wildcard skeleton patterns using '_' for missing blank slots (e.g., P_AN_T, C_OSS, Q_A_T_):</p>
+        <input
+          id="trieInput"
+          type="text"
+          value="P_AN_T"
+          oninput="updateTrieMatches()"
+          style="width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--kraft-border); background:var(--washi-desk); font-family:monospace; font-size:15px; font-weight:800; color:var(--sumi-ink);"
+        />
+        <div id="trieResults" style="font-family:monospace; font-size:13px; color:var(--matcha-jade); font-weight:700; line-height:1.6;"></div>
       </div>
     </div>
   </div>
 
+  <!-- LEVEL CLEAR ORIGAMI FANFARE MODAL -->
+  <div class="fanfare-backdrop" id="fanfareModal">
+    <div class="fanfare-modal paper-surface">
+      <div style="font-size:36px;">🏆</div>
+      <div style="font-size:22px; font-weight:900; color:var(--kyoto-gold);">ORIGAMI SOLVED!</div>
+      <div id="fanfareSubtitle" style="font-size:14px; font-weight:700; color:var(--sumi-ink);">Level 1 · Orbital Crossing</div>
+      <div class="stars-row" id="fanfareStars">★★★</div>
+      <div class="breakdown-box" id="fanfareBreakdown"></div>
+      <div class="btn-row">
+        <button class="action-btn" onclick="closeFanfareAndReplay()">Replay</button>
+        <button class="action-btn" style="background:var(--matcha-jade); color:#fffcf5; border:none;" onclick="closeFanfareAndNext()">Next Puzzle →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="nav-item active" id="nav-skeleton" onclick="switchTab('skeleton')">
+        <span class="nav-icon">⊞</span>
+        <span>Skeleton</span>
+      </button>
+      <button class="nav-item" id="nav-levels" onclick="switchTab('levels')">
+        <span class="nav-icon">🧩</span>
+        <span>Levels</span>
+      </button>
+      <button class="nav-item" id="nav-studio" onclick="switchTab('studio')">
+        <span class="nav-icon">🎨</span>
+        <span>Studio</span>
+      </button>
+      <button class="nav-item" id="nav-trie" onclick="switchTab('trie')">
+        <span class="nav-icon">📖</span>
+        <span>Trie</span>
+      </button>
+    </div>
+  </nav>
+
   <script>
+    /**
+     * Real-Time WebAudio Synthesizer matching Android's AudioPlayer.kt:
+     * - 'click': Crisp woody paper tap on tile selection / shuffle
+     * - 'snap': Harmonic chime pop on valid tile placement
+     * - 'thud': Low muted bass bump on invalid placement
+     * - 'fanfare': Ascending 4-note major pentatonic origami arpeggio on level completion
+     */
+    const AudioPlayer = (() => {
+      let ctx = null;
+      let muted = false;
+
+      function ensureCtx() {
+        if (!ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) ctx = new AudioCtx();
+        }
+        if (ctx && ctx.state === "suspended") ctx.resume();
+        return ctx;
+      }
+
+      function playTone(freqStart, freqEnd, durationSec, type = "sine", gainPeak = 0.22, delaySec = 0) {
+        const audio = ensureCtx();
+        if (!audio) return;
+        const now = audio.currentTime + delaySec;
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freqStart, now);
+        if (freqEnd !== freqStart) {
+          osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + durationSec);
+        }
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(gainPeak, now + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + durationSec);
+        osc.connect(gain);
+        gain.connect(audio.destination);
+        osc.start(now);
+        osc.stop(now + durationSec + 0.01);
+      }
+
+      return {
+        isMuted: () => muted,
+        setMuted: (m) => { muted = !!m; },
+        play: (effect) => {
+          if (muted) return;
+          if (effect === "click") {
+            playTone(1050, 460, 0.045, "triangle", 0.20, 0);
+          } else if (effect === "snap") {
+            playTone(520, 960, 0.095, "sine", 0.24, 0);
+            playTone(1040, 1560, 0.085, "triangle", 0.12, 0.015);
+          } else if (effect === "thud") {
+            playTone(165, 62, 0.15, "sine", 0.28, 0);
+            playTone(230, 88, 0.13, "triangle", 0.14, 0);
+          } else if (effect === "fanfare") {
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((n, idx) => {
+              playTone(n, n, 0.24, "sine", 0.20, idx * 0.085);
+              playTone(n * 1.5, n * 1.5, 0.20, "triangle", 0.08, idx * 0.085);
+            });
+          }
+        }
+      };
+    })();
+
+    const SKINS = [
+      { id: "washi_classic", name: "Washi Ivory", rarity: "COMMON", cost: 0, base: "#fff8ec", border: "#d9b382", text: "#231e18", desc: "Handcrafted unbleached Washi paper with folded Kraft borders." },
+      { id: "sakura_foil", name: "Kyoto Gold Foil", rarity: "RARE", cost: 100, base: "#fff3d6", border: "#c87d0a", text: "#451a03", desc: "Gilded origami vellum trimmed with radiant solar gold." },
+      { id: "celestial_jade", name: "Matcha Celadon", rarity: "EPIC", cost: 180, base: "#e2fcef", border: "#157f4b", text: "#064e3b", desc: "Crisp ceremonial Matcha green origami paper." }
+    ];
+
     const LEVELS = [
       {
-        level: 1, title: "Orbital Crossing", tier: "TIER I · STARTER SKELETON", w: 9, h: 8,
+        level: 1, title: "Orbital Crossing", tier: "TIER I · STARTER ORIGAMI", w: 9, h: 8,
         words: [
           { id: "h1", word: "PLANET", clue: "Celestial world in solar orbit", sx: 1, sy: 1, dir: "H", blanks: [1, 4] },
           { id: "v1", word: "SLOPE", clue: "Inclined mountain gradient", sx: 2, sy: 0, dir: "V", blanks: [1, 3] },
@@ -418,7 +1266,7 @@
         mults: { "2,1": "2W", "4,3": "3W", "4,5": "2L", "5,1": "3L" }
       },
       {
-        level: 2, title: "Prism & Quartz", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
+        level: 2, title: "Prism & Quartz", tier: "TIER I · STARTER ORIGAMI", w: 8, h: 8,
         words: [
           { id: "h1", word: "PRISM", clue: "Crystal that splits white light", sx: 1, sy: 1, dir: "H", blanks: [1, 3] },
           { id: "v1", word: "CROWN", clue: "Royal golden headpiece", sx: 2, sy: 0, dir: "V", blanks: [1, 2, 4] },
@@ -438,18 +1286,40 @@
           { id: "h2", word: "TARGET", clue: "Bullseye mark aimed at", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4, 5] }
         ],
         mults: { "1,1": "3W", "6,1": "3W", "3,1": "2W", "3,5": "3L" }
+      },
+      {
+        level: 4, title: "Origami Garden", tier: "TIER II · INTERSECTION NEXUS", w: 8, h: 8,
+        words: [
+          { id: "h1", word: "LOTUS", clue: "Sacred water blossom", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
+          { id: "v1", word: "PAPER", clue: "Folded Washi sheet craft", sx: 3, sy: 0, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "CRANE", clue: "Iconic folded origami bird", sx: 1, sy: 3, dir: "H", blanks: [0, 2, 4] },
+          { id: "v2", word: "BAMBOO", clue: "Tall hollow zen garden reed", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 5] },
+          { id: "h3", word: "RIVER", clue: "Flowing mountain stream", sx: 3, sy: 4, dir: "H", blanks: [0, 2, 4] }
+        ],
+        mults: { "3,1": "2W", "3,3": "3W", "5,3": "2L", "3,4": "3L" }
       }
     ];
 
+    const DICTIONARY_WORDS = [
+      "PLANET","PLANT","PLANTS","SLOPE","SPACE","CROSS","ORBIT","PRISM","CROWN","SPARK",
+      "WHALE","EMBER","QUARTZ","QUEST","AMBER","ZENITH","TARGET","LOTUS","PAPER","CRANE",
+      "BAMBOO","RIVER","TEMPLE","KIMONO","SAMURAI","SHOGUN","LANTERN","BLOSSOM","GARDEN","BRIDGE"
+    ];
+
     const LETTER_SCORES = { A:1,E:1,I:1,O:1,U:1,L:1,N:1,S:1,T:1,R:1,D:2,G:2,B:3,C:3,M:3,P:3,F:4,H:4,V:4,W:4,Y:4,K:5,J:8,X:8,Q:10,Z:10 };
+
     let currentLvlIdx = 0;
+    let shuffleSpinDeg = 0;
+    let isShufflingAnim = false;
     let state = null;
+    let dragSession = null;
 
     function buildLevel(idx) {
       const tpl = LEVELS[idx % LEVELS.length];
       const cells = Array.from({ length: tpl.h }, (_, y) =>
         Array.from({ length: tpl.w }, (_, x) => ({
-          x, y, fixed: null, isBlank: false, placed: null, expected: null, mult: tpl.mults[`${x},${y}`] || "", words: [], locked: false, flash: false
+          x, y, fixed: null, isBlank: false, placed: null, expected: null,
+          mult: tpl.mults[`${x},${y}`] || "", words: [], locked: false, flash: false, snapped: false
         }))
       );
       const blankSet = new Set();
@@ -478,43 +1348,83 @@
       }
       rack.sort(() => Math.random() - 0.5);
       state = {
-        tpl, cells, rack, selectedTileId: null, score: 0,
+        tpl,
+        cells,
+        rack,
+        selectedTileId: null,
+        focusedWordId: tpl.words[0].id,
+        hintCoord: null,
+        hoverCoord: null,
+        hoverTile: null,
+        score: 0,
         careerScore: state ? state.careerScore : 0,
-        combo: 0, mult: 1.0, completedWords: new Set()
+        coins: state ? state.coins : 160,
+        unlockedSkins: state ? state.unlockedSkins : new Set(["washi_classic"]),
+        equippedSkinId: state ? state.equippedSkinId : "washi_classic",
+        solvedLevels: state ? state.solvedLevels : new Set(),
+        hintsRemaining: 3,
+        mistakes: 0,
+        combo: 0,
+        maxCombo: 1,
+        mult: 1.0,
+        completedWords: new Set(),
+        statusMsg: "Drag letter tiles into open blanks to complete intersecting words!",
+        statusErr: false
       };
+      applyEquippedSkinVariables();
       render();
+      renderVaultAndStudio();
     }
 
-    function activeChar(x, y) {
+    function applyEquippedSkinVariables() {
+      const skin = SKINS.find(s => s.id === state.equippedSkinId) || SKINS[0];
+      document.documentElement.style.setProperty("--skin-base", skin.base);
+      document.documentElement.style.setProperty("--skin-border", skin.border);
+      document.documentElement.style.setProperty("--skin-text", skin.text);
+    }
+
+    function activeChar(x, y, overrideCoord = null, overrideChar = null) {
+      if (overrideCoord && overrideCoord.x === x && overrideCoord.y === y) return overrideChar;
       const c = state.cells[y][x];
       return c.fixed || (c.placed ? c.placed.char : null);
     }
 
-    function wordPattern(w) {
+    function wordPattern(w, overrideCoord = null, overrideChar = null) {
       let s = "";
       for (let i = 0; i < w.word.length; i++) {
         const cx = w.dir === "H" ? w.sx + i : w.sx;
         const cy = w.dir === "H" ? w.sy : w.sy + i;
-        s += activeChar(cx, cy) || "_";
+        s += activeChar(cx, cy, overrideCoord, overrideChar) || "_";
       }
       return s;
     }
 
     function tryDropTile(tileId, x, y) {
-      const cell = state.cells[y][x];
-      if (!cell || !cell.isBlank || cell.locked) return;
+      const cell = state.cells[y] && state.cells[y][x];
+      if (!cell || !cell.isBlank || cell.locked) return false;
       const tileIdx = state.rack.findIndex(t => t.id === tileId);
-      if (tileIdx === -1) return;
+      if (tileIdx === -1) return false;
       const tile = state.rack[tileIdx];
+
+      state.hintCoord = null;
 
       if (tile.char !== cell.expected) {
         state.combo = 0;
         state.mult = 1.0;
-        setStatus(`Invalid intersection! '${tile.char}' conflicts with crossing word at (${x+1}, ${y+1}).`, true);
+        state.mistakes++;
+        AudioPlayer.play("thud");
+        const boardFrame = document.getElementById("boardFrame");
+        boardFrame.classList.remove("shake");
+        void boardFrame.offsetWidth;
+        boardFrame.classList.add("shake");
+        spawnShockwaveRing(x, y, "#d9381e");
+        state.statusMsg = `Invalid intersection! '${tile.char}' conflicts with crossing fold at (${x + 1}, ${y + 1}).`;
+        state.statusErr = true;
         render();
-        return;
+        return false;
       }
 
+      // Valid placement!
       state.rack.splice(tileIdx, 1);
       if (cell.placed) state.rack.push(cell.placed);
       cell.placed = tile;
@@ -535,10 +1445,18 @@
         }
       });
 
-      spawnShockwaveAndSparks(x, y, newlyDone.length > 0 ? "#10b981" : "#38bdf8");
+      const allSolved = state.completedWords.size === state.tpl.words.length;
+      if (allSolved) {
+        AudioPlayer.play("fanfare");
+      } else {
+        AudioPlayer.play("snap");
+      }
+
+      spawnShockwaveRing(x, y, newlyDone.length > 0 ? "#157f4b" : "#1d5b8f");
 
       if (newlyDone.length > 0) {
         state.combo += newlyDone.length;
+        state.maxCombo = Math.max(state.maxCombo, state.combo);
         state.mult = state.combo >= 4 ? 4.0 : state.combo === 3 ? 3.0 : state.combo === 2 ? 2.0 : 1.5;
         const pts = Math.round((newlyDone.length * 35 + (newlyDone.length >= 2 ? 50 : 0)) * state.mult);
         state.score += pts;
@@ -546,63 +1464,66 @@
         const pill = document.getElementById("comboPill");
         pill.classList.add("bounce");
         setTimeout(() => pill.classList.remove("bounce"), 600);
-        showPopup(x, y, `+${pts} PTS · ${newlyDone.map(w => w.word).join(" × ")}!`);
-        setStatus(`Trie Verified ✓ Completed ${newlyDone.map(w => w.word).join(" & ")}! Combo ×${state.mult}`, false);
+        showPopup(x, y, `+${pts} PTS · ${newlyDone.map(w => w.word).join(" × ")}!`, newlyDone.length >= 2);
+        state.statusMsg = `Trie Verified ✓ Completed ${newlyDone.map(w => w.word).join(" & ")}! Combo ×${state.mult.toFixed(1)}`;
+        state.statusErr = false;
+
+        // Focus next unfinished word
+        const nextOpenWord = state.tpl.words.find(w => !state.completedWords.has(w.id));
+        if (nextOpenWord) state.focusedWordId = nextOpenWord.id;
       } else {
         state.score += tile.pts;
         state.careerScore += tile.pts;
-        showPopup(x, y, `+${tile.pts}`);
-        setStatus(`Snapped '${tile.char}' into (${x+1}, ${y+1}).`, false);
+        showPopup(x, y, `+${tile.pts}`, false);
+        state.statusMsg = `Snapped '${tile.char}' into fold (${x + 1}, ${y + 1}).`;
+        state.statusErr = false;
       }
 
       render();
+
+      // Subtle, localized Origami Paper Petal Shimmer (non-distracting!)
       if (newlyDone.length > 0) {
-        spawnCenterGridConfettiExplosion(newlyDone.length >= 2 ? 84 : 56);
+        spawnOrigamiPaperPetalShimmer(newlyDone.length >= 2 ? 12 : 9);
       }
-      if (state.completedWords.size === state.tpl.words.length) {
-        setStatus(`LEVEL ${state.tpl.level} SOLVED! Transitioning to next puzzle in 2.5s...`, false);
-        setTimeout(() => nextLevel(), 2500);
+
+      if (allSolved) {
+        state.solvedLevels.add(state.tpl.level);
+        const accuracyBonus = state.mistakes === 0 ? 75 : 25;
+        const coinsEarned = 35 + newlyDone.length * 10;
+        state.score += accuracyBonus;
+        state.careerScore += accuracyBonus;
+        state.coins += coinsEarned;
+        setTimeout(() => showLevelClearModal(accuracyBonus, coinsEarned), 550);
       }
+      return true;
     }
 
-    function spawnCenterGridConfettiExplosion(fragmentCount) {
-      const board = document.getElementById("boardGrid");
+    /**
+     * Gentle, localized Origami Paper Petal Shimmer (8-12 translucent folded paper triangles
+     * drifting softly around the center of the board for 720ms — never obstructing the grid).
+     */
+    function spawnOrigamiPaperPetalShimmer(petalCount) {
+      const board = document.getElementById("boardFrame");
       const rect = board.getBoundingClientRect();
       const canvas = document.createElement("canvas");
-      canvas.width = rect.width || 420;
-      canvas.height = rect.height || 370;
+      canvas.width = rect.width || 380;
+      canvas.height = rect.height || 340;
       canvas.style.position = "absolute";
       canvas.style.inset = "0";
       canvas.style.width = "100%";
       canvas.style.height = "100%";
       canvas.style.pointerEvents = "none";
-      canvas.style.zIndex = "40";
+      canvas.style.zIndex = "30";
       board.appendChild(canvas);
 
       const ctx = canvas.getContext("2d");
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
-      const palette = ["#ffb703", "#10b981", "#38bdf8", "#ff5a36", "#ff7597", "#fff8ec"];
-      const minDim = Math.min(canvas.width, canvas.height);
-
-      const fragments = Array.from({ length: fragmentCount }, (_, i) => {
-        const angle = (2 * Math.PI * i) / fragmentCount + (Math.random() - 0.5) * 0.28;
-        const speed = minDim * (0.28 + Math.random() * 0.56);
-        return {
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - canvas.height * 0.22,
-          color: palette[i % palette.length],
-          w: i % 3 === 0 ? 11 : i % 3 === 1 ? 8 : 14,
-          h: i % 3 === 0 ? 5.5 : i % 3 === 1 ? 8 : 4,
-          spinBase: Math.random() * 360,
-          spinSpeed: 340 + (i % 6) * 120,
-          flutterPhase: Math.random() * Math.PI * 2,
-          flutterFreq: 9 + (i % 5) * 2.5
-        };
-      });
-
+      const palette = ["#157f4b", "#c87d0a", "#1d5b8f"];
+      const cellSize = Math.min(canvas.width / state.tpl.w, canvas.height / state.tpl.h);
+      const count = Math.min(petalCount, 12);
       const startMs = performance.now();
-      const durationMs = 1850;
+      const durationMs = 720;
 
       function tick(now) {
         const elapsed = now - startMs;
@@ -611,48 +1532,35 @@
           return;
         }
         const t = elapsed / durationMs;
-        const fade = Math.max(0, Math.min(1, 1 - Math.max(0, t - 0.58) / 0.42));
-        const dragT = 1 - Math.pow(1 - t, 3);
-        const gravity = canvas.height * 0.82;
-
+        const fadeAlpha = Math.sin(t * Math.PI) * 0.42;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (t < 0.32) {
-          const rt = t / 0.32;
+        for (let i = 0; i < count; i++) {
+          const angle = (2 * Math.PI * i) / count + t * 0.35;
+          const dist = cellSize * (0.35 + 1.15 * t);
+          const px = cx + Math.cos(angle) * dist;
+          const py = cy + Math.sin(angle) * dist * 0.65 - cellSize * 0.45 * t;
+          const petalSize = cellSize * 0.12 * (1 - t * 0.35);
+
           ctx.save();
-          ctx.strokeStyle = "#ffb703";
-          ctx.globalAlpha = (1 - rt) * 0.85;
-          ctx.lineWidth = 4 * (1 - rt * 0.5);
+          ctx.globalAlpha = Math.max(0, Math.min(0.42, fadeAlpha));
+          ctx.translate(px, py);
+          ctx.rotate(((i * 45 + t * 90) * Math.PI) / 180);
+          ctx.fillStyle = palette[i % palette.length];
           ctx.beginPath();
-          ctx.arc(cx, cy, 18 + rt * 110, 0, Math.PI * 2);
-          ctx.stroke();
+          ctx.moveTo(0, -petalSize);
+          ctx.lineTo(petalSize * 0.85, petalSize * 0.7);
+          ctx.lineTo(-petalSize * 0.85, petalSize * 0.7);
+          ctx.closePath();
+          ctx.fill();
           ctx.restore();
         }
-
-        fragments.forEach(f => {
-          const flutterX = Math.sin(t * f.flutterFreq + f.flutterPhase) * 7 * t;
-          const px = cx + f.vx * dragT + flutterX;
-          const py = cy + f.vy * dragT + 0.5 * gravity * t * t;
-          const spinRad = ((f.spinBase + t * f.spinSpeed) * Math.PI) / 180;
-          const flipX = Math.cos(t * 12 + f.flutterPhase);
-
-          ctx.save();
-          ctx.globalAlpha = fade;
-          ctx.translate(px, py);
-          ctx.rotate(spinRad);
-          ctx.scale(Math.abs(flipX) < 0.18 ? 0.18 : flipX, 1);
-          ctx.fillStyle = f.color;
-          ctx.fillRect(-f.w / 2, -f.h / 2, f.w, f.h);
-          ctx.restore();
-        });
-
         requestAnimationFrame(tick);
       }
-
       requestAnimationFrame(tick);
     }
 
-    function spawnShockwaveAndSparks(x, y, color) {
+    function spawnShockwaveRing(x, y, color) {
       const board = document.getElementById("boardGrid");
       const ring = document.createElement("div");
       ring.className = "shockwave-ring";
@@ -660,93 +1568,224 @@
       ring.style.left = `${((x + 0.5) / state.tpl.w) * 100}%`;
       ring.style.top = `${((y + 0.5) / state.tpl.h) * 100}%`;
       board.appendChild(ring);
-      setTimeout(() => ring.remove(), 600);
+      setTimeout(() => ring.remove(), 460);
     }
 
-    function spawnDragTrail(clientX, clientY) {
-      if (!clientX && !clientY) return;
-      const spark = document.createElement("div");
-      spark.className = "drag-spark";
-      spark.style.left = `${clientX}px`;
-      spark.style.top = `${clientY}px`;
-      spark.style.background = Math.random() > 0.5 ? "#38bdf8" : "#ffb703";
-      document.body.appendChild(spark);
-      setTimeout(() => spark.remove(), 450);
-    }
-
-    function showPopup(x, y, text) {
+    function showPopup(x, y, text, isDual) {
       const board = document.getElementById("boardGrid");
       const pop = document.createElement("div");
-      pop.className = "floating-popup";
+      pop.className = "floating-popup" + (isDual ? " dual" : "");
       pop.style.left = `${((x + 0.5) / state.tpl.w) * 100}%`;
       pop.style.top = `${((y + 0.5) / state.tpl.h) * 100}%`;
       pop.textContent = text;
       board.appendChild(pop);
-      setTimeout(() => pop.remove(), 1200);
+      setTimeout(() => pop.remove(), 1050);
     }
 
-    function setStatus(msg, isErr) {
-      const banner = document.getElementById("statusBanner");
-      banner.className = isErr ? "status-banner error" : "status-banner";
-      document.getElementById("statusText").textContent = msg;
+    /**
+     * Resolves the nearest open blank slot within magnetic snap range (1.48 * cellSize)
+     * and computes a spring magnetic pull vector toward the slot's center.
+     */
+    function resolveMagneticSlotAndPull(clientX, clientY) {
+      const gridEl = document.getElementById("boardGrid");
+      const rect = gridEl.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return { coord: null, pullX: 0, pullY: 0 };
+
+      const cellW = rect.width / state.tpl.w;
+      const cellH = rect.height / state.tpl.h;
+      const maxSnapDist = Math.min(cellW, cellH) * 1.48;
+
+      let bestCoord = null;
+      let bestDist = Infinity;
+      let bestCenterX = 0;
+      let bestCenterY = 0;
+
+      for (let y = 0; y < state.tpl.h; y++) {
+        for (let x = 0; x < state.tpl.w; x++) {
+          const c = state.cells[y][x];
+          if (!c.isBlank || c.locked) continue;
+          const cx = rect.left + (x + 0.5) * cellW;
+          const cy = rect.top + (y + 0.5) * cellH;
+          const dist = Math.hypot(clientX - cx, clientY - cy);
+          if (dist <= maxSnapDist && dist < bestDist) {
+            bestDist = dist;
+            bestCoord = { x, y };
+            bestCenterX = cx;
+            bestCenterY = cy;
+          }
+        }
+      }
+
+      if (!bestCoord) return { coord: null, pullX: 0, pullY: 0 };
+      const proximity = Math.max(0, Math.min(1, 1 - bestDist / maxSnapDist));
+      const pullStrength = 0.44 + 0.40 * proximity;
+      return {
+        coord: bestCoord,
+        pullX: (bestCenterX - clientX) * pullStrength,
+        pullY: (bestCenterY - clientY) * pullStrength
+      };
     }
 
-    function render() {
+    function startTilePointerDrag(e, tile, tileEl) {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      AudioPlayer.play("click");
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let moved = false;
+
+      const proxy = document.createElement("div");
+      proxy.className = "drag-proxy-tile paper-surface";
+      proxy.innerHTML = `<div class="dog-ear"></div>${tile.char}<span class="pts-sub">${tile.pts}</span>`;
+      proxy.style.left = `${startX}px`;
+      proxy.style.top = `${startY}px`;
+      proxy.style.display = "none";
+      document.body.appendChild(proxy);
+
+      dragSession = { tile, startX, startY, proxy, tileEl };
+
+      function onPointerMove(ev) {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!moved && Math.hypot(dx, dy) > 6) {
+          moved = true;
+          state.selectedTileId = tile.id;
+          tileEl.classList.add("dragging-source");
+          proxy.style.display = "flex";
+        }
+        if (!moved) return;
+
+        const mag = resolveMagneticSlotAndPull(ev.clientX, ev.clientY);
+        const visualX = ev.clientX + mag.pullX;
+        const visualY = ev.clientY + mag.pullY;
+        proxy.style.left = `${visualX}px`;
+        proxy.style.top = `${visualY}px`;
+
+        if (mag.coord) {
+          proxy.classList.add("magnet-snapped");
+        } else {
+          proxy.classList.remove("magnet-snapped");
+        }
+
+        const prevKey = state.hoverCoord ? `${state.hoverCoord.x},${state.hoverCoord.y}` : "";
+        const nextKey = mag.coord ? `${mag.coord.x},${mag.coord.y}` : "";
+        if (prevKey !== nextKey) {
+          state.hoverCoord = mag.coord;
+          state.hoverTile = mag.coord ? tile : null;
+          renderBoardAndBannerOnly();
+        }
+      }
+
+      function onPointerUp(ev) {
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerUp);
+        proxy.remove();
+        tileEl.classList.remove("dragging-source");
+
+        if (!moved) {
+          // Tap selection toggle
+          state.selectedTileId = state.selectedTileId === tile.id ? null : tile.id;
+          state.hoverCoord = null;
+          state.hoverTile = null;
+          render();
+          return;
+        }
+
+        const mag = resolveMagneticSlotAndPull(ev.clientX, ev.clientY);
+        state.hoverCoord = null;
+        state.hoverTile = null;
+        if (mag.coord) {
+          tryDropTile(tile.id, mag.coord.x, mag.coord.y);
+        } else {
+          render();
+        }
+      }
+
+      window.addEventListener("pointermove", onPointerMove, { passive: false });
+      window.addEventListener("pointerup", onPointerUp);
+      window.addEventListener("pointercancel", onPointerUp);
+    }
+
+    function renderBoardAndBannerOnly() {
       const tpl = state.tpl;
-      document.getElementById("lvlBadge").textContent = `LVL ${tpl.level} · ${tpl.tier}`;
-      document.getElementById("lvlTitle").textContent = tpl.title;
-      const totalBlanks = state.cells.flat().filter(c => c.isBlank).length;
-      const filledBlanks = state.cells.flat().filter(c => c.isBlank && c.placed).length;
-      document.getElementById("lvlProgress").textContent = `Words: ${state.completedWords.size}/${tpl.words.length} • Blanks: ${filledBlanks}/${totalBlanks}`;
-      document.getElementById("comboText").textContent = `×${state.mult.toFixed(1)}`;
-      document.getElementById("scoreVal").textContent = `${state.score} PTS`;
-      document.getElementById("totalScoreVal").textContent = `Career: ${state.careerScore}`;
-
-      const strip = document.getElementById("cluesStrip");
-      strip.innerHTML = "";
-      tpl.words.forEach(w => {
-        const done = state.completedWords.has(w.id);
-        const chip = document.createElement("div");
-        chip.className = "clue-chip" + (done ? " done" : "");
-        const pat = wordPattern(w).split("").join(" ");
-        chip.innerHTML = `<div class="clue-head"><span class="clue-dir">${w.dir === "H" ? "ACROSS" : "DOWN"}</span><span>${pat}</span></div><div class="clue-desc">${w.clue}</div>`;
-        strip.appendChild(chip);
-      });
+      const focusedWord = tpl.words.find(w => w.id === state.focusedWordId) || tpl.words[0];
+      const focusedCoords = new Set();
+      if (focusedWord) {
+        for (let i = 0; i < focusedWord.word.length; i++) {
+          const cx = focusedWord.dir === "H" ? focusedWord.sx + i : focusedWord.sx;
+          const cy = focusedWord.dir === "H" ? focusedWord.sy : focusedWord.sy + i;
+          focusedCoords.add(`${cx},${cy}`);
+        }
+      }
 
       const grid = document.getElementById("boardGrid");
       grid.style.gridTemplateColumns = `repeat(${tpl.w}, 1fr)`;
       grid.style.gridTemplateRows = `repeat(${tpl.h}, 1fr)`;
       grid.innerHTML = "";
+
       for (let y = 0; y < tpl.h; y++) {
         for (let x = 0; x < tpl.w; x++) {
           const c = state.cells[y][x];
           const el = document.createElement("div");
+          const isHovered = state.hoverCoord && state.hoverCoord.x === x && state.hoverCoord.y === y;
+          const isHint = state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y;
+          const inCorridor = focusedCoords.has(`${x},${y}`);
+
           if (!c.expected) {
             el.className = "cell void";
           } else if (c.fixed) {
-            el.className = "cell fixed" + (c.locked ? " locked" : "") + (c.flash ? " flash" : "");
-            el.innerHTML = `${c.fixed}<span class="pts-sub">${LETTER_SCORES[c.fixed]||1}</span>`;
+            el.className =
+              "cell fixed" +
+              (c.locked ? " locked" : "") +
+              (c.flash ? " flash" : "") +
+              (inCorridor ? " corridor" : "");
+            el.innerHTML = `<div class="dog-ear"></div>${c.fixed}<span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
+            el.onclick = () => {
+              if (c.words.length > 0) {
+                state.focusedWordId = c.words[0];
+                AudioPlayer.play("click");
+                render();
+              }
+            };
           } else if (c.placed) {
-            el.className = "cell placed" + (c.locked ? " locked" : "") + (c.flash ? " flash" : "") + (c.snapped ? " snapped" : "");
-            el.innerHTML = `${c.placed.char}<span class="pts-sub">${c.placed.pts}</span>`;
+            el.className =
+              "cell placed" +
+              (c.locked ? " locked" : "") +
+              (c.flash ? " flash" : "") +
+              (c.snapped ? " snapped" : "") +
+              (inCorridor ? " corridor" : "");
+            el.innerHTML = `<div class="dog-ear"></div>${c.placed.char}<span class="pts-sub">${c.placed.pts}</span>`;
+            el.onclick = () => {
+              if (!c.locked) {
+                state.rack.push(c.placed);
+                c.placed = null;
+                AudioPlayer.play("click");
+                render();
+              }
+            };
           } else {
-            el.className = "cell blank" + (c.words.length >= 2 ? " intersection" : "");
-            el.innerHTML = `<span class="mult-tag">${c.mult || (c.words.length >= 2 ? "◆" : "•")}</span>`;
+            let blankCls = "cell blank";
+            if (c.mult) blankCls += ` mult-${c.mult}`;
+            if (c.words.length >= 2) blankCls += " intersection";
+            if (inCorridor) blankCls += " corridor";
+            if (isHint) blankCls += " hint-glow";
+
+            if (isHovered && state.hoverTile) {
+              const valid = state.hoverTile.char === c.expected;
+              blankCls += valid ? " magnetic-valid" : " magnetic-invalid";
+              el.className = blankCls;
+              el.innerHTML = `${state.hoverTile.char}<div class="hover-callout-pill ${valid ? "" : "invalid"}">${state.hoverTile.char} ${valid ? "• +" + state.hoverTile.pts : "✕"}</div>`;
+            } else {
+              el.className = blankCls;
+              const badge = isHint ? c.expected : (c.mult || (c.words.length >= 2 ? "◆" : "+"));
+              el.innerHTML = `<span class="mult-tag">${badge}</span>`;
+            }
+
             el.onclick = () => {
               const selId = state.selectedTileId || (state.rack[0] && state.rack[0].id);
               if (selId) tryDropTile(selId, x, y);
-            };
-            el.ondragover = e => {
-              e.preventDefault();
-              el.classList.add("drag-over");
-              spawnDragTrail(e.clientX, e.clientY);
-            };
-            el.ondragleave = () => el.classList.remove("drag-over");
-            el.ondrop = e => {
-              e.preventDefault();
-              el.classList.remove("drag-over");
-              const tid = e.dataTransfer.getData("text/plain");
-              if (tid) tryDropTile(tid, x, y);
             };
           }
           c.flash = false;
@@ -755,38 +1794,301 @@
         }
       }
 
-      const rackRow = document.getElementById("rackRow");
-      rackRow.innerHTML = "";
-      state.rack.forEach(t => {
-        const tel = document.createElement("div");
-        tel.className = "tile" + (state.selectedTileId === t.id ? " selected" : "");
-        tel.draggable = true;
-        tel.innerHTML = `${t.char}<span class="pts-sub">${t.pts}</span>`;
-        tel.onclick = () => {
-          state.selectedTileId = state.selectedTileId === t.id ? null : t.id;
+      // Update Live Intersection Preview & Active Clue Spotlight Banner
+      const banner = document.getElementById("statusBanner");
+      const dirEl = document.getElementById("spotlightDir");
+      const clueEl = document.getElementById("spotlightClue");
+      const miniSlotsEl = document.getElementById("spotlightMiniSlots");
+      const statusTextEl = document.getElementById("statusText");
+
+      if (state.hoverCoord && state.hoverTile) {
+        const hc = state.hoverCoord;
+        const cell = state.cells[hc.y][hc.x];
+        const valid = state.hoverTile.char === cell.expected;
+        banner.className = "status-banner paper-surface " + (valid ? "valid-preview" : "error");
+        dirEl.textContent = valid ? "MAGNETIC LOCK ✓" : "CONFLICT ✕";
+        const axes = cell.words.map(wid => {
+          const w = tpl.words.find(tw => tw.id === wid);
+          return `${w.dir === "H" ? "ACROSS" : "DOWN"}: ${wordPattern(w, hc, state.hoverTile.char)}`;
+        });
+        clueEl.textContent = axes.join("  •  ");
+        miniSlotsEl.innerHTML = "";
+        statusTextEl.textContent = valid
+          ? `Magnetic Lock ✓ '${state.hoverTile.char}' fits intersecting origami fold at (${hc.x + 1}, ${hc.y + 1})`
+          : `'${state.hoverTile.char}' conflicts with intersecting word at (${hc.x + 1}, ${hc.y + 1})`;
+      } else {
+        banner.className = "status-banner paper-surface" + (state.statusErr ? " error" : "");
+        if (focusedWord) {
+          dirEl.textContent = focusedWord.dir === "H" ? "ACROSS →" : "DOWN ↓";
+          clueEl.textContent = focusedWord.clue;
+          miniSlotsEl.innerHTML = "";
+          for (let i = 0; i < focusedWord.word.length; i++) {
+            const cx = focusedWord.dir === "H" ? focusedWord.sx + i : focusedWord.sx;
+            const cy = focusedWord.dir === "H" ? focusedWord.sy : focusedWord.sy + i;
+            const ch = activeChar(cx, cy);
+            const isBlank = focusedWord.blanks.includes(i);
+            const slot = document.createElement("div");
+            slot.className = "mini-slot" + (!ch ? " open" : isBlank ? " placed" : "");
+            slot.textContent = ch || "_";
+            miniSlotsEl.appendChild(slot);
+          }
+        }
+        statusTextEl.textContent = state.statusMsg;
+      }
+    }
+
+    function render() {
+      const tpl = state.tpl;
+      document.getElementById("lvlBadge").textContent = `LVL ${tpl.level}`;
+      document.getElementById("lvlTitle").textContent = tpl.title;
+      const totalBlanks = state.cells.flat().filter(c => c.isBlank).length;
+      const filledBlanks = state.cells.flat().filter(c => c.isBlank && c.placed).length;
+      document.getElementById("lvlProgress").textContent = `Words ${state.completedWords.size}/${tpl.words.length} · Blanks ${filledBlanks}/${totalBlanks}`;
+      document.getElementById("coinsBadge").textContent = `🪙 ${state.coins}`;
+
+      const progressPct = totalBlanks > 0 ? Math.round((filledBlanks / totalBlanks) * 100) : 0;
+      document.getElementById("hudProgressBar").style.width = `${progressPct}%`;
+
+      const comboPill = document.getElementById("comboPill");
+      comboPill.className = "combo-pill" + (state.mult >= 2.0 ? " high" : "");
+      document.getElementById("comboText").textContent = `×${state.mult.toFixed(1)}`;
+      document.getElementById("scoreVal").textContent = `${state.score} PTS`;
+      document.getElementById("totalScoreVal").textContent = `Career ${state.careerScore}`;
+
+      // Clues Strip
+      const strip = document.getElementById("cluesStrip");
+      strip.innerHTML = "";
+      tpl.words.forEach(w => {
+        const done = state.completedWords.has(w.id);
+        const focused = state.focusedWordId === w.id;
+        const chip = document.createElement("div");
+        chip.className = "clue-chip paper-surface" + (done ? " done" : focused ? " focused" : "");
+        const pat = wordPattern(w).split("").join(" ");
+        chip.innerHTML = `
+          <div class="clue-head">
+            <span class="clue-dir">${done ? "✓ " : ""}${w.dir === "H" ? "ACROSS →" : "DOWN ↓"}</span>
+            <span>${pat}</span>
+          </div>
+          <div class="clue-desc">${w.clue}</div>
+        `;
+        chip.onclick = () => {
+          state.focusedWordId = w.id;
+          AudioPlayer.play("click");
           render();
         };
-        tel.ondragstart = e => {
-          state.selectedTileId = t.id;
-          e.dataTransfer.setData("text/plain", t.id);
-        };
-        tel.ondrag = e => spawnDragTrail(e.clientX, e.clientY);
-        rackRow.appendChild(tel);
+        strip.appendChild(chip);
       });
+
+      renderBoardAndBannerOnly();
+
+      // Rack Header & Buttons
+      document.getElementById("rackCountBadge").textContent = `${state.rack.length} tiles`;
+      document.getElementById("hintBtnText").textContent = `Smart Hint (${state.hintsRemaining})`;
+      document.getElementById("hintBtn").disabled = state.hintsRemaining <= 0 || state.rack.length === 0;
+      const hasUnlockedPlaced = state.cells.flat().some(c => c.isBlank && c.placed && !c.locked);
+      document.getElementById("recallBtn").style.display = hasUnlockedPlaced ? "flex" : "none";
+
+      // Rack Tiles with idle float & 3D Origami Flip Shuffle animation
+      const rackRow = document.getElementById("rackRow");
+      rackRow.innerHTML = "";
+      if (state.rack.length === 0) {
+        rackRow.innerHTML = `<div style="color:var(--matcha-jade); font-weight:800; font-size:13px; padding:8px;">✓ All origami folds complete! Level Solved!</div>`;
+      } else {
+        state.rack.forEach((t, idx) => {
+          const tel = document.createElement("div");
+          tel.className =
+            "tile paper-surface" +
+            (state.selectedTileId === t.id ? " selected" : "") +
+            (isShufflingAnim ? " shuffling" : "");
+          tel.style.setProperty("--float-delay", `${(idx * 0.28).toFixed(2)}s`);
+          const dirSign = idx % 2 === 0 ? 1 : -1;
+          tel.style.setProperty("--shuf-x", `${dirSign * (14 + (idx % 3) * 7)}px`);
+          tel.style.setProperty("--shuf-y", `${-16 - (idx % 4) * 5}px`);
+          tel.style.setProperty("--shuf-rot", `${dirSign * 15}deg`);
+          tel.style.setProperty("--shuf-delay", `${(idx % 8) * 22}ms`);
+          tel.innerHTML = `<div class="dog-ear"></div>${t.char}<span class="pts-sub">${t.pts}</span>`;
+          tel.onpointerdown = e => startTilePointerDrag(e, t, tel);
+          rackRow.appendChild(tel);
+        });
+      }
     }
 
     function shuffleRack() {
+      if (state.rack.length <= 1) return;
+      AudioPlayer.play("click");
+      shuffleSpinDeg += 360;
+      document.getElementById("shuffleIcon").style.transform = `rotate(${shuffleSpinDeg}deg)`;
       state.rack.sort(() => Math.random() - 0.5);
+      isShufflingAnim = true;
+      render();
+      setTimeout(() => {
+        isShufflingAnim = false;
+      }, 480);
+    }
+
+    function triggerSmartHint() {
+      if (state.hintsRemaining <= 0) return;
+      const openSlots = state.cells.flat().filter(c => c.isBlank && !c.placed);
+      if (openSlots.length === 0) return;
+      const target = openSlots.find(c => c.words.length >= 2) || openSlots[0];
+      const matchTile = state.rack.find(t => t.char === target.expected);
+      state.hintsRemaining--;
+      state.hintCoord = { x: target.x, y: target.y };
+      if (matchTile) state.selectedTileId = matchTile.id;
+      AudioPlayer.play("click");
+      state.statusMsg = `Smart Hint 💡 Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
+      state.statusErr = false;
       render();
     }
-    function triggerSmartHint() {
-      const open = state.cells.flat().find(c => c.isBlank && !c.placed);
-      if (!open) return;
-      const match = state.rack.find(t => t.char === open.expected);
-      if (match) tryDropTile(match.id, open.x, open.y);
+
+    function recallUnlockedTiles() {
+      let recalled = 0;
+      state.cells.flat().forEach(c => {
+        if (c.isBlank && c.placed && !c.locked) {
+          state.rack.push(c.placed);
+          c.placed = null;
+          recalled++;
+        }
+      });
+      if (recalled > 0) {
+        AudioPlayer.play("click");
+        state.statusMsg = `Recalled ${recalled} unlocked tile(s) back to your origami rack.`;
+        state.statusErr = false;
+        render();
+      }
     }
-    function resetLevel() { buildLevel(currentLvlIdx); }
-    function nextLevel() { currentLvlIdx++; buildLevel(currentLvlIdx); }
+
+    function toggleSoundMute() {
+      const nextMuted = !AudioPlayer.isMuted();
+      AudioPlayer.setMuted(nextMuted);
+      document.getElementById("muteBtn").textContent = nextMuted ? "🔇" : "🔊";
+      if (!nextMuted) AudioPlayer.play("click");
+    }
+
+    function showLevelClearModal(accuracyBonus, coinsEarned) {
+      document.getElementById("fanfareSubtitle").textContent = `Level ${state.tpl.level} · ${state.tpl.title}`;
+      document.getElementById("fanfareStars").textContent = state.mistakes === 0 ? "★★★" : state.mistakes <= 2 ? "★★☆" : "★☆☆";
+      document.getElementById("fanfareBreakdown").innerHTML = `
+        <div class="stat-line"><span>Intersecting Words Solved</span><span>${state.tpl.words.length}</span></div>
+        <div class="stat-line"><span>Max Combo Streak</span><span>×${state.maxCombo}</span></div>
+        <div class="stat-line"><span>Accuracy Bonus</span><span>+${accuracyBonus} PTS</span></div>
+        <div class="stat-line"><span>Origami Coins Awarded</span><span>+${coinsEarned} 🪙</span></div>
+        <div class="stat-line total"><span>Total Level Score</span><span>${state.score} PTS</span></div>
+      `;
+      document.getElementById("fanfareModal").classList.add("visible");
+    }
+
+    function closeFanfareAndReplay() {
+      document.getElementById("fanfareModal").classList.remove("visible");
+      buildLevel(currentLvlIdx);
+    }
+
+    function closeFanfareAndNext() {
+      document.getElementById("fanfareModal").classList.remove("visible");
+      nextLevel();
+    }
+
+    function resetLevel() {
+      AudioPlayer.play("click");
+      buildLevel(currentLvlIdx);
+    }
+
+    function nextLevel() {
+      AudioPlayer.play("click");
+      currentLvlIdx++;
+      buildLevel(currentLvlIdx);
+    }
+
+    function switchTab(tabId) {
+      AudioPlayer.play("click");
+      ["skeleton", "levels", "studio", "trie"].forEach(id => {
+        document.getElementById(`tab-${id}`).classList.toggle("active", id === tabId);
+        document.getElementById(`nav-${id}`).classList.toggle("active", id === tabId);
+      });
+      if (tabId === "levels" || tabId === "studio") renderVaultAndStudio();
+      if (tabId === "trie") updateTrieMatches();
+    }
+
+    function renderVaultAndStudio() {
+      const vaultEl = document.getElementById("levelsVaultList");
+      if (vaultEl) {
+        vaultEl.innerHTML = "";
+        LEVELS.forEach((lvl, idx) => {
+          const solved = state.solvedLevels.has(lvl.level);
+          const card = document.createElement("div");
+          card.className = "panel-card paper-surface";
+          card.innerHTML = `
+            <div class="level-row">
+              <div>
+                <div style="font-size:11px; font-weight:800; color:${solved ? "var(--matcha-jade)" : "var(--aizome-indigo)"};">
+                  LEVEL ${lvl.level} · ${lvl.tier} ${solved ? "★★★" : ""}
+                </div>
+                <div style="font-size:16px; font-weight:800;">${lvl.title}</div>
+                <div style="font-size:11px; color:var(--walnut-muted);">${lvl.w}×${lvl.h} Grid · ${lvl.words.map(w => w.word).join(", ")}</div>
+              </div>
+              <button class="play-btn ${solved ? "solved" : ""}" onclick="currentLvlIdx=${idx}; buildLevel(${idx}); switchTab('skeleton');">
+                ${solved ? "Replay" : "Play"}
+              </button>
+            </div>
+          `;
+          vaultEl.appendChild(card);
+        });
+      }
+
+      const skinsEl = document.getElementById("skinsList");
+      if (skinsEl) {
+        skinsEl.innerHTML = "";
+        SKINS.forEach(s => {
+          const unlocked = state.unlockedSkins.has(s.id);
+          const equipped = state.equippedSkinId === s.id;
+          const row = document.createElement("div");
+          row.className = "level-row";
+          row.style.padding = "8px 0";
+          row.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:42px; height:42px; border-radius:10px; background:${s.base}; border:2px solid ${s.border}; color:${s.text}; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:20px;">L</div>
+              <div>
+                <div style="font-size:14px; font-weight:800;">${s.name} · ${s.rarity}</div>
+                <div style="font-size:11px; color:var(--walnut-muted);">${s.desc}</div>
+              </div>
+            </div>
+            <button class="play-btn ${equipped ? "solved" : ""}" onclick="selectOrUnlockSkin('${s.id}')">
+              ${equipped ? "Equipped" : unlocked ? "Equip" : s.cost + " 🪙"}
+            </button>
+          `;
+          skinsEl.appendChild(row);
+        });
+      }
+    }
+
+    function selectOrUnlockSkin(skinId) {
+      const skin = SKINS.find(s => s.id === skinId);
+      if (!skin) return;
+      if (!state.unlockedSkins.has(skinId)) {
+        if (state.coins < skin.cost) return;
+        state.coins -= skin.cost;
+        state.unlockedSkins.add(skinId);
+      }
+      state.equippedSkinId = skinId;
+      AudioPlayer.play("snap");
+      applyEquippedSkinVariables();
+      render();
+      renderVaultAndStudio();
+    }
+
+    function updateTrieMatches() {
+      const raw = (document.getElementById("trieInput").value || "").trim().toUpperCase();
+      const resEl = document.getElementById("trieResults");
+      if (!raw) {
+        resEl.textContent = "Enter a pattern above.";
+        return;
+      }
+      const regex = new RegExp("^" + raw.replace(/_/g, "[A-Z]") + "$");
+      const matches = DICTIONARY_WORDS.filter(w => regex.test(w));
+      resEl.textContent = matches.length > 0
+        ? `Matches (${matches.length}): ` + matches.join("  •  ")
+        : `No dictionary words match pattern "${raw}".`;
+    }
 
     buildLevel(0);
   </script>
