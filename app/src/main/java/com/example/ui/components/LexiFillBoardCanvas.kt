@@ -156,7 +156,7 @@ fun LexiFillBoardCanvas(
       label = "reticle_phase",
     )
 
-  // Frame clock tick for smooth tile-snap squash/stretch, shockwaves, cell flashes, popups & particles
+  // Frame clock tick for smooth tile-snap squash/stretch, shockwaves, cell flashes, popups, particles & center confetti
   var frameNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
   LaunchedEffect(
     puzzleState.cellFlashTimestamps,
@@ -164,16 +164,18 @@ fun LexiFillBoardCanvas(
     puzzleState.rejectedSlotTimestamps,
     puzzleState.scorePopups,
     puzzleState.particleBursts,
+    puzzleState.confettiExplosions,
   ) {
     val hasActiveAnimations =
       puzzleState.cellFlashTimestamps.isNotEmpty() ||
         puzzleState.tilePlacementTimestamps.isNotEmpty() ||
         puzzleState.rejectedSlotTimestamps.isNotEmpty() ||
         puzzleState.scorePopups.isNotEmpty() ||
-        puzzleState.particleBursts.isNotEmpty()
+        puzzleState.particleBursts.isNotEmpty() ||
+        puzzleState.confettiExplosions.isNotEmpty()
     if (hasActiveAnimations) {
       val start = System.currentTimeMillis()
-      while (System.currentTimeMillis() - start < 1900L) {
+      while (System.currentTimeMillis() - start < 2100L) {
         frameNowMs = System.currentTimeMillis()
         delay(16L)
       }
@@ -648,6 +650,97 @@ fun LexiFillBoardCanvas(
               radius = cellSize * 0.09f * (1f - t * 0.6f),
               center = Offset(px, py),
             )
+          }
+        }
+      }
+
+      // Render Center-of-Grid Canvas Confetti Particle Explosion when a word is completed!
+      val gridCenter = Offset(originX + gridW / 2f, originY + gridH / 2f)
+      val confettiPalette =
+        listOf(
+          KyotoGold,
+          CeladonJade,
+          SkyCyan,
+          VermilionRed,
+          Color(0xFFFF7597),
+          WashiCream,
+        )
+
+      for (confetti in puzzleState.confettiExplosions) {
+        val elapsed = (frameNowMs - confetti.createdAtMs).coerceAtLeast(0L)
+        if (elapsed in 0..1850) {
+          val t = elapsed / 1850f
+          val fadeAlpha = (1f - ((t - 0.58f).coerceAtLeast(0f) / 0.42f)).coerceIn(0f, 1f)
+
+          // Center-of-grid ignition shockwave ring at explosion start
+          if (t < 0.32f) {
+            val ringT = t / 0.32f
+            val ringColor = if (confetti.isDualIntersection) KyotoGold else CeladonJade
+            drawCircle(
+              color = ringColor.copy(alpha = (1f - ringT) * 0.85f),
+              radius = cellSize * (0.4f + 2.6f * ringT),
+              center = gridCenter,
+              style = Stroke(width = cellSize * 0.08f * (1f - ringT * 0.6f)),
+            )
+          }
+
+          // Ballistic 3D tumbling confetti fragments spawned from the center of the grid
+          for (i in 0 until confetti.fragmentCount) {
+            val hash = ((i * 73856093) xor (confetti.seed * 19349663)) and 0x7FFFFFFF
+            val angleSpread =
+              (2.0 * PI * i) / confetti.fragmentCount + ((hash % 100) / 100.0 - 0.5) * 0.25
+            val speedFactor = 0.28f + ((hash % 1000) / 1000f) * 0.56f
+            val radialSpeed = min(gridW, gridH) * speedFactor
+
+            // Air drag deceleration on initial blast velocity + upward fountain impulse + gravity
+            val dragProgress = 1f - (1f - t) * (1f - t) * (1f - t)
+            val vx = cos(angleSpread).toFloat() * radialSpeed
+            val vy = sin(angleSpread).toFloat() * radialSpeed - gridH * 0.22f
+            val gravity = gridH * 0.82f
+
+            // Sinusoidal paper flutter as fragments drift downward
+            val flutterPhase = (hash % 360) * (PI / 180.0).toFloat()
+            val flutterFreq = 9f + (i % 5) * 2.5f
+            val flutterAmp = cellSize * (0.08f + (i % 3) * 0.05f) * t
+            val flutterX = sin(t * flutterFreq + flutterPhase) * flutterAmp
+
+            val px = gridCenter.x + vx * dragProgress + flutterX
+            val py = gridCenter.y + vy * dragProgress + 0.5f * gravity * t * t
+
+            // 3D spin & flip simulation
+            val spinDeg = ((hash % 360) + t * (340f + (i % 6) * 120f)) % 360f
+            val tumbleFlipX = cos(t * (11f + (i % 4) * 3f) + flutterPhase).coerceIn(-1f, 1f)
+            val fragColor = confettiPalette[i % confettiPalette.size].copy(alpha = fadeAlpha)
+
+            val fragW =
+              when (i % 3) {
+                0 -> cellSize * 0.24f // Ribbon rectangle
+                1 -> cellSize * 0.17f // Square/diamond shard
+                else -> cellSize * 0.30f // Long streamer strip
+              }
+            val fragH =
+              when (i % 3) {
+                0 -> cellSize * 0.12f
+                1 -> cellSize * 0.17f
+                else -> cellSize * 0.08f
+              }
+
+            withTransform({
+              translate(left = px, top = py)
+              rotate(degrees = spinDeg, pivot = Offset.Zero)
+              scale(
+                scaleX = if (kotlin.math.abs(tumbleFlipX) < 0.18f) 0.18f else tumbleFlipX,
+                scaleY = 1f,
+                pivot = Offset.Zero,
+              )
+            }) {
+              drawRoundRect(
+                color = fragColor,
+                topLeft = Offset(-fragW / 2f, -fragH / 2f),
+                size = Size(fragW, fragH),
+                cornerRadius = CornerRadius(fragH * 0.25f, fragH * 0.25f),
+              )
+            }
           }
         }
       }

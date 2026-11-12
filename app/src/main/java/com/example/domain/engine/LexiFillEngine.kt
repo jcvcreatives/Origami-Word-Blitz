@@ -455,9 +455,10 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         }
       }
 
-    // Build floating ScorePopupEvents & ParticleBursts
+    // Build floating ScorePopupEvents, ParticleBursts & Center-of-Grid ConfettiExplosions
     val newPopups = ArrayList(state.scorePopups.takeLast(4))
     val newParticles = ArrayList(state.particleBursts.takeLast(4))
+    val newConfetti = ArrayList(state.confettiExplosions.takeLast(3))
 
     if (newlyCompletedWords.isNotEmpty()) {
       val wordNames = newlyCompletedWords.joinToString(" × ") { it.completedWordText ?: it.word }
@@ -492,6 +493,18 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardCoord = dropCoord,
           colorHex = if (isDualIntersectionClear) 0xFFFFB703 else 0xFF10B981,
           particleCount = if (isDualIntersectionClear) 28 else 20,
+          createdAtMs = nowMs,
+        )
+      )
+      // Spawn center-of-grid Confetti Particle Explosion whenever a word is completed!
+      newConfetti.add(
+        com.example.domain.model.ConfettiExplosionEvent(
+          id = "confetti_${nowMs}_${targetX}_${targetY}",
+          wordLabel = wordNames,
+          isDualIntersection = isDualIntersectionClear,
+          comboCount = newComboStreak,
+          fragmentCount = if (isDualIntersectionClear) 84 else 56,
+          seed = (nowMs.toInt() xor (targetX * 31 + targetY * 97)),
           createdAtMs = nowMs,
         )
       )
@@ -588,6 +601,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         highlightedHintCoord = null,
         scorePopups = newPopups,
         particleBursts = newParticles,
+        confettiExplosions = newConfetti,
         cellFlashTimestamps = updatedFlashTimestamps,
         tilePlacementTimestamps = updatedPlacementTimestamps,
         boardShakeIntensity = if (isDualIntersectionClear) 1.2f else if (newlyCompletedWords.isNotEmpty()) 0.6f else 0.25f,

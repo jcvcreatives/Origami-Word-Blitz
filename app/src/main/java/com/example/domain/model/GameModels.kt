@@ -226,6 +226,17 @@ data class RackState(
   val draggingTileId: String? = null,
 )
 
+@Immutable
+data class ConfettiExplosionEvent(
+  val id: String,
+  val wordLabel: String,
+  val isDualIntersection: Boolean = false,
+  val comboCount: Int = 1,
+  val fragmentCount: Int = 56,
+  val seed: Int = 1337,
+  val createdAtMs: Long = System.currentTimeMillis(),
+)
+
 /**
  * Primary immutable UI StateFlow model for LexiFill: Crossword Skeleton.
  */
@@ -251,6 +262,7 @@ data class PuzzleState(
   val highlightedHintCoord: Coordinate? = null,
   val scorePopups: List<ScorePopupEvent> = emptyList(),
   val particleBursts: List<ParticleBurst> = emptyList(),
+  val confettiExplosions: List<ConfettiExplosionEvent> = emptyList(),
   val cellFlashTimestamps: Map<Coordinate, Long> = emptyMap(),
   val tilePlacementTimestamps: Map<Coordinate, Long> = emptyMap(),
   val rejectedSlotTimestamps: Map<Coordinate, Long> = emptyMap(),
