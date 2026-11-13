@@ -21,6 +21,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -273,14 +275,21 @@ private fun SkeletonPuzzleArena(
       }
     }
 
-  Box(modifier = Modifier.fillMaxSize()) {
+  val isDraggingAnyTile = puzzleState.rackState.draggingTileId != null
+
+  BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    val maxBoardHeight = (maxHeight * 0.43f).coerceIn(210.dp, 420.dp)
+    val compactSpacing = if (maxHeight < 700.dp) 6.dp else 8.dp
+
     Column(
       modifier =
         Modifier.fillMaxSize()
           .widthIn(max = 600.dp)
-          .verticalScroll(scrollState)
-          .padding(horizontal = 12.dp, vertical = 8.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+          .align(Alignment.TopCenter)
+          .verticalScroll(scrollState, enabled = !isDraggingAnyTile)
+          .padding(horizontal = 12.dp, vertical = 6.dp),
+      verticalArrangement = Arrangement.spacedBy(compactSpacing),
+      horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       // 1. Top HUD: Level Title, Animated Score, Combo Streak Badge with Particle Burst, Progress Bar
       LexiFillTopHud(
@@ -298,12 +307,13 @@ private fun SkeletonPuzzleArena(
         onSelectClueWord = onSelectClueWord,
       )
 
-      // 3. 100% Compose Canvas Crossword Skeleton Grid
+      // 3. 100% Compose Canvas Crossword Skeleton Grid (adaptively sized to fit single screen)
       LexiFillBoardCanvas(
         puzzleState = puzzleState,
         onGeometryUpdated = { boardGeometry = it },
         onBlankSlotTapped = onBoardCellTapped,
         onShakeConsumed = onShakeConsumed,
+        modifier = Modifier.heightIn(max = maxBoardHeight),
       )
 
       // 4. Live Dual-Axis Intersection & Active Clue Spotlight Banner

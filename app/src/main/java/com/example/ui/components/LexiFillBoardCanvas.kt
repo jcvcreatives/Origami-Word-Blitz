@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -202,8 +203,9 @@ fun LexiFillBoardCanvas(
     if (hasActiveAnimations) {
       val start = System.currentTimeMillis()
       while (System.currentTimeMillis() - start < 1450L) {
-        frameNowMs = System.currentTimeMillis()
-        delay(16L)
+        withFrameMillis {
+          frameNowMs = System.currentTimeMillis()
+        }
       }
     }
   }
@@ -237,6 +239,8 @@ fun LexiFillBoardCanvas(
   var currentGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
   val dogEarPath = remember { Path() }
   val petalPath = remember { Path() }
+  val creaseDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f) }
+  val slotDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(9f, 6f), 0f) }
 
   val hoveredCorridorCoords =
     remember(puzzleState.hoverCoord, puzzleState.targetWords) {
@@ -334,14 +338,14 @@ fun LexiFillBoardCanvas(
         start = Offset(0f, 0f),
         end = Offset(size.width, size.height),
         strokeWidth = 1.dp.toPx(),
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
+        pathEffect = creaseDashEffect,
       )
       drawLine(
         color = creaseColor,
         start = Offset(size.width, 0f),
         end = Offset(0f, size.height),
         strokeWidth = 1.dp.toPx(),
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
+        pathEffect = creaseDashEffect,
       )
 
       val skin = puzzleState.equippedSkin
@@ -569,9 +573,7 @@ fun LexiFillBoardCanvas(
                 style =
                   Stroke(
                     width = strokeWidth,
-                    pathEffect =
-                      if (isHoveredTarget) null
-                      else PathEffect.dashPathEffect(floatArrayOf(9f, 6f), 0f),
+                    pathEffect = if (isHoveredTarget) null else slotDashEffect,
                   ),
               )
 

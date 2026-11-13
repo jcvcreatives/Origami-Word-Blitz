@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f3ede0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title>Crossword Origami</title>
   <style>
     :root {
@@ -32,6 +35,9 @@
       --mult-tl-bg: #b3d7f0;
       --mult-dw-bg: #f7d6e0;
       --mult-tw-bg: #f5cbcb;
+
+      /* Pre-baked tileable Washi paper-grain texture (populated at boot for 0ms GPU compositing) */
+      --paper-grain-tex: none;
     }
 
     * {
@@ -41,6 +47,7 @@
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     html, body {
@@ -50,6 +57,7 @@
       color: var(--sumi-ink);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       overflow-x: hidden;
+      overscroll-behavior-y: contain;
     }
 
     body {
@@ -57,25 +65,27 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 10px 10px 76px 10px;
+      padding: 8px 10px calc(66px + env(safe-area-inset-bottom, 0px)) 10px;
     }
 
-    /* Subtle 'paper-grain' CSS filter overlay on the main Washi-paper desk background */
+    /* GPU-cached 'paper-grain' overlay on the main Washi-paper desk background */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 1;
-      opacity: 0.22;
-      mix-blend-mode: multiply;
-      filter: url(#paper-grain);
+      opacity: 0.55;
+      background-image: var(--paper-grain-tex);
+      background-repeat: repeat;
+      background-size: 128px 128px;
     }
 
-    /* Subtle 'paper-grain' CSS filter overlay on all Origami card & tile components */
+    /* GPU-cached 'paper-grain' overlay on all Origami card & tile components */
     .paper-surface {
       position: relative;
       overflow: hidden;
+      contain: layout paint;
     }
     .paper-surface::after {
       content: "";
@@ -83,9 +93,10 @@
       inset: 0;
       border-radius: inherit;
       pointer-events: none;
-      opacity: 0.16;
-      mix-blend-mode: multiply;
-      filter: url(#paper-grain);
+      opacity: 0.48;
+      background-image: var(--paper-grain-tex);
+      background-repeat: repeat;
+      background-size: 128px 128px;
       z-index: 1;
     }
     .paper-surface > * {
@@ -97,23 +108,23 @@
       position: relative;
       z-index: 2;
       width: 100%;
-      max-width: 560px;
+      max-width: 540px;
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 7px;
     }
 
     /* Top HUD Card */
     .hud-card {
       background: var(--washi-sheet);
       border: 1.2px solid var(--kraft-border);
-      border-radius: 18px;
-      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.08);
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(74, 56, 35, 0.07);
       display: flex;
       flex-direction: column;
     }
     .hud-main {
-      padding: 8px 8px 6px 12px;
+      padding: 7px 8px 5px 11px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -127,7 +138,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .lvl-badge {
       background: rgba(29, 91, 143, 0.15);
@@ -135,12 +146,12 @@
       color: var(--aizome-indigo);
       font-weight: 800;
       font-size: 10px;
-      padding: 2px 6px;
+      padding: 1.5px 6px;
       border-radius: 6px;
       white-space: nowrap;
     }
     .hud-title {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 800;
       color: var(--sumi-ink);
       white-space: nowrap;
@@ -151,7 +162,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--walnut-muted);
     }
     .coins-pill {
@@ -165,23 +176,24 @@
     .combo-pill {
       background: var(--kraft-card);
       border: 1px solid var(--kraft-border);
-      border-radius: 12px;
-      padding: 5px 8px;
+      border-radius: 11px;
+      padding: 4px 8px;
       font-weight: 800;
       font-size: 12px;
       color: var(--sumi-ink);
       display: flex;
       align-items: center;
       gap: 3px;
-      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       white-space: nowrap;
+      will-change: transform;
     }
     .combo-pill.high {
       background: linear-gradient(90deg, #f7e9c8, #f3d592);
       border-color: var(--kyoto-gold);
     }
     .combo-pill.bounce {
-      transform: scale(1.32);
+      transform: scale(1.30);
       background: linear-gradient(90deg, var(--torii-vermilion), var(--kyoto-gold));
       color: #fffcf5;
     }
@@ -190,35 +202,34 @@
       white-space: nowrap;
     }
     .score-val {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: 900;
       color: var(--kyoto-gold);
     }
     .score-career {
-      font-size: 10px;
+      font-size: 9.5px;
       color: var(--walnut-muted);
     }
     .hud-actions {
       display: flex;
       align-items: center;
-      gap: 2px;
+      gap: 1px;
     }
     .icon-btn {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
       border: none;
       background: transparent;
       color: var(--walnut-muted);
-      font-size: 16px;
+      font-size: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.15s ease, transform 0.12s ease;
     }
     .icon-btn:active {
-      transform: scale(0.92);
+      transform: scale(0.90);
       background: rgba(0, 0, 0, 0.06);
     }
     .hud-progress-track {
@@ -230,16 +241,17 @@
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, var(--aizome-indigo), var(--matcha-jade), var(--kyoto-gold));
-      transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     /* Intersecting Clues Strip */
     .clues-strip {
       display: flex;
-      gap: 8px;
+      gap: 7px;
       overflow-x: auto;
-      padding-bottom: 2px;
+      padding-bottom: 1px;
       scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
     }
     .clues-strip::-webkit-scrollbar {
       display: none;
@@ -247,20 +259,19 @@
     .clue-chip {
       background: var(--washi-sheet);
       border: 1px solid var(--kraft-border);
-      border-radius: 12px;
-      padding: 6px 10px;
-      min-width: 168px;
+      border-radius: 11px;
+      padding: 5px 9px;
+      min-width: 158px;
       flex-shrink: 0;
       cursor: pointer;
-      transition: border-color 0.18s ease, background 0.18s ease, transform 0.15s ease;
     }
     .clue-chip.focused {
       background: #dfecf6;
-      border: 1.6px solid var(--aizome-indigo);
+      border: 1.5px solid var(--aizome-indigo);
     }
     .clue-chip.done {
       background: var(--completed-word-bg);
-      border: 1.6px solid var(--matcha-jade);
+      border: 1.5px solid var(--matcha-jade);
     }
     .clue-head {
       display: flex;
@@ -268,13 +279,13 @@
       gap: 6px;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-weight: 800;
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--sumi-ink);
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
     .clue-dir {
       color: var(--aizome-indigo);
-      font-size: 9px;
+      font-size: 8.5px;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       font-weight: 800;
     }
@@ -285,35 +296,36 @@
       color: var(--matcha-jade);
     }
     .clue-desc {
-      font-size: 10px;
+      font-size: 9.5px;
       color: var(--walnut-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    /* Handcrafted Washi-Paper Board Container */
+    /* Handcrafted Washi-Paper Board Container (Adaptively sized to fit mobile viewports) */
     .board-frame {
       position: relative;
+      width: 100%;
+      max-width: min(100%, 44dvh);
+      margin: 0 auto;
       background: linear-gradient(180deg, var(--washi-sheet) 0%, #f6f0e2 100%);
       border: 1.5px solid var(--kraft-border);
-      border-radius: 18px;
-      padding: 10px;
-      display: grid;
-      gap: 5px;
+      border-radius: 16px;
+      padding: 8px;
       aspect-ratio: 9 / 8;
-      box-shadow: 0 4px 12px rgba(74, 56, 35, 0.10);
+      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.09);
       touch-action: none;
     }
     .board-frame.shake {
-      animation: boardShake 0.24s linear;
+      animation: boardShake 0.22s linear;
     }
     @keyframes boardShake {
-      0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-6px); }
-      40% { transform: translateX(6px); }
-      60% { transform: translateX(-4px); }
-      80% { transform: translateX(4px); }
+      0%, 100% { transform: translate3d(0, 0, 0); }
+      20% { transform: translate3d(-6px, 0, 0); }
+      40% { transform: translate3d(6px, 0, 0); }
+      60% { transform: translate3d(-4px, 0, 0); }
+      80% { transform: translate3d(4px, 0, 0); }
     }
     .board-creases-svg {
       position: absolute;
@@ -329,31 +341,31 @@
       width: 100%;
       height: 100%;
       display: grid;
-      gap: 5px;
+      gap: 4px;
     }
 
     /* Origami Board Cells */
     .cell {
-      border-radius: 8px;
+      border-radius: 7px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
       font-family: Georgia, "Noto Serif", serif;
-      font-size: clamp(15px, 4.2vw, 21px);
+      font-size: clamp(14px, 3.9vw, 20px);
       position: relative;
-      transition: transform 0.16s ease, background 0.18s ease, border-color 0.18s ease;
+      transition: transform 0.14s ease, background-color 0.15s ease, border-color 0.15s ease;
     }
     .cell.corridor {
-      box-shadow: 0 0 0 2.5px rgba(29, 91, 143, 0.18);
+      box-shadow: 0 0 0 2px rgba(29, 91, 143, 0.18);
     }
     .cell.void {
       background: transparent;
     }
     .cell.void::after {
       content: "";
-      width: 4px;
-      height: 4px;
+      width: 3.5px;
+      height: 3.5px;
       border-radius: 50%;
       background: rgba(208, 195, 168, 0.58);
     }
@@ -361,12 +373,11 @@
     /* 1. Permanent Fixed Clue Letter Cell (Folded Kraft Origami Paper Tile) */
     .cell.fixed {
       background: var(--fixed-cell-bg);
-      border: 1.8px solid var(--fixed-cell-border);
+      border: 1.6px solid var(--fixed-cell-border);
       color: var(--sumi-ink);
-      box-shadow: 1px 2px 3px rgba(140, 122, 91, 0.22);
+      box-shadow: 1px 1.5px 2.5px rgba(140, 122, 91, 0.20);
       overflow: hidden;
     }
-    /* Diagonal paper crease line */
     .cell.fixed::before,
     .cell.placed::before,
     .tile::before {
@@ -374,18 +385,17 @@
       position: absolute;
       width: 120%;
       height: 1px;
-      background: rgba(255, 255, 255, 0.52);
+      background: rgba(255, 255, 255, 0.50);
       transform: rotate(-45deg);
       pointer-events: none;
     }
-    /* Origami dog-ear corner fold triangle in top-right corner */
     .dog-ear {
       position: absolute;
       top: 0;
       right: 0;
       width: 21%;
       height: 21%;
-      background: linear-gradient(225deg, rgba(181, 164, 137, 0.55) 50%, rgba(181, 164, 137, 0.35) 50%);
+      background: rgba(181, 164, 137, 0.45);
       clip-path: polygon(0 0, 100% 100%, 0 100%);
       pointer-events: none;
     }
@@ -393,7 +403,7 @@
     /* 2. Open Blank Target Paper Cutout Socket */
     .cell.blank {
       background: var(--blank-slot-bg);
-      border: 1.8px dashed var(--blank-slot-border);
+      border: 1.6px dashed var(--blank-slot-border);
       color: var(--walnut-muted);
       cursor: pointer;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -411,7 +421,7 @@
       border-color: var(--kyoto-gold);
       background: rgba(200, 125, 10, 0.18);
       color: var(--kyoto-gold);
-      animation: hintPulse 0.9s infinite alternate ease-in-out;
+      animation: hintPulse 0.85s infinite alternate ease-in-out;
     }
     @keyframes hintPulse {
       from { transform: scale(0.97); }
@@ -419,27 +429,29 @@
     }
     .cell.blank.magnetic-valid {
       border-style: solid;
-      border-width: 2.4px;
+      border-width: 2.2px;
       border-color: var(--matcha-jade);
       background: rgba(21, 127, 75, 0.20);
       color: var(--matcha-jade);
       transform: scale(1.06);
+      z-index: 15;
     }
     .cell.blank.magnetic-invalid {
       border-style: solid;
-      border-width: 2.4px;
+      border-width: 2.2px;
       border-color: var(--torii-vermilion);
       background: rgba(217, 56, 30, 0.18);
       color: var(--torii-vermilion);
       transform: scale(1.04);
+      z-index: 15;
     }
 
     /* 3. Player Placed Origami Tile */
     .cell.placed {
       background: var(--skin-base, #fff8ec);
-      border: 2px solid var(--skin-border, #d9b382);
+      border: 1.8px solid var(--skin-border, #d9b382);
       color: var(--skin-text, #231e18);
-      box-shadow: 1px 2.5px 4px rgba(125, 107, 77, 0.28);
+      box-shadow: 1px 2px 3.5px rgba(125, 107, 77, 0.25);
       cursor: pointer;
       overflow: hidden;
     }
@@ -447,7 +459,7 @@
     /* 4. Completed & Locked Word Cell (Folded Sage Matcha Paper) */
     .cell.locked {
       background: var(--completed-word-bg) !important;
-      border: 2px solid var(--completed-word-border) !important;
+      border: 1.8px solid var(--completed-word-border) !important;
       color: var(--sumi-ink) !important;
     }
     .cell.locked .dog-ear {
@@ -455,7 +467,7 @@
     }
 
     .cell.snapped {
-      animation: tileSnapSquash 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: tileSnapSquash 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     @keyframes tileSnapSquash {
       0% { transform: scale(1.24, 1.24); }
@@ -465,24 +477,24 @@
     }
 
     .cell.flash {
-      animation: cellEmeraldShimmer 0.65s ease-out;
+      animation: cellEmeraldShimmer 0.62s ease-out;
     }
     @keyframes cellEmeraldShimmer {
-      0% { box-shadow: 0 0 0 0 rgba(21, 127, 75, 0.65); }
-      45% { box-shadow: 0 0 0 5px rgba(21, 127, 75, 0.32); transform: scale(1.06); }
+      0% { box-shadow: 0 0 0 0 rgba(21, 127, 75, 0.60); }
+      45% { box-shadow: 0 0 0 4px rgba(21, 127, 75, 0.30); transform: scale(1.05); }
       100% { box-shadow: 0 0 0 0 rgba(21, 127, 75, 0); transform: scale(1); }
     }
 
     .mult-tag {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 800;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
     .pts-sub {
       position: absolute;
-      bottom: 2px;
+      bottom: 1.5px;
       right: 3px;
-      font-size: 8.5px;
+      font-size: 8px;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-weight: 700;
       opacity: 0.72;
@@ -491,19 +503,21 @@
     /* Magnetic Callout Pill above Hovered Slot */
     .hover-callout-pill {
       position: absolute;
-      transform: translate(-50%, -135%);
+      top: -4px;
+      left: 50%;
+      transform: translate(-50%, -100%);
       background: var(--washi-sheet);
-      border: 2px solid var(--matcha-jade);
+      border: 1.8px solid var(--matcha-jade);
       color: var(--matcha-jade);
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-weight: 800;
-      font-size: 11px;
-      padding: 2px 8px;
+      font-size: 10.5px;
+      padding: 1.5px 7px;
       border-radius: 999px;
       pointer-events: none;
       white-space: nowrap;
       z-index: 35;
-      box-shadow: 0 3px 8px rgba(35, 30, 24, 0.16);
+      box-shadow: 0 2px 6px rgba(35, 30, 24, 0.16);
     }
     .hover-callout-pill.invalid {
       border-color: var(--torii-vermilion);
@@ -513,28 +527,28 @@
     /* Subtle Paper Ripple Ring */
     .shockwave-ring {
       position: absolute;
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      border: 2.2px solid var(--aizome-indigo);
+      border: 2px solid var(--aizome-indigo);
       pointer-events: none;
       transform: translate(-50%, -50%) scale(0.45);
-      animation: shockwaveExpand 0.44s ease-out forwards;
+      animation: shockwaveExpand 0.42s ease-out forwards;
       z-index: 25;
     }
     @keyframes shockwaveExpand {
       0% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.45); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.85); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.80); }
     }
 
     .floating-popup {
       position: absolute;
       pointer-events: none;
       font-weight: 900;
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--matcha-jade);
       text-shadow: 0 1px 4px rgba(255, 252, 245, 0.95);
-      animation: floatUp 1.05s ease-out forwards;
+      animation: floatUp 1.0s ease-out forwards;
       z-index: 30;
       white-space: nowrap;
     }
@@ -543,20 +557,20 @@
     }
     @keyframes floatUp {
       0% { opacity: 1; transform: translate(-50%, 0) scale(0.9); }
-      30% { transform: translate(-50%, -12px) scale(1.08); }
-      100% { opacity: 0; transform: translate(-50%, -34px) scale(1); }
+      30% { transform: translate(-50%, -11px) scale(1.08); }
+      100% { opacity: 0; transform: translate(-50%, -32px) scale(1); }
     }
 
     /* Live Intersection Preview & Active Clue Spotlight Banner */
     .status-banner {
       background: var(--washi-sheet);
       border: 1.2px solid var(--kraft-border);
-      border-radius: 14px;
-      padding: 8px 12px;
-      box-shadow: 0 2px 6px rgba(74, 56, 35, 0.06);
+      border-radius: 13px;
+      padding: 7px 11px;
+      box-shadow: 0 2px 5px rgba(74, 56, 35, 0.05);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
     .status-banner.valid-preview {
       background: var(--completed-word-bg);
@@ -580,17 +594,17 @@
       flex: 1;
     }
     .dir-badge {
-      font-size: 9px;
+      font-size: 8.5px;
       font-weight: 800;
       color: var(--aizome-indigo);
       background: rgba(29, 91, 143, 0.12);
       border: 1px solid rgba(29, 91, 143, 0.45);
-      padding: 2px 5px;
+      padding: 1.5px 5px;
       border-radius: 5px;
       white-space: nowrap;
     }
     .clue-spotlight-text {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       color: var(--sumi-ink);
       white-space: nowrap;
@@ -599,15 +613,15 @@
     }
     .mini-slots-row {
       display: flex;
-      gap: 3px;
+      gap: 2.5px;
       flex-shrink: 0;
     }
     .mini-slot {
-      width: 19px;
-      height: 19px;
+      width: 18px;
+      height: 18px;
       border-radius: 4px;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
       display: flex;
       align-items: center;
@@ -627,7 +641,7 @@
       color: var(--kyoto-gold);
     }
     .status-subline {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--walnut-muted);
       white-space: nowrap;
       overflow: hidden;
@@ -646,12 +660,12 @@
     .rack-card {
       background: var(--washi-sheet);
       border: 1.2px solid var(--kraft-border);
-      border-radius: 18px;
-      padding: 10px 12px;
-      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.08);
+      border-radius: 16px;
+      padding: 8px 10px;
+      box-shadow: 0 2px 8px rgba(74, 56, 35, 0.07);
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
     .rack-header {
       display: flex;
@@ -665,7 +679,7 @@
       gap: 6px;
     }
     .rack-title {
-      font-size: 10.5px;
+      font-size: 10px;
       font-weight: 800;
       color: var(--sumi-ink);
       letter-spacing: 0.3px;
@@ -673,7 +687,7 @@
     .tile-count-badge {
       background: rgba(29, 91, 143, 0.14);
       color: var(--aizome-indigo);
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 700;
       padding: 1px 6px;
       border-radius: 6px;
@@ -684,9 +698,9 @@
       align-items: center;
     }
     .legend-pill {
-      font-size: 8.5px;
+      font-size: 8px;
       font-weight: 700;
-      padding: 1.5px 5px;
+      padding: 1px 4.5px;
       border-radius: 5px;
       border: 1px solid;
     }
@@ -710,12 +724,12 @@
     .rack-well {
       background: rgba(231, 222, 201, 0.78);
       border: 1px solid var(--kraft-border);
-      border-radius: 14px;
-      padding: 10px 8px;
-      min-height: 68px;
+      border-radius: 13px;
+      padding: 8px 6px;
+      min-height: 60px;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 7px;
       align-items: center;
       justify-content: center;
       perspective: 600px;
@@ -724,109 +738,110 @@
     /* Subtle continuous 'float' animation for idle tiles sitting in the rack */
     @keyframes idlePaperFloat {
       0%, 100% {
-        transform: translateY(-2.6px) rotate(-1.3deg);
+        transform: translate3d(0, -2.5px, 0) rotate(-1.3deg);
       }
       50% {
-        transform: translateY(2.6px) rotate(1.3deg);
+        transform: translate3d(0, 2.5px, 0) rotate(1.3deg);
       }
     }
 
     /* 3D Origami Flip & Fan Shuffle Animation when shuffling tiles */
     @keyframes origamiShuffleFlip {
       0% {
-        transform: translate(0, 0) scale(1) rotateY(0deg) rotateZ(0deg);
+        transform: translate3d(0, 0, 0) scale(1) rotateY(0deg) rotateZ(0deg);
       }
       35% {
-        transform: translate(var(--shuf-x, 14px), var(--shuf-y, -18px)) scale(1.18) rotateY(180deg) rotateZ(var(--shuf-rot, 14deg));
+        transform: translate3d(var(--shuf-x, 14px), var(--shuf-y, -16px), 0) scale(1.18) rotateY(180deg) rotateZ(var(--shuf-rot, 14deg));
       }
       72% {
-        transform: translate(calc(var(--shuf-x, 14px) * -0.35), -4px) scale(1.05) rotateY(330deg) rotateZ(calc(var(--shuf-rot, 14deg) * -0.5));
+        transform: translate3d(calc(var(--shuf-x, 14px) * -0.35), -4px, 0) scale(1.05) rotateY(330deg) rotateZ(calc(var(--shuf-rot, 14deg) * -0.5));
       }
       100% {
-        transform: translate(0, 0) scale(1) rotateY(360deg) rotateZ(0deg);
+        transform: translate3d(0, 0, 0) scale(1) rotateY(360deg) rotateZ(0deg);
       }
     }
 
     .tile {
-      width: 48px;
-      height: 48px;
+      width: 45px;
+      height: 45px;
       border-radius: 10px;
       background: var(--skin-base, #fff8ec);
       border: 1.6px solid var(--skin-border, #d9b382);
       color: var(--skin-text, #231e18);
       font-weight: 900;
-      font-size: 22px;
+      font-size: 21px;
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
       cursor: grab;
       touch-action: none;
-      box-shadow: 0 3px 7px rgba(74, 56, 35, 0.22);
+      box-shadow: 0 2.5px 6px rgba(74, 56, 35, 0.20);
       animation: idlePaperFloat 2.5s ease-in-out infinite;
       animation-delay: var(--float-delay, 0s);
       transform-style: preserve-3d;
+      will-change: transform;
     }
     .tile.shuffling {
-      animation: origamiShuffleFlip 0.44s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+      animation: origamiShuffleFlip 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
       animation-delay: var(--shuf-delay, 0ms) !important;
     }
     .tile.selected {
       animation: none;
-      transform: translateY(-5px) scale(1.10);
+      transform: translate3d(0, -5px, 0) scale(1.10);
       border: 2.2px solid var(--kyoto-gold);
-      box-shadow: 0 7px 14px rgba(200, 125, 10, 0.30);
+      box-shadow: 0 6px 12px rgba(200, 125, 10, 0.28);
     }
     .tile.dragging-source {
       opacity: 0.25;
       animation: none;
     }
 
-    /* Floating Drag Proxy Tile with Magnetic-Snap Physics */
+    /* Hardware-Composited Floating Drag Proxy Tile with Magnetic-Snap Physics */
     .drag-proxy-tile {
       position: fixed;
-      width: 54px;
-      height: 54px;
+      top: 0;
+      left: 0;
+      width: 52px;
+      height: 52px;
       border-radius: 11px;
       background: var(--skin-base, #fff8ec);
       border: 2.4px solid var(--aizome-indigo);
       color: var(--skin-text, #231e18);
       font-weight: 900;
-      font-size: 24px;
+      font-size: 23px;
       display: flex;
       align-items: center;
       justify-content: center;
       pointer-events: none;
       z-index: 999;
-      box-shadow: 0 12px 24px rgba(35, 30, 24, 0.32);
-      transform: translate(-50%, -50%) scale(1.16);
-      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      box-shadow: 0 10px 22px rgba(35, 30, 24, 0.30);
+      will-change: transform;
     }
     .drag-proxy-tile.magnet-snapped {
       border-color: var(--matcha-jade);
-      box-shadow: 0 0 0 6px rgba(21, 127, 75, 0.24), 0 10px 22px rgba(35, 30, 24, 0.28);
+      box-shadow: 0 0 0 5px rgba(21, 127, 75, 0.24), 0 8px 18px rgba(35, 30, 24, 0.26);
     }
 
     /* Action Buttons Row */
     .btn-row {
       display: flex;
-      gap: 8px;
+      gap: 7px;
     }
     .action-btn {
       flex: 1;
-      height: 44px;
-      border-radius: 12px;
+      height: 40px;
+      border-radius: 11px;
       border: 1.2px solid var(--kraft-border);
       background: var(--washi-sheet);
       color: var(--sumi-ink);
       font-weight: 700;
-      font-size: 12.5px;
+      font-size: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 5px;
       cursor: pointer;
-      transition: transform 0.12s ease, background 0.15s ease;
     }
     .action-btn:active {
       transform: scale(0.96);
@@ -840,7 +855,7 @@
     }
     .shuffle-icon {
       display: inline-block;
-      transition: transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 0.40s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     /* Bottom Navigation Bar matching Android App */
@@ -849,17 +864,18 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 62px;
+      height: calc(58px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
       background: var(--washi-sheet);
       border-top: 1.2px solid var(--kraft-border);
       display: flex;
       justify-content: center;
       z-index: 90;
-      box-shadow: 0 -2px 10px rgba(74, 56, 35, 0.06);
+      box-shadow: 0 -2px 8px rgba(74, 56, 35, 0.06);
     }
     .bottom-nav-inner {
       width: 100%;
-      max-width: 560px;
+      max-width: 540px;
       display: flex;
     }
     .nav-item {
@@ -872,7 +888,7 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       cursor: pointer;
     }
@@ -881,10 +897,10 @@
       font-weight: 800;
     }
     .nav-icon {
-      font-size: 17px;
-      padding: 2px 14px;
+      font-size: 16px;
+      padding: 1.5px 13px;
       border-radius: 999px;
-      transition: background 0.18s ease;
+      transition: background-color 0.15s ease;
     }
     .nav-item.active .nav-icon {
       background: rgba(29, 91, 143, 0.15);
@@ -894,7 +910,7 @@
     .tab-panel {
       display: none;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
     .tab-panel.active {
       display: flex;
@@ -903,10 +919,10 @@
       background: var(--washi-sheet);
       border: 1.2px solid var(--kraft-border);
       border-radius: 16px;
-      padding: 14px;
+      padding: 13px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 9px;
     }
     .level-row {
       display: flex;
@@ -932,7 +948,7 @@
       gap: 8px;
     }
     .sfx-btn {
-      height: 42px;
+      height: 40px;
       border-radius: 10px;
       border: 1.2px solid var(--kraft-border);
       background: var(--kraft-card);
@@ -958,15 +974,15 @@
     }
     .fanfare-modal {
       width: 100%;
-      max-width: 400px;
+      max-width: 390px;
       background: var(--washi-sheet);
       border: 2px solid var(--kyoto-gold);
       border-radius: 22px;
-      padding: 22px;
+      padding: 20px;
       text-align: center;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 11px;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
     }
     .stars-row {
@@ -997,16 +1013,16 @@
   </style>
 </head>
 <body>
-  <!-- Inline SVG filter generating organic Washi paper-grain texture -->
+  <!-- Inline SVG filter definition for Washi paper-grain -->
   <svg width="0" height="0" style="position:absolute; pointer-events:none;" aria-hidden="true">
     <filter id="paper-grain" x="0%" y="0%" width="100%" height="100%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="4" stitchTiles="stitch" result="noise" />
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch" result="noise" />
       <feColorMatrix
         type="matrix"
         values="0.35 0 0 0 0.58
                 0.30 0 0 0 0.53
                 0.22 0 0 0 0.44
-                0    0 0 0.34 0"
+                0    0 0 0.32 0"
         in="noise"
       />
     </filter>
@@ -1103,7 +1119,7 @@
     <!-- TAB 2: LEVELS VAULT -->
     <div class="tab-panel" id="tab-levels">
       <div class="panel-card paper-surface">
-        <h2 style="font-size:20px; font-weight:900;">Crossword Origami Vault</h2>
+        <h2 style="font-size:19px; font-weight:900;">Crossword Origami Vault</h2>
         <p style="font-size:12px; color:var(--aizome-indigo); font-weight:700;">100% Offline-First Kriss-Kross Fill-In Grids · Zero Network Quota</p>
       </div>
       <div id="levelsVaultList" style="display:flex; flex-direction:column; gap:10px;"></div>
@@ -1112,8 +1128,8 @@
     <!-- TAB 3: STUDIO & AUDIOPLAYER SYNTHESIZER -->
     <div class="tab-panel" id="tab-studio">
       <div class="panel-card paper-surface">
-        <h3 style="font-size:16px; font-weight:800;">AudioPlayer Sound Synthesizer</h3>
-        <p style="font-size:12px; color:var(--walnut-muted);">Audition the 4 real-time synthesized sound effects triggered on game events:</p>
+        <h3 style="font-size:15.5px; font-weight:800;">AudioPlayer Sound Synthesizer</h3>
+        <p style="font-size:11.5px; color:var(--walnut-muted);">Audition the 4 real-time synthesized sound effects triggered on game events:</p>
         <div class="sfx-grid">
           <button class="sfx-btn" onclick="AudioPlayer.play('click')">CLICK</button>
           <button class="sfx-btn" onclick="AudioPlayer.play('snap')">SNAP</button>
@@ -1123,7 +1139,7 @@
       </div>
 
       <div class="panel-card paper-surface">
-        <h3 style="font-size:16px; font-weight:800;">Cosmetic Origami Tile Materials</h3>
+        <h3 style="font-size:15.5px; font-weight:800;">Cosmetic Origami Tile Materials</h3>
         <div id="skinsList" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
     </div>
@@ -1131,8 +1147,8 @@
     <!-- TAB 4: TRIE SOLVER -->
     <div class="tab-panel" id="tab-trie">
       <div class="panel-card paper-surface">
-        <h3 style="font-size:18px; font-weight:800;">&lt;1ms In-Memory Trie Engine</h3>
-        <p style="font-size:12px; color:var(--walnut-muted);">Test wildcard skeleton patterns using '_' for missing blank slots (e.g., P_AN_T, C_OSS, Q_A_T_):</p>
+        <h3 style="font-size:17px; font-weight:800;">&lt;1ms In-Memory Trie Engine</h3>
+        <p style="font-size:11.5px; color:var(--walnut-muted);">Test wildcard skeleton patterns using '_' for missing blank slots (e.g., P_AN_T, C_OSS, Q_A_T_):</p>
         <input
           id="trieInput"
           type="text"
@@ -1148,8 +1164,8 @@
   <!-- LEVEL CLEAR ORIGAMI FANFARE MODAL -->
   <div class="fanfare-backdrop" id="fanfareModal">
     <div class="fanfare-modal paper-surface">
-      <div style="font-size:36px;">🏆</div>
-      <div style="font-size:22px; font-weight:900; color:var(--kyoto-gold);">ORIGAMI SOLVED!</div>
+      <div style="font-size:34px;">🏆</div>
+      <div style="font-size:21px; font-weight:900; color:var(--kyoto-gold);">ORIGAMI SOLVED!</div>
       <div id="fanfareSubtitle" style="font-size:14px; font-weight:700; color:var(--sumi-ink);">Level 1 · Orbital Crossing</div>
       <div class="stars-row" id="fanfareStars">★★★</div>
       <div class="breakdown-box" id="fanfareBreakdown"></div>
@@ -1183,6 +1199,54 @@
   </nav>
 
   <script>
+    /**
+     * Pre-bakes a seamless 128x128 Washi paper-grain texture into a cached Data-URL at boot
+     * so mobile Safari & Chrome composite the paper texture on the GPU with 0.0ms per-frame cost.
+     */
+    (function initCachedPaperGrainTexture() {
+      try {
+        const c = document.createElement("canvas");
+        c.width = 128;
+        c.height = 128;
+        const ctx = c.getContext("2d");
+        // Subtle horizontal deckle weave lines
+        ctx.strokeStyle = "rgba(92, 75, 55, 0.032)";
+        ctx.lineWidth = 0.7;
+        for (let y = 6; y < 128; y += 14) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(128, y);
+          ctx.stroke();
+        }
+        // Mulberry fibers
+        let seed = 1337;
+        function rand() {
+          seed = (seed * 1664525 + 1013904223) >>> 0;
+          return seed / 4294967296;
+        }
+        for (let i = 0; i < 42; i++) {
+          const sx = rand() * 128;
+          const sy = rand() * 128;
+          const ang = rand() * Math.PI * 2;
+          const len = 5 + rand() * 11;
+          ctx.strokeStyle = i % 3 === 0 ? "rgba(255, 255, 255, 0.09)" : "rgba(92, 75, 55, 0.055)";
+          ctx.lineWidth = 0.85;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len);
+          ctx.stroke();
+        }
+        // Micro-speckles
+        for (let i = 0; i < 68; i++) {
+          const px = rand() * 128;
+          const py = rand() * 128;
+          ctx.fillStyle = i % 4 === 0 ? "rgba(255, 255, 255, 0.08)" : "rgba(122, 101, 75, 0.05)";
+          ctx.fillRect(px, py, 1.4, 1.4);
+        }
+        document.documentElement.style.setProperty("--paper-grain-tex", `url(${c.toDataURL("image/png")})`);
+      } catch (_) {}
+    })();
+
     /**
      * Real-Time WebAudio Synthesizer matching Android's AudioPlayer.kt:
      * - 'click': Crisp woody paper tap on tile selection / shuffle
@@ -1312,7 +1376,7 @@
     let shuffleSpinDeg = 0;
     let isShufflingAnim = false;
     let state = null;
-    let dragSession = null;
+    let cellDomGrid = [];
 
     function buildLevel(idx) {
       const tpl = LEVELS[idx % LEVELS.length];
@@ -1463,12 +1527,11 @@
         state.careerScore += pts;
         const pill = document.getElementById("comboPill");
         pill.classList.add("bounce");
-        setTimeout(() => pill.classList.remove("bounce"), 600);
+        setTimeout(() => pill.classList.remove("bounce"), 550);
         showPopup(x, y, `+${pts} PTS · ${newlyDone.map(w => w.word).join(" × ")}!`, newlyDone.length >= 2);
         state.statusMsg = `Trie Verified ✓ Completed ${newlyDone.map(w => w.word).join(" & ")}! Combo ×${state.mult.toFixed(1)}`;
         state.statusErr = false;
 
-        // Focus next unfinished word
         const nextOpenWord = state.tpl.words.find(w => !state.completedWords.has(w.id));
         if (nextOpenWord) state.focusedWordId = nextOpenWord.id;
       } else {
@@ -1481,7 +1544,6 @@
 
       render();
 
-      // Subtle, localized Origami Paper Petal Shimmer (non-distracting!)
       if (newlyDone.length > 0) {
         spawnOrigamiPaperPetalShimmer(newlyDone.length >= 2 ? 12 : 9);
       }
@@ -1493,21 +1555,21 @@
         state.score += accuracyBonus;
         state.careerScore += accuracyBonus;
         state.coins += coinsEarned;
-        setTimeout(() => showLevelClearModal(accuracyBonus, coinsEarned), 550);
+        setTimeout(() => showLevelClearModal(accuracyBonus, coinsEarned), 520);
       }
       return true;
     }
 
     /**
-     * Gentle, localized Origami Paper Petal Shimmer (8-12 translucent folded paper triangles
+     * Gentle, localized Origami Paper Petal Shimmer (9-12 translucent folded paper triangles
      * drifting softly around the center of the board for 720ms — never obstructing the grid).
      */
     function spawnOrigamiPaperPetalShimmer(petalCount) {
       const board = document.getElementById("boardFrame");
       const rect = board.getBoundingClientRect();
       const canvas = document.createElement("canvas");
-      canvas.width = rect.width || 380;
-      canvas.height = rect.height || 340;
+      canvas.width = rect.width || 360;
+      canvas.height = rect.height || 320;
       canvas.style.position = "absolute";
       canvas.style.inset = "0";
       canvas.style.width = "100%";
@@ -1568,7 +1630,7 @@
       ring.style.left = `${((x + 0.5) / state.tpl.w) * 100}%`;
       ring.style.top = `${((y + 0.5) / state.tpl.h) * 100}%`;
       board.appendChild(ring);
-      setTimeout(() => ring.remove(), 460);
+      setTimeout(() => ring.remove(), 440);
     }
 
     function showPopup(x, y, text, isDual) {
@@ -1579,16 +1641,15 @@
       pop.style.top = `${((y + 0.5) / state.tpl.h) * 100}%`;
       pop.textContent = text;
       board.appendChild(pop);
-      setTimeout(() => pop.remove(), 1050);
+      setTimeout(() => pop.remove(), 1000);
     }
 
     /**
      * Resolves the nearest open blank slot within magnetic snap range (1.48 * cellSize)
-     * and computes a spring magnetic pull vector toward the slot's center.
+     * using cached board bounds during a drag session.
      */
-    function resolveMagneticSlotAndPull(clientX, clientY) {
-      const gridEl = document.getElementById("boardGrid");
-      const rect = gridEl.getBoundingClientRect();
+    function resolveMagneticSlotAndPull(clientX, clientY, cachedRect) {
+      const rect = cachedRect || document.getElementById("boardGrid").getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return { coord: null, pullX: 0, pullY: 0 };
 
       const cellW = rect.width / state.tpl.w;
@@ -1626,6 +1687,37 @@
       };
     }
 
+    /**
+     * O(1) Incremental Hover Update during touch/mouse drag:
+     * Updates ONLY the previous and newly hovered blank cell DOM node + banner text,
+     * avoiding full 72-node board innerHTML rebuilds on every pointer move.
+     */
+    function updateHoverHighlightOnly(prevCoord, nextCoord, tile) {
+      if (prevCoord && cellDomGrid[prevCoord.y] && cellDomGrid[prevCoord.y][prevCoord.x]) {
+        const prevCell = state.cells[prevCoord.y][prevCoord.x];
+        const prevEl = cellDomGrid[prevCoord.y][prevCoord.x];
+        if (prevCell.isBlank && !prevCell.placed) {
+          prevEl.classList.remove("magnetic-valid", "magnetic-invalid");
+          const isHint = state.hintCoord && state.hintCoord.x === prevCoord.x && state.hintCoord.y === prevCoord.y;
+          const badge = isHint ? prevCell.expected : (prevCell.mult || (prevCell.words.length >= 2 ? "◆" : "+"));
+          prevEl.innerHTML = `<span class="mult-tag">${badge}</span>`;
+        }
+      }
+
+      if (nextCoord && tile && cellDomGrid[nextCoord.y] && cellDomGrid[nextCoord.y][nextCoord.x]) {
+        const nextCell = state.cells[nextCoord.y][nextCoord.x];
+        const nextEl = cellDomGrid[nextCoord.y][nextCoord.x];
+        if (nextCell.isBlank && !nextCell.placed) {
+          const valid = tile.char === nextCell.expected;
+          nextEl.classList.remove("magnetic-valid", "magnetic-invalid");
+          nextEl.classList.add(valid ? "magnetic-valid" : "magnetic-invalid");
+          nextEl.innerHTML = `${tile.char}<div class="hover-callout-pill ${valid ? "" : "invalid"}">${tile.char} ${valid ? "• +" + tile.pts : "✕"}</div>`;
+        }
+      }
+
+      updateSpotlightBanner();
+    }
+
     function startTilePointerDrag(e, tile, tileEl) {
       if (e.button !== undefined && e.button !== 0) return;
       e.preventDefault();
@@ -1633,47 +1725,54 @@
 
       const startX = e.clientX;
       const startY = e.clientY;
+      const cachedBoardRect = document.getElementById("boardGrid").getBoundingClientRect();
       let moved = false;
+      let latestX = startX;
+      let latestY = startY;
+      let prevX = startX;
+      let rafPending = false;
 
       const proxy = document.createElement("div");
       proxy.className = "drag-proxy-tile paper-surface";
       proxy.innerHTML = `<div class="dog-ear"></div>${tile.char}<span class="pts-sub">${tile.pts}</span>`;
-      proxy.style.left = `${startX}px`;
-      proxy.style.top = `${startY}px`;
       proxy.style.display = "none";
+      proxy.style.transform = `translate3d(${startX}px, ${startY}px, 0) translate(-50%, -50%) scale(1.16)`;
       document.body.appendChild(proxy);
 
-      dragSession = { tile, startX, startY, proxy, tileEl };
+      function updateDragFrame() {
+        rafPending = false;
+        const mag = resolveMagneticSlotAndPull(latestX, latestY, cachedBoardRect);
+        const visualX = latestX + mag.pullX;
+        const visualY = latestY + mag.pullY;
+        const vx = latestX - prevX;
+        prevX = latestX;
+        const tiltDeg = mag.coord ? Math.max(-4, Math.min(4, vx * 0.2)) : Math.max(-12, Math.min(12, vx * 0.55));
+
+        proxy.style.transform = `translate3d(${visualX.toFixed(1)}px, ${visualY.toFixed(1)}px, 0) translate(-50%, -50%) scale(1.16) rotate(${tiltDeg.toFixed(1)}deg)`;
+        proxy.classList.toggle("magnet-snapped", !!mag.coord);
+
+        const prevCoord = state.hoverCoord;
+        const prevKey = prevCoord ? `${prevCoord.x},${prevCoord.y}` : "";
+        const nextKey = mag.coord ? `${mag.coord.x},${mag.coord.y}` : "";
+        if (prevKey !== nextKey) {
+          state.hoverCoord = mag.coord;
+          state.hoverTile = mag.coord ? tile : null;
+          updateHoverHighlightOnly(prevCoord, mag.coord, tile);
+        }
+      }
 
       function onPointerMove(ev) {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        if (!moved && Math.hypot(dx, dy) > 6) {
+        latestX = ev.clientX;
+        latestY = ev.clientY;
+        if (!moved && Math.hypot(latestX - startX, latestY - startY) > 5) {
           moved = true;
           state.selectedTileId = tile.id;
           tileEl.classList.add("dragging-source");
           proxy.style.display = "flex";
         }
-        if (!moved) return;
-
-        const mag = resolveMagneticSlotAndPull(ev.clientX, ev.clientY);
-        const visualX = ev.clientX + mag.pullX;
-        const visualY = ev.clientY + mag.pullY;
-        proxy.style.left = `${visualX}px`;
-        proxy.style.top = `${visualY}px`;
-
-        if (mag.coord) {
-          proxy.classList.add("magnet-snapped");
-        } else {
-          proxy.classList.remove("magnet-snapped");
-        }
-
-        const prevKey = state.hoverCoord ? `${state.hoverCoord.x},${state.hoverCoord.y}` : "";
-        const nextKey = mag.coord ? `${mag.coord.x},${mag.coord.y}` : "";
-        if (prevKey !== nextKey) {
-          state.hoverCoord = mag.coord;
-          state.hoverTile = mag.coord ? tile : null;
-          renderBoardAndBannerOnly();
+        if (moved && !rafPending) {
+          rafPending = true;
+          requestAnimationFrame(updateDragFrame);
         }
       }
 
@@ -1685,7 +1784,6 @@
         tileEl.classList.remove("dragging-source");
 
         if (!moved) {
-          // Tap selection toggle
           state.selectedTileId = state.selectedTileId === tile.id ? null : tile.id;
           state.hoverCoord = null;
           state.hoverTile = null;
@@ -1693,108 +1791,25 @@
           return;
         }
 
-        const mag = resolveMagneticSlotAndPull(ev.clientX, ev.clientY);
+        const prevCoord = state.hoverCoord;
+        const mag = resolveMagneticSlotAndPull(ev.clientX, ev.clientY, cachedBoardRect);
         state.hoverCoord = null;
         state.hoverTile = null;
         if (mag.coord) {
           tryDropTile(tile.id, mag.coord.x, mag.coord.y);
         } else {
-          render();
+          updateHoverHighlightOnly(prevCoord, null, null);
         }
       }
 
-      window.addEventListener("pointermove", onPointerMove, { passive: false });
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
       window.addEventListener("pointerup", onPointerUp);
       window.addEventListener("pointercancel", onPointerUp);
     }
 
-    function renderBoardAndBannerOnly() {
+    function updateSpotlightBanner() {
       const tpl = state.tpl;
       const focusedWord = tpl.words.find(w => w.id === state.focusedWordId) || tpl.words[0];
-      const focusedCoords = new Set();
-      if (focusedWord) {
-        for (let i = 0; i < focusedWord.word.length; i++) {
-          const cx = focusedWord.dir === "H" ? focusedWord.sx + i : focusedWord.sx;
-          const cy = focusedWord.dir === "H" ? focusedWord.sy : focusedWord.sy + i;
-          focusedCoords.add(`${cx},${cy}`);
-        }
-      }
-
-      const grid = document.getElementById("boardGrid");
-      grid.style.gridTemplateColumns = `repeat(${tpl.w}, 1fr)`;
-      grid.style.gridTemplateRows = `repeat(${tpl.h}, 1fr)`;
-      grid.innerHTML = "";
-
-      for (let y = 0; y < tpl.h; y++) {
-        for (let x = 0; x < tpl.w; x++) {
-          const c = state.cells[y][x];
-          const el = document.createElement("div");
-          const isHovered = state.hoverCoord && state.hoverCoord.x === x && state.hoverCoord.y === y;
-          const isHint = state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y;
-          const inCorridor = focusedCoords.has(`${x},${y}`);
-
-          if (!c.expected) {
-            el.className = "cell void";
-          } else if (c.fixed) {
-            el.className =
-              "cell fixed" +
-              (c.locked ? " locked" : "") +
-              (c.flash ? " flash" : "") +
-              (inCorridor ? " corridor" : "");
-            el.innerHTML = `<div class="dog-ear"></div>${c.fixed}<span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
-            el.onclick = () => {
-              if (c.words.length > 0) {
-                state.focusedWordId = c.words[0];
-                AudioPlayer.play("click");
-                render();
-              }
-            };
-          } else if (c.placed) {
-            el.className =
-              "cell placed" +
-              (c.locked ? " locked" : "") +
-              (c.flash ? " flash" : "") +
-              (c.snapped ? " snapped" : "") +
-              (inCorridor ? " corridor" : "");
-            el.innerHTML = `<div class="dog-ear"></div>${c.placed.char}<span class="pts-sub">${c.placed.pts}</span>`;
-            el.onclick = () => {
-              if (!c.locked) {
-                state.rack.push(c.placed);
-                c.placed = null;
-                AudioPlayer.play("click");
-                render();
-              }
-            };
-          } else {
-            let blankCls = "cell blank";
-            if (c.mult) blankCls += ` mult-${c.mult}`;
-            if (c.words.length >= 2) blankCls += " intersection";
-            if (inCorridor) blankCls += " corridor";
-            if (isHint) blankCls += " hint-glow";
-
-            if (isHovered && state.hoverTile) {
-              const valid = state.hoverTile.char === c.expected;
-              blankCls += valid ? " magnetic-valid" : " magnetic-invalid";
-              el.className = blankCls;
-              el.innerHTML = `${state.hoverTile.char}<div class="hover-callout-pill ${valid ? "" : "invalid"}">${state.hoverTile.char} ${valid ? "• +" + state.hoverTile.pts : "✕"}</div>`;
-            } else {
-              el.className = blankCls;
-              const badge = isHint ? c.expected : (c.mult || (c.words.length >= 2 ? "◆" : "+"));
-              el.innerHTML = `<span class="mult-tag">${badge}</span>`;
-            }
-
-            el.onclick = () => {
-              const selId = state.selectedTileId || (state.rack[0] && state.rack[0].id);
-              if (selId) tryDropTile(selId, x, y);
-            };
-          }
-          c.flash = false;
-          c.snapped = false;
-          grid.appendChild(el);
-        }
-      }
-
-      // Update Live Intersection Preview & Active Clue Spotlight Banner
       const banner = document.getElementById("statusBanner");
       const dirEl = document.getElementById("spotlightDir");
       const clueEl = document.getElementById("spotlightClue");
@@ -1837,6 +1852,88 @@
       }
     }
 
+    function renderBoard() {
+      const tpl = state.tpl;
+      const focusedWord = tpl.words.find(w => w.id === state.focusedWordId) || tpl.words[0];
+      const focusedCoords = new Set();
+      if (focusedWord) {
+        for (let i = 0; i < focusedWord.word.length; i++) {
+          const cx = focusedWord.dir === "H" ? focusedWord.sx + i : focusedWord.sx;
+          const cy = focusedWord.dir === "H" ? focusedWord.sy : focusedWord.sy + i;
+          focusedCoords.add(`${cx},${cy}`);
+        }
+      }
+
+      const grid = document.getElementById("boardGrid");
+      grid.style.gridTemplateColumns = `repeat(${tpl.w}, 1fr)`;
+      grid.style.gridTemplateRows = `repeat(${tpl.h}, 1fr)`;
+      const frag = document.createDocumentFragment();
+      cellDomGrid = Array.from({ length: tpl.h }, () => Array(tpl.w));
+
+      for (let y = 0; y < tpl.h; y++) {
+        for (let x = 0; x < tpl.w; x++) {
+          const c = state.cells[y][x];
+          const el = document.createElement("div");
+          const isHint = state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y;
+          const inCorridor = focusedCoords.has(`${x},${y}`);
+
+          if (!c.expected) {
+            el.className = "cell void";
+          } else if (c.fixed) {
+            el.className =
+              "cell fixed" +
+              (c.locked ? " locked" : "") +
+              (c.flash ? " flash" : "") +
+              (inCorridor ? " corridor" : "");
+            el.innerHTML = `<div class="dog-ear"></div>${c.fixed}<span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
+            el.onclick = () => {
+              if (c.words.length > 0) {
+                state.focusedWordId = c.words[0];
+                AudioPlayer.play("click");
+                render();
+              }
+            };
+          } else if (c.placed) {
+            el.className =
+              "cell placed" +
+              (c.locked ? " locked" : "") +
+              (c.flash ? " flash" : "") +
+              (c.snapped ? " snapped" : "") +
+              (inCorridor ? " corridor" : "");
+            el.innerHTML = `<div class="dog-ear"></div>${c.placed.char}<span class="pts-sub">${c.placed.pts}</span>`;
+            el.onclick = () => {
+              if (!c.locked) {
+                state.rack.push(c.placed);
+                c.placed = null;
+                AudioPlayer.play("click");
+                render();
+              }
+            };
+          } else {
+            let blankCls = "cell blank";
+            if (c.mult) blankCls += ` mult-${c.mult}`;
+            if (c.words.length >= 2) blankCls += " intersection";
+            if (inCorridor) blankCls += " corridor";
+            if (isHint) blankCls += " hint-glow";
+            el.className = blankCls;
+            const badge = isHint ? c.expected : (c.mult || (c.words.length >= 2 ? "◆" : "+"));
+            el.innerHTML = `<span class="mult-tag">${badge}</span>`;
+
+            el.onclick = () => {
+              const selId = state.selectedTileId || (state.rack[0] && state.rack[0].id);
+              if (selId) tryDropTile(selId, x, y);
+            };
+          }
+          c.flash = false;
+          c.snapped = false;
+          cellDomGrid[y][x] = el;
+          frag.appendChild(el);
+        }
+      }
+      grid.replaceChildren(frag);
+      updateSpotlightBanner();
+    }
+
     function render() {
       const tpl = state.tpl;
       document.getElementById("lvlBadge").textContent = `LVL ${tpl.level}`;
@@ -1857,7 +1954,7 @@
 
       // Clues Strip
       const strip = document.getElementById("cluesStrip");
-      strip.innerHTML = "";
+      const clueFrag = document.createDocumentFragment();
       tpl.words.forEach(w => {
         const done = state.completedWords.has(w.id);
         const focused = state.focusedWordId === w.id;
@@ -1876,10 +1973,11 @@
           AudioPlayer.play("click");
           render();
         };
-        strip.appendChild(chip);
+        clueFrag.appendChild(chip);
       });
+      strip.replaceChildren(clueFrag);
 
-      renderBoardAndBannerOnly();
+      renderBoard();
 
       // Rack Header & Buttons
       document.getElementById("rackCountBadge").textContent = `${state.rack.length} tiles`;
@@ -1890,10 +1988,10 @@
 
       // Rack Tiles with idle float & 3D Origami Flip Shuffle animation
       const rackRow = document.getElementById("rackRow");
-      rackRow.innerHTML = "";
       if (state.rack.length === 0) {
         rackRow.innerHTML = `<div style="color:var(--matcha-jade); font-weight:800; font-size:13px; padding:8px;">✓ All origami folds complete! Level Solved!</div>`;
       } else {
+        const rackFrag = document.createDocumentFragment();
         state.rack.forEach((t, idx) => {
           const tel = document.createElement("div");
           tel.className =
@@ -1908,8 +2006,9 @@
           tel.style.setProperty("--shuf-delay", `${(idx % 8) * 22}ms`);
           tel.innerHTML = `<div class="dog-ear"></div>${t.char}<span class="pts-sub">${t.pts}</span>`;
           tel.onpointerdown = e => startTilePointerDrag(e, t, tel);
-          rackRow.appendChild(tel);
+          rackFrag.appendChild(tel);
         });
+        rackRow.replaceChildren(rackFrag);
       }
     }
 
@@ -1923,7 +2022,7 @@
       render();
       setTimeout(() => {
         isShufflingAnim = false;
-      }, 480);
+      }, 460);
     }
 
     function triggerSmartHint() {
@@ -2012,7 +2111,7 @@
     function renderVaultAndStudio() {
       const vaultEl = document.getElementById("levelsVaultList");
       if (vaultEl) {
-        vaultEl.innerHTML = "";
+        const frag = document.createDocumentFragment();
         LEVELS.forEach((lvl, idx) => {
           const solved = state.solvedLevels.has(lvl.level);
           const card = document.createElement("div");
@@ -2023,7 +2122,7 @@
                 <div style="font-size:11px; font-weight:800; color:${solved ? "var(--matcha-jade)" : "var(--aizome-indigo)"};">
                   LEVEL ${lvl.level} · ${lvl.tier} ${solved ? "★★★" : ""}
                 </div>
-                <div style="font-size:16px; font-weight:800;">${lvl.title}</div>
+                <div style="font-size:15.5px; font-weight:800;">${lvl.title}</div>
                 <div style="font-size:11px; color:var(--walnut-muted);">${lvl.w}×${lvl.h} Grid · ${lvl.words.map(w => w.word).join(", ")}</div>
               </div>
               <button class="play-btn ${solved ? "solved" : ""}" onclick="currentLvlIdx=${idx}; buildLevel(${idx}); switchTab('skeleton');">
@@ -2031,24 +2130,25 @@
               </button>
             </div>
           `;
-          vaultEl.appendChild(card);
+          frag.appendChild(card);
         });
+        vaultEl.replaceChildren(frag);
       }
 
       const skinsEl = document.getElementById("skinsList");
       if (skinsEl) {
-        skinsEl.innerHTML = "";
+        const frag = document.createDocumentFragment();
         SKINS.forEach(s => {
           const unlocked = state.unlockedSkins.has(s.id);
           const equipped = state.equippedSkinId === s.id;
           const row = document.createElement("div");
           row.className = "level-row";
-          row.style.padding = "8px 0";
+          row.style.padding = "6px 0";
           row.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:42px; height:42px; border-radius:10px; background:${s.base}; border:2px solid ${s.border}; color:${s.text}; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:20px;">L</div>
+              <div style="width:40px; height:40px; border-radius:10px; background:${s.base}; border:2px solid ${s.border}; color:${s.text}; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:19px;">L</div>
               <div>
-                <div style="font-size:14px; font-weight:800;">${s.name} · ${s.rarity}</div>
+                <div style="font-size:13.5px; font-weight:800;">${s.name} · ${s.rarity}</div>
                 <div style="font-size:11px; color:var(--walnut-muted);">${s.desc}</div>
               </div>
             </div>
@@ -2056,8 +2156,9 @@
               ${equipped ? "Equipped" : unlocked ? "Equip" : s.cost + " 🪙"}
             </button>
           `;
-          skinsEl.appendChild(row);
+          frag.appendChild(row);
         });
+        skinsEl.replaceChildren(frag);
       }
     }
 

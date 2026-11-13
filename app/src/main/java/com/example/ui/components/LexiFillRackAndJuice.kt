@@ -396,6 +396,20 @@ fun LexiFillDraggableRack(
       label = "shuffle_btn_spin",
     )
 
+  // Shared single InfiniteTransition for all idle floating rack tiles (eliminates N per-tile coroutines)
+  val sharedRackInfinite = rememberInfiniteTransition(label = "shared_rack_tile_float")
+  val sharedFloatPhase by
+    sharedRackInfinite.animateFloat(
+      initialValue = 0f,
+      targetValue = (2f * PI).toFloat(),
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(durationMillis = 2500, easing = LinearEasing),
+          repeatMode = RepeatMode.Restart,
+        ),
+      label = "shared_float_phase",
+    )
+
   Surface(
     modifier =
       modifier
@@ -493,6 +507,7 @@ fun LexiFillDraggableRack(
                 SpringDraggableRackTile(
                   tile = tile,
                   tileIndex = index,
+                  sharedFloatPhase = sharedFloatPhase,
                   shuffleGeneration = shuffleGeneration,
                   isSelected = tile.id == selectedTileId,
                   skin = equippedSkin,
@@ -603,6 +618,7 @@ private fun LegendMiniPill(label: String, color: Color) {
 private fun SpringDraggableRackTile(
   tile: Tile,
   tileIndex: Int,
+  sharedFloatPhase: Float,
   shuffleGeneration: Int,
   isSelected: Boolean,
   skin: CosmeticTileSkin,
@@ -692,21 +708,8 @@ private fun SpringDraggableRackTile(
   var dragVelocity by remember(tile.id) { mutableStateOf(Offset.Zero) }
   var trailOffsets by remember(tile.id) { mutableStateOf<List<Offset>>(emptyList()) }
 
-  // 1. Subtle continuous 'float' animation for tiles sitting in the rack!
-  val infinite = rememberInfiniteTransition(label = "rack_tile_float_${tile.id}")
-  val floatPhase by
-    infinite.animateFloat(
-      initialValue = 0f,
-      targetValue = (2f * PI).toFloat(),
-      animationSpec =
-        infiniteRepeatable(
-          animation = tween(durationMillis = 2500, easing = LinearEasing),
-          repeatMode = RepeatMode.Restart,
-        ),
-      label = "float_phase",
-    )
-
-  val phaseAngle = floatPhase + (tileIndex * 0.85f)
+  // 1. Subtle continuous 'float' animation driven by the shared rack phase clock
+  val phaseAngle = sharedFloatPhase + (tileIndex * 0.85f)
   val floatAmplitudePx = with(density) { 2.8.dp.toPx() }
   val idleFloatY = if (!isDragging) sin(phaseAngle) * floatAmplitudePx else 0f
   val idleFloatTilt = if (!isDragging) cos(phaseAngle) * 1.4f else 0f
