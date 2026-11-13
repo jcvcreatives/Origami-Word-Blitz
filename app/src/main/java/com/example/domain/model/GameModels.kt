@@ -417,6 +417,9 @@ data class ParticleBurst(
   val boardCoord: Coordinate,
   val colorHex: Long,
   val particleCount: Int = 18,
+  val wordCoords: List<Coordinate> = emptyList(),
+  val isHighMultiplier: Boolean = false,
+  val comboMultiplier: Float = 1.0f,
   val createdAtMs: Long = System.currentTimeMillis(),
 )
 

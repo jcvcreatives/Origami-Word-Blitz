@@ -464,6 +464,15 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
 
     if (newlyCompletedWords.isNotEmpty()) {
       val wordNames = newlyCompletedWords.joinToString(" × ") { it.completedWordText ?: it.word }
+      val orderedWordCoords = newlyCompletedWords.flatMap { it.coordinates() }.distinct()
+      val hasBoardMultiplier =
+        orderedWordCoords.any { c ->
+          val cellMult = updatedCellsStep1.getOrNull(c.y)?.getOrNull(c.x)?.multiplier
+          cellMult != null && cellMult != SquareMultiplier.NONE
+        }
+      val isHighMultiplierCompletion =
+        isDualIntersectionClear || hasBoardMultiplier || newComboMultiplier >= 2.0f
+
       val headline =
         if (isDualIntersectionClear) {
           "+$gainedScore PTS · DUAL INTERSECTION!"
@@ -493,8 +502,16 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         ParticleBurst(
           id = "burst_${nowMs}_${targetX}_${targetY}",
           boardCoord = dropCoord,
-          colorHex = if (isDualIntersectionClear) 0xFFFFB703 else 0xFF10B981,
-          particleCount = if (isDualIntersectionClear) 10 else 8,
+          colorHex = if (isHighMultiplierCompletion) 0xFFC87D0A else 0xFF157F4B,
+          particleCount =
+            when {
+              newComboStreak >= 3 || isDualIntersectionClear -> 24
+              isHighMultiplierCompletion -> 18
+              else -> 12
+            },
+          wordCoords = orderedWordCoords,
+          isHighMultiplier = isHighMultiplierCompletion,
+          comboMultiplier = newComboMultiplier,
           createdAtMs = nowMs,
         )
       )

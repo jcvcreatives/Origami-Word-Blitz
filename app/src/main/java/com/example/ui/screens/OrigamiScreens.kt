@@ -137,6 +137,7 @@ enum class LexiFillDestination(val label: String) {
 fun LexiFillMainScreen(
   viewModel: GameViewModel,
   userEmail: String? = null,
+  isGuestUser: Boolean = false,
   onSignOut: (() -> Unit)? = null,
 ) {
   val puzzleState by viewModel.puzzleState.collectAsStateWithLifecycle()
@@ -199,6 +200,9 @@ fun LexiFillMainScreen(
         LexiFillDestination.PUZZLE_GRID -> {
           SkeletonPuzzleArena(
             puzzleState = puzzleState,
+            userEmail = userEmail,
+            isGuestUser = isGuestUser,
+            onSignOut = onSignOut,
             onSelectClueWord = { wordId -> viewModel.selectClueWord(wordId, haptics) },
             onBoardCellTapped = { x, y -> viewModel.onBoardCellTapped(x, y, haptics) },
             onRackTileTapped = { tile -> viewModel.onRackTileTapped(tile, haptics) },
@@ -240,6 +244,7 @@ fun LexiFillMainScreen(
             viewModel = viewModel,
             puzzleState = puzzleState,
             userEmail = userEmail,
+            isGuestUser = isGuestUser,
             onSignOut = onSignOut,
           )
         }
@@ -251,6 +256,9 @@ fun LexiFillMainScreen(
 @Composable
 private fun SkeletonPuzzleArena(
   puzzleState: PuzzleState,
+  userEmail: String?,
+  isGuestUser: Boolean,
+  onSignOut: (() -> Unit)?,
   onSelectClueWord: (String) -> Unit,
   onBoardCellTapped: (Int, Int) -> Unit,
   onRackTileTapped: (com.example.domain.model.Tile) -> Unit,
@@ -291,9 +299,12 @@ private fun SkeletonPuzzleArena(
       verticalArrangement = Arrangement.spacedBy(compactSpacing),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      // 1. Top HUD: Level Title, Animated Score, Combo Streak Badge with Particle Burst, Progress Bar
+      // 1. Top HUD: Level Title, Animated Score, Combo Streak Badge, Account Pill, Progress Bar
       LexiFillTopHud(
         puzzleState = puzzleState,
+        userEmail = userEmail,
+        isGuestUser = isGuestUser,
+        onSignOut = onSignOut,
         onToggleSoundMute = onToggleSoundMute,
         onResetLevel = onReplayLevel,
         onSkipToNextLevel = onNextLevel,
@@ -359,6 +370,9 @@ private fun SkeletonPuzzleArena(
 @Composable
 private fun LexiFillTopHud(
   puzzleState: PuzzleState,
+  userEmail: String?,
+  isGuestUser: Boolean,
+  onSignOut: (() -> Unit)?,
   onToggleSoundMute: () -> Unit,
   onResetLevel: () -> Unit,
   onSkipToNextLevel: () -> Unit,
@@ -435,7 +449,7 @@ private fun LexiFillTopHud(
           Spacer(modifier = Modifier.height(2.dp))
           Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
           ) {
             Text(
               text =
@@ -455,6 +469,31 @@ private fun LexiFillTopHud(
                 fontWeight = FontWeight.Bold,
                 color = KyotoGold,
               )
+            }
+            if (onSignOut != null) {
+              Box(
+                modifier =
+                  Modifier.clip(RoundedCornerShape(5.dp))
+                    .background(
+                      if (isGuestUser) IndigoCard
+                      else CeladonJade.copy(alpha = 0.14f)
+                    )
+                    .border(
+                      0.8.dp,
+                      if (isGuestUser) IndigoElevated else CeladonJade.copy(alpha = 0.45f),
+                      RoundedCornerShape(5.dp),
+                    )
+                    .clickable(onClick = onSignOut)
+                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                    .testTag("hud_account_badge")
+              ) {
+                Text(
+                  text = if (isGuestUser) "👤 Guest · Login" else "🟢 Gmail",
+                  fontSize = 9.5.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = if (isGuestUser) WashiMuted else CeladonJade,
+                )
+              }
             }
           }
         }
@@ -1238,6 +1277,7 @@ private fun TriePatternSolverScreen(
   viewModel: GameViewModel,
   puzzleState: PuzzleState,
   userEmail: String?,
+  isGuestUser: Boolean,
   onSignOut: (() -> Unit)?,
 ) {
   var patternQuery by rememberSaveable { mutableStateOf("P_AN_T") }
@@ -1254,6 +1294,55 @@ private fun TriePatternSolverScreen(
         .padding(16.dp),
     verticalArrangement = Arrangement.spacedBy(14.dp),
   ) {
+    if (onSignOut != null) {
+      Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = IndigoSurface,
+        modifier =
+          Modifier.fillMaxWidth()
+            .border(1.2.dp, IndigoElevated, RoundedCornerShape(16.dp)),
+      ) {
+        Row(
+          modifier = Modifier.padding(14.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text =
+                if (isGuestUser) "Playing as Guest (Local Washi Mode)"
+                else "Signed in with Gmail: ${userEmail ?: "Gmail Account"}",
+              style = MaterialTheme.typography.labelLarge,
+              fontWeight = FontWeight.ExtraBold,
+              color = if (isGuestUser) WashiCream else CeladonJade,
+            )
+            Text(
+              text =
+                "Career Score: ${puzzleState.totalCampaignScore} PTS · LexiCoins: ${puzzleState.lexiCoins} 🪙",
+              style = MaterialTheme.typography.bodySmall,
+              color = WashiMuted,
+            )
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          Button(
+            onClick = onSignOut,
+            shape = RoundedCornerShape(10.dp),
+            colors =
+              ButtonDefaults.buttonColors(
+                containerColor = if (isGuestUser) SkyCyan else IndigoCard,
+                contentColor = if (isGuestUser) Color.White else WashiCream,
+              ),
+            modifier = Modifier.testTag("btn_account_action"),
+          ) {
+            Text(
+              text = if (isGuestUser) "Gmail Login" else "Sign Out",
+              fontWeight = FontWeight.Bold,
+            )
+          }
+        }
+      }
+    }
+
     Text(
       text = "<1ms In-Memory Kotlin Trie Engine",
       style = MaterialTheme.typography.headlineSmall,
@@ -1302,28 +1391,6 @@ private fun TriePatternSolverScreen(
           fontFamily = FontFamily.Monospace,
           color = WashiCream,
         )
-      }
-    }
-
-    if (!userEmail.isNullOrBlank() && onSignOut != null) {
-      Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = IndigoSurface,
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Row(
-          modifier = Modifier.padding(14.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Column(modifier = Modifier.weight(1f)) {
-            Text("Signed in as $userEmail", style = MaterialTheme.typography.labelMedium, color = WashiCream)
-            Text("Career Score: ${puzzleState.totalCampaignScore} PTS", style = MaterialTheme.typography.bodySmall, color = WashiMuted)
-          }
-          OutlinedButton(onClick = onSignOut) {
-            Text("Sign Out")
-          }
-        }
       }
     }
   }

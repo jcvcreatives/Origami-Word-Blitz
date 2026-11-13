@@ -1028,6 +1028,209 @@
       border-top: 1px solid var(--kraft-border);
       padding-top: 6px;
     }
+
+    /* Origami Washi Login Page Overlay */
+    .login-backdrop {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 252, 245, 0.94), rgba(231, 222, 201, 0.96)),
+        var(--washi-desk);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 320;
+      overflow-y: auto;
+    }
+    .login-backdrop.visible {
+      display: flex;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--washi-sheet);
+      border: 1.6px solid var(--kraft-border);
+      border-bottom: 4px solid #b5a489;
+      border-radius: 24px;
+      padding: 22px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      box-shadow: 0 14px 36px rgba(52, 41, 28, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .login-logo-row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+    }
+    .login-logo-tile {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #efe7d6 0%, #e4d8c3 100%);
+      border: 1.5px solid #c4b397;
+      border-bottom: 3px solid #b3a082;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Georgia, "Noto Serif", serif;
+      font-weight: 900;
+      font-size: 17px;
+      color: var(--sumi-ink);
+      position: relative;
+    }
+    .login-logo-tile.center {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(180deg, #e2f5ea 0%, #d1ebd9 100%);
+      border-color: var(--matcha-jade);
+      border-bottom-color: #0f6339;
+    }
+    .login-tabs {
+      display: flex;
+      background: var(--kraft-card);
+      border: 1px solid var(--kraft-border);
+      border-radius: 13px;
+      padding: 4px;
+      gap: 5px;
+    }
+    .login-tab-btn {
+      flex: 1;
+      height: 36px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--walnut-muted);
+      font-weight: 800;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 0.16s ease, color 0.16s ease;
+    }
+    .login-tab-btn.active {
+      background: var(--washi-sheet);
+      color: var(--sumi-ink);
+      box-shadow: 0 2px 5px rgba(74, 56, 35, 0.10);
+    }
+    .login-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .login-label {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--walnut-muted);
+      letter-spacing: 0.3px;
+    }
+    .login-input {
+      width: 100%;
+      padding: 11px 13px;
+      border-radius: 12px;
+      border: 1.5px solid var(--kraft-border);
+      background: var(--washi-desk);
+      color: var(--sumi-ink);
+      font-size: 14px;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .login-input:focus {
+      border-color: var(--aizome-indigo);
+      box-shadow: 0 0 0 3px rgba(29, 91, 143, 0.14);
+    }
+    .gmail-quick-chip {
+      align-self: flex-start;
+      background: rgba(29, 91, 143, 0.10);
+      border: 1px solid rgba(29, 91, 143, 0.30);
+      color: var(--aizome-indigo);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .gmail-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      border: none;
+      background: var(--aizome-indigo);
+      color: #fffcf5;
+      font-weight: 800;
+      font-size: 14.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(29, 91, 143, 0.24);
+    }
+    .gmail-btn.create-mode {
+      background: var(--matcha-jade);
+      box-shadow: 0 4px 12px rgba(21, 127, 75, 0.24);
+    }
+    .gmail-g-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: var(--aizome-indigo);
+      font-weight: 900;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .guest-btn {
+      width: 100%;
+      height: 46px;
+      border-radius: 14px;
+      border: 1.5px solid #b5a489;
+      border-bottom: 3px solid #9c8b70;
+      background: var(--kraft-card);
+      color: var(--sumi-ink);
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--walnut-muted);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+    }
+    .login-divider::before,
+    .login-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--kraft-border);
+    }
+    .account-pill-btn {
+      background: rgba(21, 127, 75, 0.14);
+      border: 1px solid rgba(21, 127, 75, 0.40);
+      color: var(--matcha-jade);
+      padding: 1px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .account-pill-btn.guest {
+      background: var(--kraft-card);
+      border-color: var(--kraft-border);
+      color: var(--walnut-muted);
+    }
   </style>
 </head>
 <body>
@@ -1044,6 +1247,7 @@
             <div class="hud-sub-row">
               <span id="lvlProgress">Words 0/5 · Blanks 0/8</span>
               <span class="coins-pill" id="coinsBadge">🪙 160</span>
+              <button class="account-pill-btn guest" id="accountPill" onclick="openLoginPage()" title="Account & Login">👤 Guest · Login</button>
             </div>
           </div>
 
@@ -1142,8 +1346,18 @@
       </div>
     </div>
 
-    <!-- TAB 4: TRIE SOLVER -->
+    <!-- TAB 4: TRIE SOLVER & ACCOUNT -->
     <div class="tab-panel" id="tab-trie">
+      <div class="panel-card paper-surface">
+        <div class="level-row">
+          <div>
+            <div id="accountCardTitle" style="font-size:14px; font-weight:800; color:var(--sumi-ink);">Playing as Guest (Local Washi Mode)</div>
+            <div id="accountCardSub" style="font-size:11.5px; color:var(--walnut-muted);">Sign in or create an account with Gmail to sync your career progress.</div>
+          </div>
+          <button class="play-btn" id="accountCardBtn" onclick="handleAccountCardAction()">Gmail Login</button>
+        </div>
+      </div>
+
       <div class="panel-card paper-surface">
         <h3 style="font-size:17px; font-weight:800;">&lt;1ms In-Memory Trie Engine</h3>
         <p style="font-size:11.5px; color:var(--walnut-muted);">Test wildcard skeleton patterns using '_' for missing blank slots (e.g., P_AN_T, C_OSS, Q_A_T_):</p>
@@ -1156,6 +1370,57 @@
         />
         <div id="trieResults" style="font-family:monospace; font-size:13px; color:var(--matcha-jade); font-weight:700; line-height:1.6;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- CROSSWORD ORIGAMI LOGIN PAGE (GMAIL SIGN-IN / CREATE ACCOUNT / GUEST LOGIN) -->
+  <div class="login-backdrop visible" id="loginOverlay">
+    <div class="login-card paper-surface">
+      <div class="dog-ear"></div>
+      <div class="login-logo-row">
+        <div class="login-logo-tile"><div class="dog-ear"></div>C</div>
+        <div class="login-logo-tile"><div class="dog-ear"></div>R</div>
+        <div class="login-logo-tile center"><div class="dog-ear"></div>O</div>
+        <div class="login-logo-tile"><div class="dog-ear"></div>S</div>
+        <div class="login-logo-tile"><div class="dog-ear"></div>S</div>
+      </div>
+
+      <div style="text-align:center;">
+        <div style="font-size:21px; font-weight:900; letter-spacing:0.8px; color:var(--sumi-ink);">CROSSWORD ORIGAMI</div>
+        <div style="font-size:12px; color:var(--walnut-muted); font-weight:600; margin-top:2px;">Handcrafted Washi Word Fill-In &amp; Scrabble Multipliers</div>
+      </div>
+
+      <div class="login-tabs">
+        <button class="login-tab-btn active" id="tabSignInBtn" onclick="setLoginMode('signin')">Sign In with Gmail</button>
+        <button class="login-tab-btn" id="tabCreateBtn" onclick="setLoginMode('create')">Create with Gmail</button>
+      </div>
+
+      <div id="createNameGroup" class="login-field-group" style="display:none;">
+        <label class="login-label" for="gmailDisplayName">ORIGAMI STRATEGIST NAME</label>
+        <input class="login-input" id="gmailDisplayName" type="text" placeholder="e.g. Master Folder" value="Origami Strategist" />
+      </div>
+
+      <div class="login-field-group">
+        <label class="login-label" id="gmailInputLabel" for="gmailEmailInput">GMAIL ACCOUNT (@GMAIL.COM)</label>
+        <input class="login-input" id="gmailEmailInput" type="email" placeholder="yourname@gmail.com" value="jcv.ai.use@gmail.com" />
+        <button type="button" class="gmail-quick-chip" onclick="useQuickGmailAccount('jcv.ai.use@gmail.com')">
+          ✓ Use jcv.ai.use@gmail.com
+        </button>
+      </div>
+
+      <div id="loginErrorBox" style="display:none; background:rgba(217,56,30,0.12); border:1px solid rgba(217,56,30,0.40); color:var(--torii-vermilion); padding:8px 10px; border-radius:10px; font-size:12px; font-weight:700; text-align:center;"></div>
+
+      <button type="button" class="gmail-btn" id="gmailSubmitBtn" onclick="submitGmailAuth()">
+        <span class="gmail-g-badge" id="gmailGBadge">G</span>
+        <span id="gmailSubmitText">Continue with Gmail Account</span>
+      </button>
+
+      <div class="login-divider">OR PLAY OFFLINE</div>
+
+      <button type="button" class="guest-btn" id="guestLoginBtn" onclick="loginAsGuest()">
+        <span>👤</span>
+        <span>Login as Guest</span>
+      </button>
     </div>
   </div>
 
@@ -1191,7 +1456,7 @@
       </button>
       <button class="nav-item" id="nav-trie" onclick="switchTab('trie')">
         <span class="nav-icon">📖</span>
-        <span>Trie</span>
+        <span>Account</span>
       </button>
     </div>
   </nav>
@@ -1496,7 +1761,7 @@
       render();
 
       if (newlyDone.length > 0) {
-        spawnOrigamiPaperPetalShimmer(newlyDone.length >= 2 ? 12 : 9);
+        spawnWordPetalParticleBurst(newlyDone, x, y);
       }
 
       if (allSolved) {
@@ -1512,10 +1777,10 @@
     }
 
     /**
-     * Gentle, localized Origami Paper Petal Shimmer (9-12 translucent folded paper triangles
-     * drifting softly around the center of the board for 720ms — never obstructing the grid).
+     * Origami Paper-Petal Particle Burst emanating directly from the completed word area.
+     * Scales up with high-multiplier squares (2L, 3L, 2W, 3W), dual-axis crossings, and high-score combos.
      */
-    function spawnOrigamiPaperPetalShimmer(petalCount) {
+    function spawnWordPetalParticleBurst(newlyDoneWords, dropX, dropY) {
       const board = document.getElementById("boardFrame");
       const rect = board.getBoundingClientRect();
       const canvas = document.createElement("canvas");
@@ -1529,14 +1794,35 @@
       canvas.style.zIndex = "30";
       board.appendChild(canvas);
 
+      const wordCoords = [];
+      let hasMultiplierCell = false;
+      newlyDoneWords.forEach(w => {
+        for (let i = 0; i < w.word.length; i++) {
+          const cx = w.dir === "H" ? w.sx + i : w.sx;
+          const cy = w.dir === "H" ? w.sy : w.sy + i;
+          if (!wordCoords.some(p => p.x === cx && p.y === cy)) {
+            wordCoords.push({ x: cx, y: cy });
+          }
+          if (state.cells[cy] && state.cells[cy][cx] && state.cells[cy][cx].mult) {
+            hasMultiplierCell = true;
+          }
+        }
+      });
+      if (wordCoords.length === 0) wordCoords.push({ x: dropX, y: dropY });
+
+      const isHighMultiplier =
+        hasMultiplierCell || newlyDoneWords.length >= 2 || state.mult >= 2.0;
       const ctx = canvas.getContext("2d");
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const palette = ["#157f4b", "#c87d0a", "#1d5b8f"];
-      const cellSize = Math.min(canvas.width / state.tpl.w, canvas.height / state.tpl.h);
-      const count = Math.min(petalCount, 12);
+      const cellW = canvas.width / state.tpl.w;
+      const cellH = canvas.height / state.tpl.h;
+      const cellSize = Math.min(cellW, cellH);
+
+      const palette = isHighMultiplier
+        ? ["#c87d0a", "#157f4b", "#d9381e", "#1d5b8f", "#d65a7a"]
+        : ["#157f4b", "#c87d0a", "#1d5b8f"];
+      const count = isHighMultiplier ? Math.min(26, wordCoords.length * 4) : Math.min(14, wordCoords.length * 2 + 4);
       const startMs = performance.now();
-      const durationMs = 720;
+      const durationMs = isHighMultiplier ? 920 : 720;
 
       function tick(now) {
         const elapsed = now - startMs;
@@ -1545,27 +1831,77 @@
           return;
         }
         const t = elapsed / durationMs;
-        const fadeAlpha = Math.sin(t * Math.PI) * 0.42;
+        const maxAlpha = isHighMultiplier ? 0.78 : 0.50;
+        const fadeAlpha = Math.sin(t * Math.PI) * maxAlpha;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // Warm golden corridor aura on high-multiplier / combo completions
+        if (isHighMultiplier && t < 0.65) {
+          const glowAlpha = (1 - t / 0.65) * 0.24;
+          ctx.save();
+          ctx.fillStyle = `rgba(200, 125, 10, ${glowAlpha.toFixed(3)})`;
+          wordCoords.forEach(wc => {
+            const gx = (wc.x + 0.5) * cellW;
+            const gy = (wc.y + 0.5) * cellH;
+            ctx.beginPath();
+            ctx.arc(gx, gy, cellSize * (0.48 + 0.30 * t), 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.restore();
+        }
+
         for (let i = 0; i < count; i++) {
-          const angle = (2 * Math.PI * i) / count + t * 0.35;
-          const dist = cellSize * (0.35 + 1.15 * t);
-          const px = cx + Math.cos(angle) * dist;
-          const py = cy + Math.sin(angle) * dist * 0.65 - cellSize * 0.45 * t;
-          const petalSize = cellSize * 0.12 * (1 - t * 0.35);
+          const src = wordCoords[i % wordCoords.length];
+          const sx = (src.x + 0.5) * cellW;
+          const sy = (src.y + 0.5) * cellH;
+
+          const stagger = (i % wordCoords.length) * 0.045;
+          const localT = Math.max(0, Math.min(1, (t - stagger) / Math.max(0.4, 1 - stagger)));
+          if (localT <= 0) continue;
+
+          const angle = (2 * Math.PI * i) / count + (src.x * 0.55 + src.y * 0.85);
+          const easeOut = 1 - (1 - localT) * (1 - localT);
+          const radialReach = cellSize * (isHighMultiplier ? 1.05 : 0.72) * easeOut;
+          const flutterX = Math.sin(localT * Math.PI * 3.0 + i * 1.3) * cellSize * 0.14;
+          const upwardLift = cellSize * (isHighMultiplier ? 0.78 : 0.48) * localT;
+
+          const px = sx + Math.cos(angle) * radialReach + flutterX;
+          const py = sy + Math.sin(angle) * radialReach * 0.58 - upwardLift;
+          const petalSize = cellSize * (isHighMultiplier ? 0.145 : 0.115) * (1 - localT * 0.32);
 
           ctx.save();
-          ctx.globalAlpha = Math.max(0, Math.min(0.42, fadeAlpha));
           ctx.translate(px, py);
-          ctx.rotate(((i * 45 + t * 90) * Math.PI) / 180);
+          ctx.rotate(((i * 52 + localT * 145) * Math.PI) / 180);
+
+          // Left folded wing of origami paper-petal kite sprite
+          ctx.globalAlpha = Math.max(0, Math.min(maxAlpha, fadeAlpha));
           ctx.fillStyle = palette[i % palette.length];
           ctx.beginPath();
-          ctx.moveTo(0, -petalSize);
-          ctx.lineTo(petalSize * 0.85, petalSize * 0.7);
-          ctx.lineTo(-petalSize * 0.85, petalSize * 0.7);
+          ctx.moveTo(0, -petalSize * 1.15);
+          ctx.lineTo(petalSize * 0.88, 0);
+          ctx.lineTo(0, petalSize * 0.95);
           ctx.closePath();
           ctx.fill();
+
+          // Right folded wing (2-tone origami crease depth)
+          ctx.globalAlpha = Math.max(0, Math.min(maxAlpha, fadeAlpha * 0.72));
+          ctx.fillStyle = palette[(i + 1) % palette.length];
+          ctx.beginPath();
+          ctx.moveTo(0, -petalSize * 1.15);
+          ctx.lineTo(-petalSize * 0.88, 0);
+          ctx.lineTo(0, petalSize * 0.95);
+          ctx.closePath();
+          ctx.fill();
+
+          // Central origami spine crease highlight
+          ctx.globalAlpha = Math.max(0, Math.min(1, fadeAlpha * 0.65));
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = Math.max(1, cellSize * 0.018);
+          ctx.beginPath();
+          ctx.moveTo(0, -petalSize * 1.05);
+          ctx.lineTo(0, petalSize * 0.85);
+          ctx.stroke();
+
           ctx.restore();
         }
         requestAnimationFrame(tick);
@@ -2145,7 +2481,133 @@
       renderVaultAndStudio();
     }
 
+    let loginMode = "signin";
+    let authUser = {
+      isGuest: true,
+      email: null,
+      displayName: "Guest Folding Master"
+    };
+
+    function setLoginMode(mode) {
+      AudioPlayer.play("click");
+      loginMode = mode === "create" ? "create" : "signin";
+      document.getElementById("tabSignInBtn").classList.toggle("active", loginMode === "signin");
+      document.getElementById("tabCreateBtn").classList.toggle("active", loginMode === "create");
+      document.getElementById("createNameGroup").style.display = loginMode === "create" ? "flex" : "none";
+      const submitBtn = document.getElementById("gmailSubmitBtn");
+      submitBtn.classList.toggle("create-mode", loginMode === "create");
+      document.getElementById("gmailGBadge").style.color = loginMode === "create" ? "var(--matcha-jade)" : "var(--aizome-indigo)";
+      document.getElementById("gmailSubmitText").textContent =
+        loginMode === "create" ? "Create Account with Gmail (+150 🪙)" : "Continue with Gmail Account";
+      document.getElementById("loginErrorBox").style.display = "none";
+    }
+
+    function useQuickGmailAccount(email) {
+      AudioPlayer.play("click");
+      document.getElementById("gmailEmailInput").value = email;
+      document.getElementById("loginErrorBox").style.display = "none";
+    }
+
+    function submitGmailAuth() {
+      const emailRaw = (document.getElementById("gmailEmailInput").value || "").trim().toLowerCase();
+      const nameRaw = (document.getElementById("gmailDisplayName").value || "").trim() || "Origami Strategist";
+      const errBox = document.getElementById("loginErrorBox");
+
+      if (!emailRaw || !emailRaw.endsWith("@gmail.com") || emailRaw.length < 11) {
+        AudioPlayer.play("thud");
+        errBox.textContent = "Please enter a valid @gmail.com address (e.g., yourname@gmail.com).";
+        errBox.style.display = "block";
+        return;
+      }
+
+      errBox.style.display = "none";
+      AudioPlayer.play("snap");
+
+      const isCreate = loginMode === "create";
+      authUser = {
+        isGuest: false,
+        email: emailRaw,
+        displayName: isCreate ? nameRaw : emailRaw.split("@")[0]
+      };
+
+      if (isCreate && !state.gmailBonusClaimed) {
+        state.coins += 150;
+        state.gmailBonusClaimed = true;
+      }
+
+      try {
+        localStorage.setItem("crossword_origami_auth", JSON.stringify(authUser));
+      } catch (e) {}
+
+      document.getElementById("loginOverlay").classList.remove("visible");
+      state.statusMsg = isCreate
+        ? `Created Gmail account (${emailRaw})! +150 bonus Origami Coins awarded.`
+        : `Signed in with Gmail as ${emailRaw}. Cloud sync active!`;
+      state.statusErr = false;
+      updateAccountUi();
+      render();
+    }
+
+    function loginAsGuest() {
+      AudioPlayer.play("click");
+      authUser = {
+        isGuest: true,
+        email: null,
+        displayName: "Guest Folding Master"
+      };
+      try {
+        localStorage.setItem("crossword_origami_auth", JSON.stringify(authUser));
+      } catch (e) {}
+      document.getElementById("loginOverlay").classList.remove("visible");
+      state.statusMsg = "Playing as Guest (Offline Washi Mode). Tap 'Guest · Login' anytime to link Gmail.";
+      state.statusErr = false;
+      updateAccountUi();
+      render();
+    }
+
+    function openLoginPage() {
+      AudioPlayer.play("click");
+      document.getElementById("loginErrorBox").style.display = "none";
+      document.getElementById("loginOverlay").classList.add("visible");
+    }
+
+    function handleAccountCardAction() {
+      if (authUser.isGuest) {
+        openLoginPage();
+      } else {
+        AudioPlayer.play("click");
+        authUser = { isGuest: true, email: null, displayName: "Guest Folding Master" };
+        try {
+          localStorage.removeItem("crossword_origami_auth");
+        } catch (e) {}
+        updateAccountUi();
+        openLoginPage();
+      }
+    }
+
+    function updateAccountUi() {
+      const pill = document.getElementById("accountPill");
+      const titleEl = document.getElementById("accountCardTitle");
+      const subEl = document.getElementById("accountCardSub");
+      const btnEl = document.getElementById("accountCardBtn");
+
+      if (authUser && !authUser.isGuest && authUser.email) {
+        pill.className = "account-pill-btn";
+        pill.textContent = `🟢 ${authUser.email.split("@")[0]}`;
+        if (titleEl) titleEl.textContent = `Signed in with Gmail: ${authUser.email}`;
+        if (subEl) subEl.textContent = `Career Score: ${state.careerScore} PTS · Origami Coins: ${state.coins} 🪙`;
+        if (btnEl) btnEl.textContent = "Sign Out";
+      } else {
+        pill.className = "account-pill-btn guest";
+        pill.textContent = "👤 Guest · Login";
+        if (titleEl) titleEl.textContent = "Playing as Guest (Local Washi Mode)";
+        if (subEl) subEl.textContent = "Sign in or create an account with Gmail to sync your career progress.";
+        if (btnEl) btnEl.textContent = "Gmail Login";
+      }
+    }
+
     function updateTrieMatches() {
+      updateAccountUi();
       const raw = (document.getElementById("trieInput").value || "").trim().toUpperCase();
       const resEl = document.getElementById("trieResults");
       if (!raw) {
@@ -2160,6 +2622,7 @@
     }
 
     buildLevel(0);
+    updateAccountUi();
   </script>
 </body>
 </html>

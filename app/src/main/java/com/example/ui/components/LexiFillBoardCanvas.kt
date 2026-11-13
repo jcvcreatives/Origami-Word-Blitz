@@ -732,41 +732,103 @@ fun LexiFillBoardCanvas(
         drawContext.canvas.nativeCanvas.drawText(calloutLabel, centerX, ty, subPaint)
       }
 
-      // Gentle Origami Paper Petals Wafting on Word Completion (Non-Distracting & Localized!)
-      val origamiPetalPalette =
+      // Origami Paper-Petal Particle Burst Emanating from Completed Word Area (High-Multiplier & Combo Reward)
+      val standardPetalPalette =
         listOf(
           CeladonJade,
           KyotoGold,
           SkyCyan,
         )
+      val highMultPetalPalette =
+        listOf(
+          KyotoGold,
+          CeladonJade,
+          VermilionRed,
+          SkyCyan,
+          Color(0xFFD65A7A),
+        )
 
-      for (confetti in puzzleState.confettiExplosions) {
-        val elapsed = (frameNowMs - confetti.createdAtMs).coerceAtLeast(0L)
-        if (elapsed in 0..720) {
-          val t = elapsed / 720f
-          val fadeAlpha = (sin(t * PI).toFloat() * 0.42f).coerceIn(0f, 0.42f)
-          val gridCenter = Offset(originX + gridW / 2f, originY + gridH / 2f)
-          val count = confetti.fragmentCount.coerceAtMost(12)
+      for (burst in puzzleState.particleBursts) {
+        val durationMs = if (burst.isHighMultiplier) 940L else 740L
+        val elapsed = (frameNowMs - burst.createdAtMs).coerceAtLeast(0L)
+        if (elapsed in 0..durationMs) {
+          val t = elapsed.toFloat() / durationMs.toFloat()
+          val originCoords = burst.wordCoords.ifEmpty { listOf(burst.boardCoord) }
+          val palette = if (burst.isHighMultiplier) highMultPetalPalette else standardPetalPalette
+          val maxAlpha = if (burst.isHighMultiplier) 0.78f else 0.52f
+          val fadeAlpha = (sin(t * PI).toFloat() * maxAlpha).coerceIn(0f, maxAlpha)
 
+          // Warm golden corridor pulse on high-multiplier / combo word completions
+          if (burst.isHighMultiplier && t < 0.65f) {
+            val glowAlpha = ((1f - t / 0.65f) * 0.26f).coerceIn(0f, 0.26f)
+            for (wc in originCoords) {
+              val cx = originX + (wc.x + 0.5f) * cellSize
+              val cy = originY + (wc.y + 0.5f) * cellSize
+              drawCircle(
+                color = KyotoGold.copy(alpha = glowAlpha),
+                radius = cellSize * (0.52f + 0.32f * t),
+                center = Offset(cx, cy),
+              )
+            }
+          }
+
+          val count = burst.particleCount.coerceIn(8, 28)
           for (i in 0 until count) {
-            val angle = (2.0 * PI * i) / count + t * 0.35
-            val dist = cellSize * (0.35f + 1.15f * t)
-            val px = gridCenter.x + (cos(angle) * dist).toFloat()
-            val py = gridCenter.y + (sin(angle) * dist * 0.65f).toFloat() - cellSize * 0.45f * t
-            val petalSize = cellSize * 0.11f * (1f - t * 0.35f)
-            val col = origamiPetalPalette[i % origamiPetalPalette.size].copy(alpha = fadeAlpha)
+            val sourceCoord = originCoords[i % originCoords.size]
+            val startX = originX + (sourceCoord.x + 0.5f) * cellSize
+            val startY = originY + (sourceCoord.y + 0.5f) * cellSize
+
+            // Stagger launch slightly along the word's cells
+            val staggerDelay = (i % originCoords.size) * 0.045f
+            val localT = ((t - staggerDelay) / (1f - staggerDelay).coerceAtLeast(0.4f)).coerceIn(0f, 1f)
+            if (localT <= 0f) continue
+
+            // Outward burst velocity + upward paper buoyancy + gentle horizontal flutter
+            val angle =
+              (2.0 * PI * i) / count +
+                (sourceCoord.x * 0.55 + sourceCoord.y * 0.85)
+            val radialReach =
+              cellSize * (if (burst.isHighMultiplier) 1.05f else 0.72f) * (1f - (1f - localT) * (1f - localT))
+            val flutterX = (sin(localT * PI * 3.0 + i * 1.3) * cellSize * 0.14f).toFloat()
+            val upwardLift = cellSize * (if (burst.isHighMultiplier) 0.78f else 0.48f) * localT
+
+            val px = startX + (cos(angle) * radialReach).toFloat() + flutterX
+            val py = startY + (sin(angle) * radialReach * 0.58f).toFloat() - upwardLift
+            val petalSize =
+              cellSize *
+                (if (burst.isHighMultiplier) 0.145f else 0.115f) *
+                (1f - localT * 0.32f)
+            val baseCol = palette[i % palette.size].copy(alpha = fadeAlpha)
+            val foldShadowCol =
+              palette[(i + 1) % palette.size].copy(alpha = (fadeAlpha * 0.72f).coerceIn(0f, 1f))
 
             withTransform({
               translate(left = px, top = py)
-              rotate(degrees = (i * 45f + t * 90f) % 360f, pivot = Offset.Zero)
+              rotate(degrees = (i * 52f + localT * 145f) % 360f, pivot = Offset.Zero)
             }) {
-              // Tiny folded origami triangle petal
+              // Left wing of folded origami paper-petal kite sprite
               petalPath.reset()
-              petalPath.moveTo(0f, -petalSize)
-              petalPath.lineTo(petalSize * 0.85f, petalSize * 0.7f)
-              petalPath.lineTo(-petalSize * 0.85f, petalSize * 0.7f)
+              petalPath.moveTo(0f, -petalSize * 1.15f)
+              petalPath.lineTo(petalSize * 0.88f, 0f)
+              petalPath.lineTo(0f, petalSize * 0.95f)
               petalPath.close()
-              drawPath(path = petalPath, color = col)
+              drawPath(path = petalPath, color = baseCol)
+
+              // Right folded wing (2-tone origami crease depth)
+              petalPath.reset()
+              petalPath.moveTo(0f, -petalSize * 1.15f)
+              petalPath.lineTo(-petalSize * 0.88f, 0f)
+              petalPath.lineTo(0f, petalSize * 0.95f)
+              petalPath.close()
+              drawPath(path = petalPath, color = foldShadowCol)
+
+              // Crisp central origami spine highlight
+              drawLine(
+                color = Color.White.copy(alpha = (fadeAlpha * 0.65f).coerceIn(0f, 1f)),
+                start = Offset(0f, -petalSize * 1.05f),
+                end = Offset(0f, petalSize * 0.85f),
+                strokeWidth = (cellSize * 0.018f).coerceAtLeast(1f),
+              )
             }
           }
         }
