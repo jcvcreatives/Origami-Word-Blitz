@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">Crossword Origami</string>
-    <string name="sign_in_with_google">Continue with Gmail (Google)</string>
-    <string name="create_with_gmail">Create Account with Gmail</string>
+    <string name="create_account_primary">Create Account</string>
+    <string name="log_in_primary">Log In</string>
+    <string name="sign_in_with_google">Continue with Gmail (Optional)</string>
     <string name="login_as_guest">Login as Guest</string>
     <string name="cd_hero_banner">Crossword Origami puzzle header</string>
     <string name="nav_puzzle">Skeleton Grid</string>

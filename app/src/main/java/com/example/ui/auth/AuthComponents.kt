@@ -26,10 +26,16 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOutline
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,8 +43,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,6 +70,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,6 +105,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
+import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.awaitClose
@@ -102,6 +114,125 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+
+data class LocalOrigamiAccount(
+  val username: String,
+  val email: String,
+)
+
+object LocalAccountStore {
+  private const val PREFS_NAME = "origami_accounts_prefs"
+  private const val KEY_ACTIVE_USERNAME = "active_username"
+  private const val KEY_ACTIVE_EMAIL = "active_email"
+
+  private fun sha256(input: String): String {
+    val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+    return bytes.joinToString("") { "%02x".format(it) }
+  }
+
+  fun getActiveAccount(context: Context): LocalOrigamiAccount? {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val username = prefs.getString(KEY_ACTIVE_USERNAME, null)?.takeIf { it.isNotBlank() } ?: return null
+    val email = prefs.getString(KEY_ACTIVE_EMAIL, "") ?: ""
+    return LocalOrigamiAccount(username = username, email = email)
+  }
+
+  fun registerAccount(
+    context: Context,
+    username: String,
+    email: String,
+    passwordPlain: String,
+  ): Result<LocalOrigamiAccount> {
+    val cleanUser = username.trim()
+    val cleanEmail = email.trim().lowercase()
+    if (cleanUser.length < 2) {
+      return Result.failure(IllegalArgumentException("Please enter a username (at least 2 characters)."))
+    }
+    if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
+      return Result.failure(IllegalArgumentException("Please enter a valid email address."))
+    }
+    if (passwordPlain.length < 4) {
+      return Result.failure(IllegalArgumentException("Password must be at least 4 characters."))
+    }
+
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val passHash = sha256(passwordPlain)
+    val userKey = cleanUser.lowercase()
+
+    prefs
+      .edit()
+      .putString("acct_user_$userKey", cleanUser)
+      .putString("acct_email_$userKey", cleanEmail)
+      .putString("acct_pass_$userKey", passHash)
+      .putString("acct_user_by_email_$cleanEmail", userKey)
+      .putString(KEY_ACTIVE_USERNAME, cleanUser)
+      .putString(KEY_ACTIVE_EMAIL, cleanEmail)
+      .apply()
+
+    return Result.success(LocalOrigamiAccount(username = cleanUser, email = cleanEmail))
+  }
+
+  fun loginAccount(
+    context: Context,
+    identifier: String,
+    passwordPlain: String,
+  ): Result<LocalOrigamiAccount> {
+    val cleanId = identifier.trim()
+    if (cleanId.isBlank()) {
+      return Result.failure(IllegalArgumentException("Please enter your username or email."))
+    }
+    if (passwordPlain.isBlank()) {
+      return Result.failure(IllegalArgumentException("Please enter your password."))
+    }
+
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val lookupKey =
+      if (cleanId.contains("@")) {
+        prefs.getString("acct_user_by_email_${cleanId.lowercase()}", cleanId.lowercase())
+          ?: cleanId.lowercase()
+      } else {
+        cleanId.lowercase()
+      }
+
+    val storedPassHash = prefs.getString("acct_pass_$lookupKey", null)
+    val inputHash = sha256(passwordPlain)
+
+    if (storedPassHash != null && storedPassHash != inputHash) {
+      return Result.failure(IllegalArgumentException("Incorrect password for '$cleanId'."))
+    }
+
+    val resolvedUsername =
+      prefs.getString("acct_user_$lookupKey", null)
+        ?: cleanId.substringBefore("@").ifBlank { "Origami Player" }
+    val resolvedEmail =
+      prefs.getString("acct_email_$lookupKey", null)
+        ?: if (cleanId.contains("@")) cleanId.lowercase() else "$lookupKey@origami.local"
+
+    // Persist if first-time login so subsequent logins remember credentials
+    if (storedPassHash == null) {
+      prefs
+        .edit()
+        .putString("acct_user_$lookupKey", resolvedUsername)
+        .putString("acct_email_$lookupKey", resolvedEmail)
+        .putString("acct_pass_$lookupKey", inputHash)
+        .putString("acct_user_by_email_$resolvedEmail", lookupKey)
+        .apply()
+    }
+
+    prefs
+      .edit()
+      .putString(KEY_ACTIVE_USERNAME, resolvedUsername)
+      .putString(KEY_ACTIVE_EMAIL, resolvedEmail)
+      .apply()
+
+    return Result.success(LocalOrigamiAccount(username = resolvedUsername, email = resolvedEmail))
+  }
+
+  fun clearActiveAccount(context: Context) {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    prefs.edit().remove(KEY_ACTIVE_USERNAME).remove(KEY_ACTIVE_EMAIL).apply()
+  }
+}
 
 internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
   val listener = FirebaseAuth.AuthStateListener { auth -> trySend(auth.currentUser) }
@@ -229,13 +360,20 @@ fun signOutUser(
 @Composable
 fun OrigamiAuthScreen(
   onAuthSuccess: () -> Unit,
+  onLocalAccountAuthenticated: (LocalOrigamiAccount) -> Unit = {},
   onContinueAsGuest: () -> Unit = {},
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   val credentialManager = remember { CredentialManager.create(context) }
   var isLoading by remember { mutableStateOf(false) }
-  var isCreateAccountMode by rememberSaveable { mutableStateOf(false) }
+
+  // Main flow defaults to "Create Account" (true); user can switch to "Log In" (false)
+  var isCreateAccountMode by rememberSaveable { mutableStateOf(true) }
+  var usernameInput by rememberSaveable { mutableStateOf("") }
+  var emailOrIdInput by rememberSaveable { mutableStateOf("") }
+  var passwordInput by rememberSaveable { mutableStateOf("") }
+  var passwordVisible by rememberSaveable { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
   LaunchedEffect(Unit) {
@@ -265,9 +403,8 @@ fun OrigamiAuthScreen(
         Modifier.fillMaxWidth()
           .widthIn(max = 460.dp)
           .verticalScroll(rememberScrollState())
-          .padding(horizontal = 20.dp, vertical = 16.dp),
+          .padding(horizontal = 20.dp, vertical = 14.dp),
       horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
       Card(
         shape = RoundedCornerShape(24.dp),
@@ -280,10 +417,10 @@ fun OrigamiAuthScreen(
       ) {
         Column(
           horizontalAlignment = Alignment.CenterHorizontally,
-          modifier = Modifier.padding(bottom = 22.dp),
+          modifier = Modifier.padding(bottom = 20.dp),
         ) {
-          // Top Washi Hero Banner with Origami Tile Emblem
-          Box(modifier = Modifier.fillMaxWidth().height(168.dp)) {
+          // Top Washi Hero Header
+          Box(modifier = Modifier.fillMaxWidth().height(142.dp)) {
             Image(
               painter = painterResource(id = R.drawable.img_origami_hero_1794379928974),
               contentDescription = stringResource(R.string.cd_hero_banner),
@@ -306,11 +443,11 @@ fun OrigamiAuthScreen(
             Column(
               modifier =
                 Modifier.align(Alignment.BottomCenter)
-                  .padding(horizontal = 18.dp, vertical = 10.dp),
+                  .padding(horizontal = 18.dp, vertical = 8.dp),
               horizontalAlignment = Alignment.CenterHorizontally,
             ) {
               OrigamiLogoTilesRow()
-              Spacer(modifier = Modifier.height(8.dp))
+              Spacer(modifier = Modifier.height(6.dp))
               Text(
                 text = "CROSSWORD ORIGAMI",
                 style = MaterialTheme.typography.headlineSmall,
@@ -318,18 +455,12 @@ fun OrigamiAuthScreen(
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.2.sp,
               )
-              Text(
-                text = "Handcrafted Washi Word Fill-In & Scrabble Multipliers",
-                style = MaterialTheme.typography.bodySmall,
-                color = WashiMuted,
-                textAlign = TextAlign.Center,
-              )
             }
           }
 
           Spacer(modifier = Modifier.height(6.dp))
 
-          // Sign In vs. Create Account with Gmail Segmented Switcher
+          // Primary Mode Switcher: Create Account (Main) | Log In
           Surface(
             shape = RoundedCornerShape(14.dp),
             color = IndigoCard,
@@ -343,70 +474,102 @@ fun OrigamiAuthScreen(
               horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
               AuthModeTabButton(
-                label = "Sign In",
-                selected = !isCreateAccountMode,
-                onClick = {
-                  isCreateAccountMode = false
-                  errorMessage = null
-                },
-                modifier = Modifier.weight(1f).testTag("tab_sign_in_gmail"),
-              )
-              AuthModeTabButton(
-                label = "Create with Gmail",
+                label = "Create Account",
                 selected = isCreateAccountMode,
                 onClick = {
                   isCreateAccountMode = true
                   errorMessage = null
                 },
-                modifier = Modifier.weight(1f).testTag("tab_create_gmail"),
+                modifier = Modifier.weight(1f).testTag("tab_create_account"),
+              )
+              AuthModeTabButton(
+                label = "Log In",
+                selected = !isCreateAccountMode,
+                onClick = {
+                  isCreateAccountMode = false
+                  errorMessage = null
+                },
+                modifier = Modifier.weight(1f).testTag("tab_sign_in"),
               )
             }
           }
 
-          Spacer(modifier = Modifier.height(14.dp))
+          Spacer(modifier = Modifier.height(12.dp))
 
-          // Contextual Explanation Banner
-          Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = if (isCreateAccountMode) CompletedWordBg else IndigoCard.copy(alpha = 0.65f),
-            modifier =
-              Modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .border(
-                  1.dp,
-                  if (isCreateAccountMode) CeladonJade.copy(alpha = 0.45f) else IndigoElevated,
-                  RoundedCornerShape(14.dp),
-                ),
+          // Main Account Creation / Login Form Fields
+          Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
           ) {
-            Column(
-              modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-              verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-              Text(
-                text =
-                  if (isCreateAccountMode) {
-                    "Create Your Origami Profile with Gmail"
-                  } else {
-                    "Welcome Back, Origami Strategist"
-                  },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = if (isCreateAccountMode) CeladonJade else SkyCyan,
-              )
-              Text(
-                text =
-                  if (isCreateAccountMode) {
-                    "Select your @gmail.com account to automatically create your cloud profile with 150 bonus LexiCoins and cross-device puzzle sync."
-                  } else {
-                    "Sign in with your Gmail account to restore your unlocked puzzle levels, career score, and Washi tile skins."
-                  },
-                style = MaterialTheme.typography.bodySmall,
-                color = WashiMuted,
+            if (isCreateAccountMode) {
+              OutlinedTextField(
+                value = usernameInput,
+                onValueChange = {
+                  usernameInput = it
+                  errorMessage = null
+                },
+                label = { Text("Username") },
+                placeholder = { Text("e.g. OrigamiMaster") },
+                leadingIcon = {
+                  Icon(Icons.Default.Person, contentDescription = null, tint = SkyCyan)
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().testTag("input_account_username"),
               )
             }
-          }
 
-          Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(
+              value = emailOrIdInput,
+              onValueChange = {
+                emailOrIdInput = it
+                errorMessage = null
+              },
+              label = { Text(if (isCreateAccountMode) "Email Address" else "Username or Email") },
+              placeholder = {
+                Text(if (isCreateAccountMode) "you@example.com" else "Username or email")
+              },
+              leadingIcon = {
+                Icon(Icons.Default.Email, contentDescription = null, tint = SkyCyan)
+              },
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+              singleLine = true,
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.fillMaxWidth().testTag("input_account_identifier"),
+            )
+
+            OutlinedTextField(
+              value = passwordInput,
+              onValueChange = {
+                passwordInput = it
+                errorMessage = null
+              },
+              label = { Text("Password") },
+              placeholder = { Text("Enter password") },
+              leadingIcon = {
+                Icon(Icons.Default.Lock, contentDescription = null, tint = SkyCyan)
+              },
+              trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                  Icon(
+                    imageVector =
+                      if (passwordVisible) Icons.Default.VisibilityOff
+                      else Icons.Default.Visibility,
+                    contentDescription =
+                      if (passwordVisible) "Hide password" else "Show password",
+                    tint = WashiMuted,
+                  )
+                }
+              },
+              visualTransformation =
+                if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+              singleLine = true,
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier.fillMaxWidth().testTag("input_account_password"),
+            )
+          }
 
           if (errorMessage != null) {
             Surface(
@@ -414,7 +577,7 @@ fun OrigamiAuthScreen(
               color = VermilionRed.copy(alpha = 0.12f),
               modifier =
                 Modifier.fillMaxWidth()
-                  .padding(horizontal = 20.dp, vertical = 4.dp)
+                  .padding(horizontal = 20.dp, vertical = 6.dp)
                   .border(1.dp, VermilionRed.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
             ) {
               Text(
@@ -428,10 +591,74 @@ fun OrigamiAuthScreen(
             }
           }
 
-          Spacer(modifier = Modifier.height(6.dp))
+          Spacer(modifier = Modifier.height(12.dp))
 
-          // 1. Primary Gmail / Google Account Button (Sign In or Create Account)
+          // 1. MAIN CTA: Create Account / Log In
           Button(
+            onClick = {
+              errorMessage = null
+              val result =
+                if (isCreateAccountMode) {
+                  LocalAccountStore.registerAccount(
+                    context = context,
+                    username = usernameInput,
+                    email = emailOrIdInput,
+                    passwordPlain = passwordInput,
+                  )
+                } else {
+                  LocalAccountStore.loginAccount(
+                    context = context,
+                    identifier = emailOrIdInput,
+                    passwordPlain = passwordInput,
+                  )
+                }
+              result
+                .onSuccess { account -> onLocalAccountAuthenticated(account) }
+                .onFailure { err -> errorMessage = err.message ?: "Authentication failed" }
+            },
+            enabled = !isLoading,
+            colors =
+              ButtonDefaults.buttonColors(
+                containerColor = if (isCreateAccountMode) CeladonJade else SkyCyan,
+                contentColor = Color.White,
+              ),
+            shape = RoundedCornerShape(14.dp),
+            modifier =
+              Modifier.fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .height(50.dp)
+                .testTag("primary_account_submit_button"),
+          ) {
+            Text(
+              text =
+                if (isCreateAccountMode) {
+                  "${stringResource(R.string.create_account_primary)} (+150 🪙)"
+                } else {
+                  stringResource(R.string.log_in_primary)
+                },
+              style = MaterialTheme.typography.titleMedium,
+              fontWeight = FontWeight.ExtraBold,
+            )
+          }
+
+          // Divider for Optional Sign-In Methods
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+          ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = IndigoElevated)
+            Text(
+              text = "OPTIONAL QUICK ACCESS",
+              style = MaterialTheme.typography.labelSmall,
+              color = WashiMuted,
+              fontWeight = FontWeight.Bold,
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = IndigoElevated)
+          }
+
+          // 2. OPTIONAL: Continue with Gmail (Google)
+          OutlinedButton(
             onClick = {
               errorMessage = null
               isLoading = true
@@ -451,70 +678,52 @@ fun OrigamiAuthScreen(
               )
             },
             enabled = !isLoading,
-            colors =
-              ButtonDefaults.buttonColors(
-                containerColor = if (isCreateAccountMode) CeladonJade else SkyCyan,
-                contentColor = Color.White,
-              ),
             shape = RoundedCornerShape(14.dp),
+            colors =
+              ButtonDefaults.outlinedButtonColors(
+                containerColor = IndigoCard.copy(alpha = 0.55f),
+                contentColor = WashiCream,
+              ),
             modifier =
               Modifier.fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .height(52.dp)
+                .height(48.dp)
                 .testTag("google_sign_in_button"),
           ) {
             if (isLoading) {
               CircularProgressIndicator(
-                modifier = Modifier.size(22.dp),
-                color = Color.White,
-                strokeWidth = 2.5.dp,
+                modifier = Modifier.size(20.dp),
+                color = SkyCyan,
+                strokeWidth = 2.2.dp,
               )
             } else {
               Box(
                 modifier =
-                  Modifier.size(26.dp)
+                  Modifier.size(22.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(SkyCyan),
                 contentAlignment = Alignment.Center,
               ) {
                 Text(
                   text = "G",
-                  color = if (isCreateAccountMode) CeladonJade else SkyCyan,
+                  color = Color.White,
                   fontWeight = FontWeight.ExtraBold,
-                  fontSize = 15.sp,
+                  fontSize = 13.sp,
                 )
               }
-              Spacer(modifier = Modifier.width(10.dp))
+              Spacer(modifier = Modifier.width(8.dp))
               Text(
-                text =
-                  if (isCreateAccountMode) {
-                    stringResource(R.string.create_with_gmail)
-                  } else {
-                    stringResource(R.string.sign_in_with_google)
-                  },
-                style = MaterialTheme.typography.titleMedium,
+                text = stringResource(R.string.sign_in_with_google),
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.ExtraBold,
+                color = WashiCream,
               )
             }
           }
 
-          // Divider with "OR"
-          Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-          ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = IndigoElevated)
-            Text(
-              text = "OR PLAY OFFLINE",
-              style = MaterialTheme.typography.labelSmall,
-              color = WashiMuted,
-              fontWeight = FontWeight.Bold,
-            )
-            HorizontalDivider(modifier = Modifier.weight(1f), color = IndigoElevated)
-          }
+          Spacer(modifier = Modifier.height(8.dp))
 
-          // 2. Secondary "Login as Guest" Button
+          // 3. OPTIONAL: Login as Guest
           OutlinedButton(
             onClick = {
               errorMessage = null
@@ -530,19 +739,19 @@ fun OrigamiAuthScreen(
             modifier =
               Modifier.fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .height(50.dp)
+                .height(48.dp)
                 .testTag("guest_login_button"),
           ) {
             Icon(
               imageVector = Icons.Default.PersonOutline,
               contentDescription = "Guest login",
               tint = KyotoGold,
-              modifier = Modifier.size(20.dp),
+              modifier = Modifier.size(19.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = stringResource(R.string.login_as_guest),
-              style = MaterialTheme.typography.titleMedium,
+              style = MaterialTheme.typography.labelLarge,
               fontWeight = FontWeight.ExtraBold,
               color = WashiCream,
             )

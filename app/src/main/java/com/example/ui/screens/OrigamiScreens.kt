@@ -487,8 +487,14 @@ private fun LexiFillTopHud(
                     .padding(horizontal = 5.dp, vertical = 1.dp)
                     .testTag("hud_account_badge")
               ) {
+                val shortLabel =
+                  userEmail
+                    ?.substringBefore(" (")
+                    ?.substringBefore("@")
+                    ?.take(12)
+                    ?.ifBlank { "Account" } ?: "Account"
                 Text(
-                  text = if (isGuestUser) "👤 Guest · Login" else "🟢 Gmail",
+                  text = if (isGuestUser) "👤 Guest · Account" else "🟢 $shortLabel",
                   fontSize = 9.5.sp,
                   fontWeight = FontWeight.Bold,
                   color = if (isGuestUser) WashiMuted else CeladonJade,
@@ -1311,7 +1317,7 @@ private fun TriePatternSolverScreen(
             Text(
               text =
                 if (isGuestUser) "Playing as Guest (Local Washi Mode)"
-                else "Signed in with Gmail: ${userEmail ?: "Gmail Account"}",
+                else "Signed in: ${userEmail ?: "Origami Account"}",
               style = MaterialTheme.typography.labelLarge,
               fontWeight = FontWeight.ExtraBold,
               color = if (isGuestUser) WashiCream else CeladonJade,
@@ -1329,13 +1335,13 @@ private fun TriePatternSolverScreen(
             shape = RoundedCornerShape(10.dp),
             colors =
               ButtonDefaults.buttonColors(
-                containerColor = if (isGuestUser) SkyCyan else IndigoCard,
+                containerColor = if (isGuestUser) CeladonJade else IndigoCard,
                 contentColor = if (isGuestUser) Color.White else WashiCream,
               ),
             modifier = Modifier.testTag("btn_account_action"),
           ) {
             Text(
-              text = if (isGuestUser) "Gmail Login" else "Sign Out",
+              text = if (isGuestUser) "Create Account" else "Sign Out",
               fontWeight = FontWeight.Bold,
             )
           }

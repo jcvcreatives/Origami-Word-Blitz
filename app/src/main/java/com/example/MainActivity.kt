@@ -20,6 +20,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.repository.OrigamiCloudRepository
+import com.example.ui.auth.LocalAccountStore
+import com.example.ui.auth.LocalOrigamiAccount
 import com.example.ui.auth.OrigamiAuthScreen
 import com.example.ui.auth.signOutUser
 import com.example.ui.feedback.SoundAndHapticsEngine
@@ -58,6 +60,9 @@ fun LexiFillAppRoot() {
       }
     )
   }
+  var localAccount by remember {
+    mutableStateOf<LocalOrigamiAccount?>(LocalAccountStore.getActiveAccount(context))
+  }
   var isGuestMode by rememberSaveable { mutableStateOf(false) }
 
   DisposableEffect(Unit) {
@@ -80,8 +85,10 @@ fun LexiFillAppRoot() {
     }
   }
 
-  val activeUser = currentUser
-  if (activeUser == null && !isGuestMode) {
+  val activeFirebaseUser = currentUser
+  val activeLocalAccount = localAccount
+
+  if (activeFirebaseUser == null && activeLocalAccount == null && !isGuestMode) {
     OrigamiAuthScreen(
       onAuthSuccess = {
         currentUser =
@@ -92,15 +99,19 @@ fun LexiFillAppRoot() {
           }
         isGuestMode = false
       },
+      onLocalAccountAuthenticated = { account ->
+        localAccount = account
+        isGuestMode = false
+      },
       onContinueAsGuest = {
         isGuestMode = true
       },
     )
-  } else if (activeUser != null) {
-    val uid = activeUser.uid
+  } else if (activeFirebaseUser != null) {
+    val uid = activeFirebaseUser.uid
     val emailLabel =
-      activeUser.email?.takeIf { it.isNotBlank() }
-        ?: activeUser.displayName?.takeIf { it.isNotBlank() }
+      activeFirebaseUser.email?.takeIf { it.isNotBlank() }
+        ?: activeFirebaseUser.displayName?.takeIf { it.isNotBlank() }
         ?: "Gmail Account"
     key(uid) {
       val gameViewModel: GameViewModel =
@@ -128,6 +139,8 @@ fun LexiFillAppRoot() {
         userEmail = emailLabel,
         isGuestUser = false,
         onSignOut = {
+          LocalAccountStore.clearActiveAccount(context)
+          localAccount = null
           signOutUser(
             credentialManager = credentialManager,
             scope = scope,
@@ -136,6 +149,40 @@ fun LexiFillAppRoot() {
               isGuestMode = false
             },
           )
+        },
+      )
+    }
+  } else if (activeLocalAccount != null) {
+    val accountKey = "local_${activeLocalAccount.username.lowercase()}"
+    key(accountKey) {
+      val gameViewModel: GameViewModel =
+        viewModel(
+          key = accountKey,
+          factory =
+            viewModelFactory {
+              initializer {
+                val app =
+                  checkNotNull(this[APPLICATION_KEY]) {
+                    "APPLICATION_KEY missing from CreationExtras"
+                  }
+                val soundEngine = SoundAndHapticsEngine(app)
+                GameViewModel(
+                  repository = null,
+                  currentUserId = null,
+                  soundEngine = soundEngine,
+                )
+              }
+            },
+        )
+
+      LexiFillMainScreen(
+        viewModel = gameViewModel,
+        userEmail = "${activeLocalAccount.username} (${activeLocalAccount.email})",
+        isGuestUser = false,
+        onSignOut = {
+          LocalAccountStore.clearActiveAccount(context)
+          localAccount = null
+          isGuestMode = false
         },
       )
     }
