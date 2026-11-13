@@ -434,10 +434,11 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
       updatedTargetWords.filter { it.isCompleted }.flatMap { it.coordinates() }.toSet()
 
     val updatedFlashTimestamps = HashMap(state.cellFlashTimestamps)
-    for (c in completedCoords) {
-      updatedFlashTimestamps[c] = nowMs
+    for (tw in newlyCompletedWords) {
+      tw.coordinates().forEachIndexed { idx, c ->
+        updatedFlashTimestamps[c] = nowMs + idx * 55L
+      }
     }
-    updatedFlashTimestamps[Coordinate(targetX, targetY)] = nowMs
 
     val dropCoord = Coordinate(targetX, targetY)
     val updatedPlacementTimestamps = state.tilePlacementTimestamps + (dropCoord to nowMs)

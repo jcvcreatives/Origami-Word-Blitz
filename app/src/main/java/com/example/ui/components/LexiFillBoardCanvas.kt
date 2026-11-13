@@ -239,8 +239,6 @@ fun LexiFillBoardCanvas(
   var currentGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
   val dogEarPath = remember { Path() }
   val petalPath = remember { Path() }
-  val creaseDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f) }
-  val slotDashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(9f, 6f), 0f) }
 
   val hoveredCorridorCoords =
     remember(puzzleState.hoverCoord, puzzleState.targetWords) {
@@ -331,23 +329,6 @@ fun LexiFillBoardCanvas(
       val innerSize = cellSize - pad * 2f
       val cornerRadius = CornerRadius(cellSize * 0.14f, cellSize * 0.14f)
 
-      // Subtle Origami diagonal paper-fold crease lines across the Washi sheet background
-      val creaseColor = IndigoElevated.copy(alpha = 0.28f)
-      drawLine(
-        color = creaseColor,
-        start = Offset(0f, 0f),
-        end = Offset(size.width, size.height),
-        strokeWidth = 1.dp.toPx(),
-        pathEffect = creaseDashEffect,
-      )
-      drawLine(
-        color = creaseColor,
-        start = Offset(size.width, 0f),
-        end = Offset(0f, size.height),
-        strokeWidth = 1.dp.toPx(),
-        pathEffect = creaseDashEffect,
-      )
-
       val skin = puzzleState.equippedSkin
       val skinBaseColor = Color(skin.baseColorHex)
       val skinBorderColor = Color(skin.borderColorHex)
@@ -356,28 +337,19 @@ fun LexiFillBoardCanvas(
       for (y in 0 until puzzleState.boardHeight) {
         for (x in 0 until puzzleState.boardWidth) {
           val cell = puzzleState.cells[y][x]
+          if (!cell.isPlayable) continue
+
           val coord = Coordinate(x, y)
           val topLeft = Offset(originX + x * cellSize + pad, originY + y * cellSize + pad)
           val cellCenter = Offset(topLeft.x + innerSize / 2f, topLeft.y + innerSize / 2f)
-
-          if (!cell.isPlayable) {
-            // Subtle paper pin-dot on empty background grid intersections
-            drawCircle(
-              color = IndigoElevated.copy(alpha = 0.45f),
-              radius = cellSize * 0.036f,
-              center = cellCenter,
-            )
-            continue
-          }
 
           val isHoveredTarget = puzzleState.hoverCoord == coord
           val isInHoveredCorridor = coord in hoveredCorridorCoords
           val isInFocusedWord = coord in focusedWordCoords
           val isHintHighlighted = puzzleState.highlightedHintCoord == coord
           val flashStart = puzzleState.cellFlashTimestamps[coord]
-          val flashElapsed = if (flashStart != null) (frameNowMs - flashStart) else 9999L
-          val flashProgress =
-            if (flashElapsed in 0..650) 1f - (flashElapsed / 650f) else 0f
+          val foldElapsed = if (flashStart != null) (frameNowMs - flashStart) else 9999L
+          val foldAnim = computePaperFoldTransition(foldElapsed, cell.isLockedCompleted)
 
           // Placement squash-and-stretch timing (when putting a tile into a slot)
           val placeStart = puzzleState.tilePlacementTimestamps[coord]
@@ -400,80 +372,109 @@ fun LexiFillBoardCanvas(
           when {
             // 1. Permanent Fixed Clue Letter Cell (Folded Kraft Origami Paper Tile)
             cell.fixedLetter != null -> {
+              val showLockedGreen = foldAnim.showLockedGreen
               val bgColor =
-                if (cell.isLockedCompleted) CompletedWordBg else FixedClueCellBg
+                if (showLockedGreen) CompletedWordBg else FixedClueCellBg
               val borderColor =
-                if (cell.isLockedCompleted) CompletedWordBorder
+                if (showLockedGreen) CompletedWordBorder
                 else if (isInFocusedWord) SkyCyan.copy(alpha = 0.65f)
                 else FixedClueCellBorder
 
-              // Soft paper drop shadow
-              drawRoundRect(
-                color = Color(0xFF8C7A5B).copy(alpha = 0.24f),
-                topLeft = Offset(topLeft.x + cellSize * 0.02f, topLeft.y + cellSize * 0.04f),
-                size = Size(innerSize, innerSize),
-                cornerRadius = cornerRadius,
-              )
-              drawRoundRect(
-                color = bgColor,
-                topLeft = topLeft,
-                size = Size(innerSize, innerSize),
-                cornerRadius = cornerRadius,
-              )
+              withTransform({
+                if (foldAnim.isFolding) {
+                  scale(
+                    scaleX = foldAnim.scaleX,
+                    scaleY = foldAnim.scaleY,
+                    pivot = cellCenter,
+                  )
+                  rotate(degrees = foldAnim.tiltDeg, pivot = cellCenter)
+                }
+              }) {
+                // Tactile 3D bottom bevel & soft paper elevation
+                drawRoundRect(
+                  color = borderColor.copy(alpha = 0.55f),
+                  topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.045f),
+                  size = Size(innerSize, innerSize),
+                  cornerRadius = cornerRadius,
+                )
+                drawRoundRect(
+                  color = bgColor,
+                  topLeft = topLeft,
+                  size = Size(innerSize, innerSize),
+                  cornerRadius = cornerRadius,
+                )
 
-              // Subtle diagonal origami fold crease inside the paper tile
-              drawLine(
-                color = Color.White.copy(alpha = 0.45f),
-                start = Offset(topLeft.x + innerSize * 0.08f, topLeft.y + innerSize * 0.92f),
-                end = Offset(topLeft.x + innerSize * 0.92f, topLeft.y + innerSize * 0.08f),
-                strokeWidth = cellSize * 0.02f,
-              )
+                // Paper-fold crease shadow/highlight during active fold transition
+                if (foldAnim.creaseAlpha > 0f) {
+                  drawRoundRect(
+                    color = Color(0xFF157F4B).copy(alpha = foldAnim.creaseAlpha * 0.28f),
+                    topLeft = topLeft,
+                    size = Size(innerSize, innerSize),
+                    cornerRadius = cornerRadius,
+                  )
+                  drawLine(
+                    color = Color.White.copy(alpha = foldAnim.creaseAlpha * 0.85f),
+                    start = Offset(topLeft.x + innerSize * 0.08f, cellCenter.y),
+                    end = Offset(topLeft.x + innerSize * 0.92f, cellCenter.y),
+                    strokeWidth = cellSize * 0.045f,
+                    cap = StrokeCap.Round,
+                  )
+                }
 
-              // Origami dog-ear corner fold triangle in top-right corner
-              val foldSize = innerSize * 0.20f
-              dogEarPath.reset()
-              dogEarPath.moveTo(topLeft.x + innerSize - foldSize, topLeft.y)
-              dogEarPath.lineTo(topLeft.x + innerSize, topLeft.y + foldSize)
-              dogEarPath.lineTo(topLeft.x + innerSize - foldSize, topLeft.y + foldSize)
-              dogEarPath.close()
-              drawPath(
-                path = dogEarPath,
-                color = borderColor.copy(alpha = 0.42f),
-              )
+                // Clean subtle origami corner fold accent in top-right corner
+                val foldSize = innerSize * 0.16f
+                dogEarPath.reset()
+                dogEarPath.moveTo(topLeft.x + innerSize - foldSize, topLeft.y)
+                dogEarPath.lineTo(topLeft.x + innerSize, topLeft.y + foldSize)
+                dogEarPath.lineTo(topLeft.x + innerSize - foldSize, topLeft.y + foldSize)
+                dogEarPath.close()
+                drawPath(
+                  path = dogEarPath,
+                  color = borderColor.copy(alpha = 0.28f),
+                )
 
-              drawRoundRect(
-                color = borderColor,
-                topLeft = topLeft,
-                size = Size(innerSize, innerSize),
-                cornerRadius = cornerRadius,
-                style = Stroke(width = cellSize * 0.038f),
-              )
+                drawRoundRect(
+                  color = borderColor,
+                  topLeft = topLeft,
+                  size = Size(innerSize, innerSize),
+                  cornerRadius = cornerRadius,
+                  style = Stroke(width = cellSize * 0.032f),
+                )
 
-              letterPaint.color = WashiCream.toArgb()
-              letterPaint.textSize = innerSize * 0.54f
-              val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
-              drawContext.canvas.nativeCanvas.drawText(
-                cell.fixedLetter.toString(),
-                cellCenter.x,
-                textY,
-                letterPaint,
-              )
+                letterPaint.color = WashiCream.toArgb()
+                letterPaint.textSize = innerSize * 0.54f
+                val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
+                drawContext.canvas.nativeCanvas.drawText(
+                  cell.fixedLetter.toString(),
+                  cellCenter.x,
+                  textY,
+                  letterPaint,
+                )
 
-              subPaint.color = WashiMuted.toArgb()
-              subPaint.textSize = innerSize * 0.19f
-              drawContext.canvas.nativeCanvas.drawText(
-                com.example.domain.model.GameCatalog.letterBaseScore(cell.fixedLetter).toString(),
-                topLeft.x + innerSize * 0.80f,
-                topLeft.y + innerSize * 0.88f,
-                subPaint,
-              )
+                subPaint.color = WashiMuted.toArgb()
+                subPaint.textSize = innerSize * 0.19f
+                drawContext.canvas.nativeCanvas.drawText(
+                  com.example.domain.model.GameCatalog.letterBaseScore(cell.fixedLetter).toString(),
+                  topLeft.x + innerSize * 0.80f,
+                  topLeft.y + innerSize * 0.88f,
+                  subPaint,
+                )
+              }
             }
 
-            // 2. Player Placed Origami Tile inside a Blank Target Slot (with Squash-and-Stretch!)
+            // 2. Player Placed Origami Tile inside a Blank Target Slot (with Squash-and-Stretch & Paper-Fold!)
             cell.placedTile != null -> {
               val tile = cell.placedTile
+              val showLockedGreen = foldAnim.showLockedGreen
               withTransform({
-                scale(scaleX = snapScaleX, scaleY = snapScaleY, pivot = cellCenter)
+                scale(
+                  scaleX = snapScaleX * foldAnim.scaleX,
+                  scaleY = snapScaleY * foldAnim.scaleY,
+                  pivot = cellCenter,
+                )
+                if (foldAnim.isFolding) {
+                  rotate(degrees = foldAnim.tiltDeg, pivot = cellCenter)
+                }
               }) {
                 // Paper shadow
                 drawRoundRect(
@@ -483,11 +484,27 @@ fun LexiFillBoardCanvas(
                   cornerRadius = cornerRadius,
                 )
                 drawRoundRect(
-                  color = if (cell.isLockedCompleted) CompletedWordBg else skinBaseColor,
+                  color = if (showLockedGreen) CompletedWordBg else skinBaseColor,
                   topLeft = topLeft,
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
                 )
+
+                if (foldAnim.creaseAlpha > 0f) {
+                  drawRoundRect(
+                    color = Color(0xFF157F4B).copy(alpha = foldAnim.creaseAlpha * 0.28f),
+                    topLeft = topLeft,
+                    size = Size(innerSize, innerSize),
+                    cornerRadius = cornerRadius,
+                  )
+                  drawLine(
+                    color = Color.White.copy(alpha = foldAnim.creaseAlpha * 0.85f),
+                    start = Offset(topLeft.x + innerSize * 0.08f, cellCenter.y),
+                    end = Offset(topLeft.x + innerSize * 0.92f, cellCenter.y),
+                    strokeWidth = cellSize * 0.045f,
+                    cap = StrokeCap.Round,
+                  )
+                }
 
                 // Origami dog-ear corner fold on placed tile
                 val foldSize = innerSize * 0.19f
@@ -498,11 +515,11 @@ fun LexiFillBoardCanvas(
                 dogEarPath.close()
                 drawPath(
                   path = dogEarPath,
-                  color = (if (cell.isLockedCompleted) CeladonJade else skinBorderColor).copy(alpha = 0.35f),
+                  color = (if (showLockedGreen) CeladonJade else skinBorderColor).copy(alpha = 0.35f),
                 )
 
                 val borderCol =
-                  if (cell.isLockedCompleted) CeladonJade else skinBorderColor
+                  if (showLockedGreen) CeladonJade else skinBorderColor
                 drawRoundRect(
                   color = borderCol,
                   topLeft = topLeft,
@@ -512,7 +529,7 @@ fun LexiFillBoardCanvas(
                 )
 
                 val charColorArgb =
-                  if (cell.isLockedCompleted) WashiCream.toArgb() else skinTextColorArgb
+                  if (showLockedGreen) WashiCream.toArgb() else skinTextColorArgb
                 letterPaint.color = charColorArgb
                 letterPaint.textSize = innerSize * 0.55f
                 val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
@@ -563,18 +580,24 @@ fun LexiFillBoardCanvas(
                 }
 
               val strokeWidth =
-                if (isHoveredTarget || isHintHighlighted) cellSize * 0.068f else cellSize * 0.038f
+                if (isHoveredTarget || isHintHighlighted) cellSize * 0.064f else cellSize * 0.034f
 
+              // Clean solid rounded border for open sockets (no busy dashed lines)
               drawRoundRect(
                 color = strokeColor,
                 topLeft = topLeft,
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
-                style =
-                  Stroke(
-                    width = strokeWidth,
-                    pathEffect = if (isHoveredTarget) null else slotDashEffect,
-                  ),
+                style = Stroke(width = strokeWidth),
+              )
+
+              // Subtle inner recessed well rim
+              drawRoundRect(
+                color = Color.White.copy(alpha = 0.55f),
+                topLeft = Offset(topLeft.x + cellSize * 0.04f, topLeft.y + cellSize * 0.04f),
+                size = Size(innerSize - cellSize * 0.08f, innerSize - cellSize * 0.08f),
+                cornerRadius = CornerRadius(cellSize * 0.11f, cellSize * 0.11f),
+                style = Stroke(width = cellSize * 0.018f),
               )
 
               // Magnetic Lock-On Ghost Letter & Target Reticle Brackets while Dragging!
@@ -628,37 +651,18 @@ fun LexiFillBoardCanvas(
                   textY,
                   letterPaint,
                 )
-              } else {
-                val badge =
-                  if (cell.multiplier != SquareMultiplier.NONE) cell.multiplier.label
-                  else if (cell.isIntersection) "◆"
-                  else "+"
-                subPaint.color =
-                  (if (cell.isIntersection) KyotoGold else WashiMuted.copy(alpha = 0.65f)).toArgb()
-                subPaint.textSize =
-                  if (cell.multiplier != SquareMultiplier.NONE) innerSize * 0.27f
-                  else innerSize * 0.26f
+              } else if (cell.multiplier != SquareMultiplier.NONE) {
+                subPaint.color = WashiCream.copy(alpha = 0.78f).toArgb()
+                subPaint.textSize = innerSize * 0.27f
                 val by = cellCenter.y - (subPaint.descent() + subPaint.ascent()) / 2f
-                drawContext.canvas.nativeCanvas.drawText(badge, cellCenter.x, by, subPaint)
+                drawContext.canvas.nativeCanvas.drawText(
+                  cell.multiplier.label,
+                  cellCenter.x,
+                  by,
+                  subPaint,
+                )
               }
             }
-          }
-
-          // Gentle, Non-Distracting Paper Shimmer on Newly Completed Cells
-          if (flashProgress > 0f) {
-            drawRoundRect(
-              color = CeladonJade.copy(alpha = flashProgress * 0.22f),
-              topLeft = topLeft,
-              size = Size(innerSize, innerSize),
-              cornerRadius = cornerRadius,
-            )
-            drawRoundRect(
-              color = CeladonJade.copy(alpha = flashProgress * 0.65f),
-              topLeft = Offset(topLeft.x - 1.5f, topLeft.y - 1.5f),
-              size = Size(innerSize + 3f, innerSize + 3f),
-              cornerRadius = cornerRadius,
-              style = Stroke(width = cellSize * 0.05f * flashProgress),
-            )
           }
 
           // Subtle Paper Ripple Ring when a tile snaps into place
@@ -826,3 +830,95 @@ private fun computeSnapSquashStretch(elapsedMs: Long): Pair<Float, Float> {
     }
   }
 }
+
+private data class PaperFoldAnimState(
+  val isFolding: Boolean,
+  val showLockedGreen: Boolean,
+  val scaleX: Float,
+  val scaleY: Float,
+  val tiltDeg: Float,
+  val creaseAlpha: Float,
+)
+
+/**
+ * Computes the subtle 3D origami 'paper-fold' state when a board cell transitions
+ * from its warm Washi/Kraft state into the locked Matcha Jade green state.
+ */
+private fun computePaperFoldTransition(
+  foldElapsedMs: Long,
+  isCellLocked: Boolean,
+): PaperFoldAnimState {
+  if (!isCellLocked) {
+    return PaperFoldAnimState(
+      isFolding = false,
+      showLockedGreen = false,
+      scaleX = 1f,
+      scaleY = 1f,
+      tiltDeg = 0f,
+      creaseAlpha = 0f,
+    )
+  }
+  // Waiting for staggered letter turn along the completed word
+  if (foldElapsedMs < 0L) {
+    return PaperFoldAnimState(
+      isFolding = false,
+      showLockedGreen = false,
+      scaleX = 1f,
+      scaleY = 1f,
+      tiltDeg = 0f,
+      creaseAlpha = 0f,
+    )
+  }
+  val duration = 520f
+  if (foldElapsedMs > duration.toLong()) {
+    return PaperFoldAnimState(
+      isFolding = false,
+      showLockedGreen = true,
+      scaleX = 1f,
+      scaleY = 1f,
+      tiltDeg = 0f,
+      creaseAlpha = 0f,
+    )
+  }
+
+  val t = (foldElapsedMs / duration).coerceIn(0f, 1f)
+  return when {
+    // Phase 1 (0..42%): Fold inward along horizontal origami crease before flipping to green
+    t < 0.42f -> {
+      val p = t / 0.42f
+      PaperFoldAnimState(
+        isFolding = true,
+        showLockedGreen = false,
+        scaleX = 1f - 0.08f * p,
+        scaleY = 1f - 0.82f * p,
+        tiltDeg = -3.2f * p,
+        creaseAlpha = p,
+      )
+    }
+    // Phase 2 (42..76%): Unfold into locked Matcha green state with slight spring overshoot
+    t < 0.76f -> {
+      val p = (t - 0.42f) / 0.34f
+      PaperFoldAnimState(
+        isFolding = true,
+        showLockedGreen = true,
+        scaleX = 0.92f + (1.05f - 0.92f) * p,
+        scaleY = 0.18f + (1.06f - 0.18f) * p,
+        tiltDeg = -3.2f * (1f - p) + 1.4f * p,
+        creaseAlpha = (1f - p * 0.7f).coerceIn(0f, 1f),
+      )
+    }
+    // Phase 3 (76..100%): Settle flat onto the Washi board
+    else -> {
+      val p = (t - 0.76f) / 0.24f
+      PaperFoldAnimState(
+        isFolding = true,
+        showLockedGreen = true,
+        scaleX = 1.05f + (1.0f - 1.05f) * p,
+        scaleY = 1.06f + (1.0f - 1.06f) * p,
+        tiltDeg = 1.4f * (1f - p),
+        creaseAlpha = (0.3f * (1f - p)).coerceIn(0f, 1f),
+      )
+    }
+  }
+}
+

@@ -938,17 +938,9 @@ private fun SpringDraggableRackTile(
           .testTag("rack_tile_${tile.char}_${tile.id}"),
       contentAlignment = Alignment.Center,
     ) {
-      // Origami folded corner dog-ear + diagonal crease on the paper tile
+      // Subtle top-right origami corner fold on the paper tile (no slash line across letter)
       Canvas(modifier = Modifier.fillMaxSize()) {
-        // Subtle diagonal paper crease line
-        drawLine(
-          color = Color.White.copy(alpha = 0.45f),
-          start = Offset(size.width * 0.1f, size.height * 0.9f),
-          end = Offset(size.width * 0.9f, size.height * 0.1f),
-          strokeWidth = 1.dp.toPx(),
-        )
-        // Top-right origami dog-ear corner fold
-        val fold = size.width * 0.22f
+        val fold = size.width * 0.18f
         dogEarFoldPath.reset()
         dogEarFoldPath.moveTo(size.width - fold, 0f)
         dogEarFoldPath.lineTo(size.width, fold)
@@ -956,7 +948,7 @@ private fun SpringDraggableRackTile(
         dogEarFoldPath.close()
         drawPath(
           path = dogEarFoldPath,
-          color = borderColor.copy(alpha = 0.38f),
+          color = borderColor.copy(alpha = 0.28f),
         )
       }
 
