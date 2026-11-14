@@ -1117,7 +1117,7 @@ fun LevelClearFanfareOverlay(
               StatRow("Intersecting Words Solved", "${summary.wordsCompleted}")
               StatRow("Max Combo Streak", "×${summary.maxCombo}")
               StatRow("Zero-Error Accuracy Bonus", "+${summary.accuracyBonus} PTS")
-              StatRow("Origami Coins Awarded", "+${summary.coinsEarned} 🪙")
+              StatRow("Origami Coins Awarded", "+${summary.coinsEarned} Coins")
               StatRow("Total Level Score", "${summary.levelScore} PTS", highlight = true)
             }
           }

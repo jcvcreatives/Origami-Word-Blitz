@@ -1,8 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/img_app_icon_fg_1794379928021"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle Recessed Kraft Board Tray inside 66dp safe zone (24..84) -->
+    <path
+        android:fillColor="#D4C5AA"
+        android:pathData="M29,23L79,23A6,6 0,0 1,85 29L85,79A6,6 0,0 1,79 85L29,85A6,6 0,0 1,23 79L23,29A6,6 0,0 1,29 23Z" />
+
+    <!-- 1. TOP-LEFT TILE: Warm Washi Ivory Crossword Tile with 'C' (26,26 to 52,52) -->
+    <!-- 3D Bottom Bevel -->
+    <path
+        android:fillColor="#B3A082"
+        android:pathData="M30,28L48,28A4,4 0,0 1,52 32L52,50A4,4 0,0 1,48 54L30,54A4,4 0,0 1,26 50L26,32A4,4 0,0 1,30 28Z" />
+    <!-- Tile Surface -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:pathData="M30,26L48,26A4,4 0,0 1,52 30L52,48A4,4 0,0 1,48 52L30,52A4,4 0,0 1,26 48L26,30A4,4 0,0 1,30 26Z" />
+    <!-- Origami Dog-Ear Corner Fold -->
+    <path
+        android:fillColor="#DFD3BE"
+        android:pathData="M46,26L52,32L46,32Z" />
+    <!-- Geometric 'C' Glyph in Sumi Ink -->
+    <path
+        android:fillColor="#231E18"
+        android:pathData="M43.5,34.5L36.5,34.5A2.5,2.5 0,0 0,34 37L34,41A2.5,2.5 0,0 0,36.5 43.5L43.5,43.5L43.5,46.5L36,46.5A5,5 0,0 1,31 41.5L31,36.5A5,5 0,0 1,36 31.5L43.5,31.5Z" />
+
+    <!-- 2. TOP-RIGHT TILE: Aizome Indigo Folded Origami Tile (56,26 to 82,52) -->
+    <!-- 3D Bottom Bevel -->
+    <path
+        android:fillColor="#123C5E"
+        android:pathData="M60,28L78,28A4,4 0,0 1,82 32L82,50A4,4 0,0 1,78 54L60,54A4,4 0,0 1,56 50L56,32A4,4 0,0 1,60 28Z" />
+    <!-- Tile Surface -->
+    <path
+        android:fillColor="#1D5B8F"
+        android:pathData="M60,26L78,26A4,4 0,0 1,82 30L82,48A4,4 0,0 1,78 52L60,52A4,4 0,0 1,56 48L56,30A4,4 0,0 1,60 26Z" />
+    <!-- Two-Tone Folded Origami Kite Silhouette -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:pathData="M69,31L76,39L69,47Z" />
+    <path
+        android:fillColor="#CFE3F5"
+        android:pathData="M69,31L62,39L69,47Z" />
+
+    <!-- 3. BOTTOM-LEFT TILE: Matcha Jade Locked Word Tile (26,56 to 52,82) -->
+    <!-- 3D Bottom Bevel -->
+    <path
+        android:fillColor="#0E5934"
+        android:pathData="M30,58L48,58A4,4 0,0 1,52 62L52,80A4,4 0,0 1,48 84L30,84A4,4 0,0 1,26 80L26,62A4,4 0,0 1,30 58Z" />
+    <!-- Tile Surface -->
+    <path
+        android:fillColor="#157F4B"
+        android:pathData="M30,56L48,56A4,4 0,0 1,52 60L52,78A4,4 0,0 1,48 82L30,82A4,4 0,0 1,26 78L26,60A4,4 0,0 1,30 56Z" />
+    <!-- Origami Dog-Ear Corner Fold -->
+    <path
+        android:fillColor="#48A878"
+        android:pathData="M46,56L52,62L46,62Z" />
+    <!-- Crisp Checkmark Glyph -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:pathData="M37.2,72.2L32.3,67.3L34.4,65.2L37.2,68.0L44.0,61.2L46.1,63.3Z" />
+
+    <!-- 4. BOTTOM-RIGHT TILE: Warm Washi Ivory Crossword Tile with 'O' (56,56 to 82,82) -->
+    <!-- 3D Bottom Bevel -->
+    <path
+        android:fillColor="#B3A082"
+        android:pathData="M60,58L78,58A4,4 0,0 1,82 62L82,80A4,4 0,0 1,78 84L60,84A4,4 0,0 1,56 80L56,62A4,4 0,0 1,60 58Z" />
+    <!-- Tile Surface -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:pathData="M60,56L78,56A4,4 0,0 1,82 60L82,78A4,4 0,0 1,78 82L60,82A4,4 0,0 1,56 78L56,60A4,4 0,0 1,60 56Z" />
+    <!-- Origami Dog-Ear Corner Fold -->
+    <path
+        android:fillColor="#DFD3BE"
+        android:pathData="M76,56L82,62L76,62Z" />
+    <!-- Geometric 'O' Glyph in Sumi Ink -->
+    <path
+        android:fillColor="#231E18"
+        android:pathData="M66,61.5L72,61.5A4.5,4.5 0,0 1,76.5 66L76.5,72A4.5,4.5 0,0 1,72 76.5L66,76.5A4.5,4.5 0,0 1,61.5 72L61.5,66A4.5,4.5 0,0 1,66 61.5ZM66.5,64.5A1.5,1.5 0,0 0,65 66L65,72A1.5,1.5 0,0 0,66.5 73.5L71.5,73.5A1.5,1.5 0,0 0,73 72L73,66A1.5,1.5 0,0 0,71.5 64.5Z" />
+
+    <!-- Center Kyoto Gold Intersection Diamond (49..59) -->
+    <path
+        android:fillColor="#C87D0A"
+        android:pathData="M54,48.5L59.5,54L54,59.5L48.5,54Z" />
+</vector>

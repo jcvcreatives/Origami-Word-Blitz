@@ -473,7 +473,7 @@ private fun LexiFillTopHud(
                   .padding(horizontal = 5.dp, vertical = 1.dp)
             ) {
               Text(
-                text = "🪙 ${puzzleState.lexiCoins}",
+                text = "${puzzleState.lexiCoins} Coins",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = KyotoGold,
@@ -503,7 +503,7 @@ private fun LexiFillTopHud(
                     ?.take(12)
                     ?.ifBlank { "Account" } ?: "Account"
                 Text(
-                  text = if (isGuestUser) "👤 Guest · Account" else "🟢 $shortLabel",
+                  text = if (isGuestUser) "Guest · Account" else "● $shortLabel",
                   fontSize = 9.5.sp,
                   fontWeight = FontWeight.Bold,
                   color = if (isGuestUser) WashiMuted else CeladonJade,
@@ -944,7 +944,7 @@ private fun PuzzleVaultScreen(
           )
           VaultStatColumn(
             label = "LEXICOINS",
-            value = "🪙 ${puzzleState.lexiCoins}",
+            value = "${puzzleState.lexiCoins} Coins",
             valueColor = SkyCyan,
           )
         }
@@ -1196,7 +1196,7 @@ private fun CustomStudioAndSkinsScreen(
           color = WashiCream,
         )
         Text(
-          text = "LexiCoins: ${puzzleState.lexiCoins} 🪙",
+          text = "LexiCoins: ${puzzleState.lexiCoins} Coins",
           style = MaterialTheme.typography.labelLarge,
           fontWeight = FontWeight.Bold,
           color = KyotoGold,
@@ -1276,7 +1276,7 @@ private fun CustomStudioAndSkinsScreen(
                 when {
                   isEquipped -> "Equipped"
                   isUnlocked -> "Equip"
-                  else -> "${skin.costCoins} 🪙"
+                  else -> "${skin.costCoins} Coins"
                 },
               fontWeight = FontWeight.Bold,
             )
@@ -1333,7 +1333,7 @@ private fun TriePatternSolverScreen(
             )
             Text(
               text =
-                "Career Score: ${puzzleState.totalCampaignScore} PTS · LexiCoins: ${puzzleState.lexiCoins} 🪙",
+                "Career Score: ${puzzleState.totalCampaignScore} PTS · LexiCoins: ${puzzleState.lexiCoins} Coins",
               style = MaterialTheme.typography.bodySmall,
               color = WashiMuted,
             )

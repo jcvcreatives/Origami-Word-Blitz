@@ -415,35 +415,27 @@ fun OrigamiAuthScreen(
           horizontalAlignment = Alignment.CenterHorizontally,
           modifier = Modifier.padding(bottom = 20.dp),
         ) {
-          // Top Washi Hero Header
-          Box(modifier = Modifier.fillMaxWidth().height(142.dp)) {
-            Image(
-              painter = painterResource(id = R.drawable.img_origami_hero_1794379928974),
-              contentDescription = stringResource(R.string.cd_hero_banner),
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxSize(),
-            )
-            Box(
-              modifier =
-                Modifier.fillMaxSize()
-                  .background(
-                    Brush.verticalGradient(
-                      colors =
-                        listOf(
-                          Color(0x33231E18),
-                          IndigoSurface.copy(alpha = 0.96f),
-                        )
-                    )
+          // Top Handcrafted Washi Paper Header (Clean Geometric Tiles — No AI Artwork)
+          Box(
+            modifier =
+              Modifier.fillMaxWidth()
+                .background(
+                  Brush.verticalGradient(
+                    colors =
+                      listOf(
+                        Color(0xFFEDE4D2),
+                        IndigoSurface,
+                      )
                   )
-            )
+                )
+                .padding(horizontal = 18.dp, vertical = 20.dp),
+            contentAlignment = Alignment.Center,
+          ) {
             Column(
-              modifier =
-                Modifier.align(Alignment.BottomCenter)
-                  .padding(horizontal = 18.dp, vertical = 8.dp),
               horizontalAlignment = Alignment.CenterHorizontally,
             ) {
               OrigamiLogoTilesRow()
-              Spacer(modifier = Modifier.height(6.dp))
+              Spacer(modifier = Modifier.height(10.dp))
               Text(
                 text = "CROSSWORD ORIGAMI",
                 style = MaterialTheme.typography.headlineSmall,
@@ -606,7 +598,7 @@ fun OrigamiAuthScreen(
             Text(
               text =
                 if (isCreateAccountMode) {
-                  "${stringResource(R.string.create_account_primary)} (+150 🪙)"
+                  "${stringResource(R.string.create_account_primary)} (+150 Coins)"
                 } else {
                   stringResource(R.string.log_in_primary)
                 },

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f3ede0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'%3E%3Crect width='108' height='108' rx='22' fill='%23F3EDE0'/%3E%3Crect x='14' y='14' width='80' height='80' rx='14' fill='%23D4C5AA'/%3E%3Crect x='20' y='20' width='31' height='31' rx='6' fill='%23FFFDF7' stroke='%23B3A082' stroke-width='2'/%3E%3Ctext x='35.5' y='42' font-family='Georgia,serif' font-weight='900' font-size='20' text-anchor='middle' fill='%23231E18'%3EC%3C/text%3E%3Crect x='57' y='20' width='31' height='31' rx='6' fill='%231D5B8F'/%3E%3Cpolygon points='72.5,25 81,35.5 72.5,46' fill='%23FFFDF7'/%3E%3Cpolygon points='72.5,25 64,35.5 72.5,46' fill='%23CFE3F5'/%3E%3Crect x='20' y='57' width='31' height='31' rx='6' fill='%23157F4B'/%3E%3Cpath d='M28 73 L33.5 78.5 L43.5 67.5' fill='none' stroke='%23FFFDF7' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='57' y='57' width='31' height='31' rx='6' fill='%23FFFDF7' stroke='%23B3A082' stroke-width='2'/%3E%3Ctext x='72.5' y='79' font-family='Georgia,serif' font-weight='900' font-size='20' text-anchor='middle' fill='%23231E18'%3EO%3C/text%3E%3Cpolygon points='54,47 61,54 54,61 47,54' fill='%23C87D0A'/%3E%3C/svg%3E" />
   <title>Crossword Origami</title>
   <style>
     :root {
@@ -1279,12 +1280,15 @@
             </div>
             <div class="hud-sub-row">
               <span id="lvlProgress">Words 0/5 · Blanks 0/8</span>
-              <span class="coins-pill" id="coinsBadge">🪙 160</span>
-              <button class="account-pill-btn guest" id="accountPill" onclick="openLoginPage()" title="Account & Login">👤 Guest · Login</button>
+              <span class="coins-pill" id="coinsBadge">160 Coins</span>
+              <button class="account-pill-btn guest" id="accountPill" onclick="openLoginPage()" title="Account & Login">Guest · Login</button>
             </div>
           </div>
 
-          <div class="combo-pill" id="comboPill">🔥 <span id="comboText">×1.0</span></div>
+          <div class="combo-pill" id="comboPill">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span id="comboText">×1.0</span>
+          </div>
 
           <div class="score-box">
             <div class="score-val" id="scoreVal">0 PTS</div>
@@ -1292,9 +1296,15 @@
           </div>
 
           <div class="hud-actions">
-            <button class="icon-btn" id="muteBtn" onclick="toggleSoundMute()" title="Mute/Unmute Audio">🔊</button>
-            <button class="icon-btn" onclick="resetLevel()" title="Reset Current Grid">↻</button>
-            <button class="icon-btn" onclick="nextLevel()" title="Skip to Next Puzzle" style="color:var(--aizome-indigo);">⏭</button>
+            <button class="icon-btn" id="muteBtn" onclick="toggleSoundMute()" title="Mute/Unmute Audio">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+            </button>
+            <button class="icon-btn" onclick="resetLevel()" title="Reset Current Grid">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            </button>
+            <button class="icon-btn" onclick="nextLevel()" title="Skip to Next Puzzle" style="color:var(--aizome-indigo);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+            </button>
           </div>
         </div>
         <div class="hud-progress-track">
@@ -1336,15 +1346,17 @@
 
         <div class="btn-row">
           <button class="action-btn" onclick="shuffleRack()">
-            <span class="shuffle-icon" id="shuffleIcon">🔀</span>
+            <span class="shuffle-icon" id="shuffleIcon" style="display:inline-flex;align-items:center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+            </span>
             <span>Shuffle</span>
           </button>
           <button class="action-btn hint-btn" id="hintBtn" onclick="triggerSmartHint()">
-            <span>💡</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>
             <span id="hintBtnText">Smart Hint (3)</span>
           </button>
           <button class="action-btn" id="recallBtn" onclick="recallUnlockedTiles()" style="display:none;">
-            <span>↩</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
             <span>Recall</span>
           </button>
         </div>
@@ -1440,7 +1452,7 @@
       <div id="loginErrorBox" style="display:none; background:rgba(217,56,30,0.12); border:1px solid rgba(217,56,30,0.40); color:var(--torii-vermilion); padding:8px 10px; border-radius:10px; font-size:12px; font-weight:700; text-align:center;"></div>
 
       <button type="button" class="gmail-btn create-mode" id="primaryAccountSubmitBtn" onclick="submitPrimaryAccountAuth()">
-        <span id="primaryAccountSubmitText">Create Account (+150 🪙)</span>
+        <span id="primaryAccountSubmitText">Create Account (+150 Coins)</span>
       </button>
 
       <div class="login-divider">OPTIONAL QUICK ACCESS</div>
@@ -1451,7 +1463,7 @@
       </button>
 
       <button type="button" class="guest-btn" id="guestLoginBtn" onclick="loginAsGuest()">
-        <span>👤</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         <span>Login as Guest</span>
       </button>
     </div>
@@ -1460,7 +1472,9 @@
   <!-- LEVEL CLEAR ORIGAMI FANFARE MODAL -->
   <div class="fanfare-backdrop" id="fanfareModal">
     <div class="fanfare-modal paper-surface">
-      <div style="font-size:34px;">🏆</div>
+      <div style="display:flex;justify-content:center;color:var(--kyoto-gold);">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+      </div>
       <div style="font-size:21px; font-weight:900; color:var(--kyoto-gold);">ORIGAMI SOLVED!</div>
       <div id="fanfareSubtitle" style="font-size:14px; font-weight:700; color:var(--sumi-ink);">Level 1 · Orbital Crossing</div>
       <div class="stars-row" id="fanfareStars">★★★</div>
@@ -1476,19 +1490,27 @@
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
       <button class="nav-item active" id="nav-skeleton" onclick="switchTab('skeleton')">
-        <span class="nav-icon">⊞</span>
+        <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+        </span>
         <span>Skeleton</span>
       </button>
       <button class="nav-item" id="nav-levels" onclick="switchTab('levels')">
-        <span class="nav-icon">🧩</span>
+        <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        </span>
         <span>Levels</span>
       </button>
       <button class="nav-item" id="nav-studio" onclick="switchTab('studio')">
-        <span class="nav-icon">🎨</span>
+        <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
+        </span>
         <span>Studio</span>
       </button>
       <button class="nav-item" id="nav-trie" onclick="switchTab('trie')">
-        <span class="nav-icon">📖</span>
+        <span class="nav-icon" style="display:inline-flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        </span>
         <span>Account</span>
       </button>
     </div>
@@ -2315,7 +2337,7 @@
       const totalBlanks = state.cells.flat().filter(c => c.isBlank).length;
       const filledBlanks = state.cells.flat().filter(c => c.isBlank && c.placed).length;
       document.getElementById("lvlProgress").textContent = `Words ${state.completedWords.size}/${tpl.words.length} · Blanks ${filledBlanks}/${totalBlanks}`;
-      document.getElementById("coinsBadge").textContent = `🪙 ${state.coins}`;
+      document.getElementById("coinsBadge").textContent = `${state.coins} Coins`;
 
       const progressPct = totalBlanks > 0 ? Math.round((filledBlanks / totalBlanks) * 100) : 0;
       document.getElementById("hudProgressBar").style.width = `${progressPct}%`;
@@ -2418,7 +2440,7 @@
       state.hintCoord = { x: target.x, y: target.y };
       if (matchTile) state.selectedTileId = matchTile.id;
       AudioPlayer.play("click");
-      state.statusMsg = `Smart Hint 💡 Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
+      state.statusMsg = `Smart Hint: Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
       state.statusErr = false;
       render();
     }
@@ -2443,7 +2465,9 @@
     function toggleSoundMute() {
       const nextMuted = !AudioPlayer.isMuted();
       AudioPlayer.setMuted(nextMuted);
-      document.getElementById("muteBtn").textContent = nextMuted ? "🔇" : "🔊";
+      document.getElementById("muteBtn").innerHTML = nextMuted
+        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`
+        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>`;
       if (!nextMuted) AudioPlayer.play("click");
     }
 
@@ -2454,7 +2478,7 @@
         <div class="stat-line"><span>Intersecting Words Solved</span><span>${state.tpl.words.length}</span></div>
         <div class="stat-line"><span>Max Combo Streak</span><span>×${state.maxCombo}</span></div>
         <div class="stat-line"><span>Accuracy Bonus</span><span>+${accuracyBonus} PTS</span></div>
-        <div class="stat-line"><span>Origami Coins Awarded</span><span>+${coinsEarned} 🪙</span></div>
+        <div class="stat-line"><span>Origami Coins Awarded</span><span>+${coinsEarned} Coins</span></div>
         <div class="stat-line total"><span>Total Level Score</span><span>${state.score} PTS</span></div>
       `;
       document.getElementById("fanfareModal").classList.add("visible");
@@ -2536,7 +2560,7 @@
               </div>
             </div>
             <button class="play-btn ${equipped ? "solved" : ""}" onclick="selectOrUnlockSkin('${s.id}')">
-              ${equipped ? "Equipped" : unlocked ? "Equip" : s.cost + " 🪙"}
+              ${equipped ? "Equipped" : unlocked ? "Equip" : s.cost + " Coins"}
             </button>
           `;
           frag.appendChild(row);
@@ -2575,7 +2599,7 @@
       const submitBtn = document.getElementById("primaryAccountSubmitBtn");
       submitBtn.classList.toggle("create-mode", loginMode === "create");
       document.getElementById("primaryAccountSubmitText").textContent =
-        loginMode === "create" ? "Create Account (+150 🪙)" : "Log In";
+        loginMode === "create" ? "Create Account (+150 Coins)" : "Log In";
       document.getElementById("loginErrorBox").style.display = "none";
     }
 
@@ -2723,13 +2747,13 @@
       if (authUser && !authUser.isGuest) {
         const label = authUser.displayName || (authUser.email && authUser.email.split("@")[0]) || "Account";
         pill.className = "account-pill-btn";
-        pill.textContent = `🟢 ${label}`;
+        pill.textContent = `● ${label}`;
         if (titleEl) titleEl.textContent = `Signed in: ${label} (${authUser.email || "Origami Account"})`;
-        if (subEl) subEl.textContent = `Career Score: ${state.careerScore} PTS · Origami Coins: ${state.coins} 🪙`;
+        if (subEl) subEl.textContent = `Career Score: ${state.careerScore} PTS · Origami Coins: ${state.coins} Coins`;
         if (btnEl) btnEl.textContent = "Sign Out";
       } else {
         pill.className = "account-pill-btn guest";
-        pill.textContent = "👤 Guest · Account";
+        pill.textContent = "Guest · Account";
         if (titleEl) titleEl.textContent = "Playing as Guest (Local Washi Mode)";
         if (subEl) subEl.textContent = "Create an account (or optionally link Gmail) to save your career progress.";
         if (btnEl) btnEl.textContent = "Create Account";
