@@ -1349,6 +1349,21 @@ private fun TriePatternSolverScreen(
   isGuestUser: Boolean,
   onSignOut: (() -> Unit)?,
 ) {
+  val context = androidx.compose.ui.platform.LocalContext.current
+  val scope = androidx.compose.runtime.rememberCoroutineScope()
+  val credentialManager = remember { androidx.credentials.CredentialManager.create(context) }
+  val cloudProfile by viewModel.cloudProfileState.collectAsStateWithLifecycle()
+  val cloudSyncStatus by viewModel.cloudSyncStatus.collectAsStateWithLifecycle()
+  var isLinkingFirebase by remember { mutableStateOf(false) }
+  var linkMessage by remember { mutableStateOf<String?>(null) }
+  var registeredAccounts by remember {
+    mutableStateOf(com.example.ui.auth.LocalAccountStore.getAllRegisteredAccounts(context))
+  }
+
+  LaunchedEffect(cloudProfile, userEmail) {
+    registeredAccounts = com.example.ui.auth.LocalAccountStore.getAllRegisteredAccounts(context)
+  }
+
   var patternQuery by rememberSaveable { mutableStateOf("P_AN_T") }
   val matches =
     remember(patternQuery) {
@@ -1371,42 +1386,207 @@ private fun TriePatternSolverScreen(
           Modifier.fillMaxWidth()
             .border(1.2.dp, IndigoElevated, RoundedCornerShape(16.dp)),
       ) {
-        Row(
+        Column(
           modifier = Modifier.padding(14.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically,
+          verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-          Column(modifier = Modifier.weight(1f)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text =
+                  if (isGuestUser) "Playing as Guest (Local Washi Mode)"
+                  else "Signed in: ${userEmail ?: "Origami Account"}",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (isGuestUser) WashiCream else CeladonJade,
+              )
+              Text(
+                text =
+                  "Career Score: ${puzzleState.totalCampaignScore} PTS · LexiCoins: ${puzzleState.lexiCoins} Coins",
+                style = MaterialTheme.typography.bodySmall,
+                color = WashiMuted,
+              )
+              Text(
+                text = cloudSyncStatus,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (cloudProfile != null) CeladonJade else SkyCyan,
+              )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+              onClick = onSignOut,
+              shape = RoundedCornerShape(10.dp),
+              colors =
+                ButtonDefaults.buttonColors(
+                  containerColor = if (isGuestUser) CeladonJade else IndigoCard,
+                  contentColor = if (isGuestUser) Color.White else WashiCream,
+                ),
+              modifier = Modifier.testTag("btn_account_action"),
+            ) {
+              Text(
+                text = if (isGuestUser) "Create Account" else "Sign Out",
+                fontWeight = FontWeight.Bold,
+              )
+            }
+          }
+
+          if (cloudProfile != null) {
+            val cp = cloudProfile!!
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = CompletedWordBg,
+              modifier =
+                Modifier.fillMaxWidth()
+                  .border(1.dp, CeladonJade.copy(alpha = 0.5f), RoundedCornerShape(10.dp)),
+            ) {
+              Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+              ) {
+                Text(
+                  text = "Firebase Firestore Profile (users/${cp.userId.take(10)}…)",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = CeladonJade,
+                )
+                Text(
+                  text =
+                    "Display Name: ${cp.displayName} · Stage: ${cp.campaignStage} · Cloud Coins: ${cp.paperCoins} · Score: ${cp.totalScore}",
+                  fontSize = 11.sp,
+                  color = WashiCream,
+                )
+              }
+            }
+          } else if (!isGuestUser) {
+            OutlinedButton(
+              onClick = {
+                isLinkingFirebase = true
+                linkMessage = null
+                com.example.ui.auth.onGoogleSignInClicked(
+                  context = context,
+                  credentialManager = credentialManager,
+                  onAuthSuccess = {
+                    isLinkingFirebase = false
+                    val fbUser =
+                      try {
+                        com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                      } catch (e: Exception) {
+                        null
+                      }
+                    if (fbUser != null) {
+                      val activeLocal = com.example.ui.auth.LocalAccountStore.getActiveAccount(context)
+                      val name = activeLocal?.username ?: fbUser.displayName ?: "Origami Strategist"
+                      com.example.ui.auth.LocalAccountStore.recordFirebaseRegistration(
+                        context = context,
+                        username = name,
+                        email = fbUser.email ?: activeLocal?.email.orEmpty(),
+                        firebaseUid = fbUser.uid,
+                      )
+                      registeredAccounts =
+                        com.example.ui.auth.LocalAccountStore.getAllRegisteredAccounts(context)
+                      linkMessage = "Linked & synced '$name' to Firebase Firestore (users/${fbUser.uid.take(8)}…)!"
+                    }
+                  },
+                  onAuthError = { msg ->
+                    isLinkingFirebase = false
+                    linkMessage = msg
+                  },
+                  scope = scope,
+                  onAuthCancelled = { isLinkingFirebase = false },
+                )
+              },
+              enabled = !isLinkingFirebase,
+              shape = RoundedCornerShape(10.dp),
+              modifier = Modifier.fillMaxWidth().testTag("btn_link_firebase_cloud"),
+            ) {
+              Text(
+                text =
+                  if (isLinkingFirebase) "Linking to Firebase Firestore..."
+                  else "Link & Sync Account to Firebase Cloud (Google)",
+                fontWeight = FontWeight.ExtraBold,
+                color = SkyCyan,
+              )
+            }
+          }
+
+          if (linkMessage != null) {
             Text(
-              text =
-                if (isGuestUser) "Playing as Guest (Local Washi Mode)"
-                else "Signed in: ${userEmail ?: "Origami Account"}",
-              style = MaterialTheme.typography.labelLarge,
-              fontWeight = FontWeight.ExtraBold,
-              color = if (isGuestUser) WashiCream else CeladonJade,
-            )
-            Text(
-              text =
-                "Career Score: ${puzzleState.totalCampaignScore} PTS · LexiCoins: ${puzzleState.lexiCoins} Coins",
-              style = MaterialTheme.typography.bodySmall,
-              color = WashiMuted,
+              text = linkMessage!!,
+              fontSize = 11.sp,
+              fontWeight = FontWeight.SemiBold,
+              color = CeladonJade,
             )
           }
-          Spacer(modifier = Modifier.width(8.dp))
-          Button(
-            onClick = onSignOut,
-            shape = RoundedCornerShape(10.dp),
-            colors =
-              ButtonDefaults.buttonColors(
-                containerColor = if (isGuestUser) CeladonJade else IndigoCard,
-                contentColor = if (isGuestUser) Color.White else WashiCream,
-              ),
-            modifier = Modifier.testTag("btn_account_action"),
+
+          // Registered Accounts Directory
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = IndigoCard,
+            modifier =
+              Modifier.fillMaxWidth()
+                .border(1.dp, IndigoElevated, RoundedCornerShape(12.dp))
+                .testTag("cloud_registered_users_card"),
           ) {
-            Text(
-              text = if (isGuestUser) "Create Account" else "Sign Out",
-              fontWeight = FontWeight.Bold,
-            )
+            Column(
+              modifier = Modifier.padding(12.dp),
+              verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+              Text(
+                text = "REGISTERED ACCOUNTS DIRECTORY (${registeredAccounts.size})",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = SkyCyan,
+              )
+              if (registeredAccounts.isEmpty()) {
+                Text(
+                  text = "No registered accounts yet. Tap 'Create Account' on the login screen to register.",
+                  fontSize = 11.sp,
+                  color = WashiMuted,
+                )
+              } else {
+                registeredAccounts.forEach { acct ->
+                  Row(
+                    modifier =
+                      Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(IndigoSurface)
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                  ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                      Text(
+                        text = acct.username,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = WashiCream,
+                      )
+                      Text(
+                        text =
+                          if (acct.syncedToFirebase) {
+                            "Firestore: users/${acct.firebaseUid.take(10)}… · ${acct.email}"
+                          } else {
+                            "Local Account · ${acct.email}"
+                          },
+                        fontSize = 10.sp,
+                        color = if (acct.syncedToFirebase) CeladonJade else WashiMuted,
+                      )
+                    }
+                    Text(
+                      text = if (acct.syncedToFirebase) "Firebase ✓" else "Registered",
+                      fontSize = 10.sp,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = if (acct.syncedToFirebase) CeladonJade else KyotoGold,
+                    )
+                  }
+                }
+              }
+            }
           }
         }
       }

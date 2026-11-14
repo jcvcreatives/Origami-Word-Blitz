@@ -49,6 +49,7 @@ sealed interface CloudUiState<out T> {
 class GameViewModel(
   private val repository: OrigamiCloudRepository? = null,
   private val currentUserId: String? = null,
+  private val preferredDisplayName: String? = null,
   private val soundEngine: SoundAndHapticsEngine = SoundAndHapticsEngine(),
 ) : ViewModel() {
 
@@ -68,6 +69,19 @@ class GameViewModel(
       )
     )
   val puzzleState: StateFlow<PuzzleState> = _puzzleState.asStateFlow()
+
+  private val _cloudProfileState = MutableStateFlow<UserProfileDocument?>(null)
+  val cloudProfileState: StateFlow<UserProfileDocument?> = _cloudProfileState.asStateFlow()
+
+  private val _cloudSyncStatus =
+    MutableStateFlow(
+      if (repository != null && !currentUserId.isNullOrBlank()) {
+        "Connecting to Firebase Firestore..."
+      } else {
+        "Local Account Mode (Tap 'Link Firebase' to sync to Cloud Firestore)"
+      }
+    )
+  val cloudSyncStatus: StateFlow<String> = _cloudSyncStatus.asStateFlow()
 
   val cloudMatchesState: StateFlow<CloudUiState<List<SavedMatchDocument>>> =
     if (repository != null && !currentUserId.isNullOrBlank()) {
@@ -108,7 +122,19 @@ class GameViewModel(
 
   private fun observeCloudProfile(repo: OrigamiCloudRepository, uid: String) {
     viewModelScope.launch {
-      repo.ensureOrCreateProfile()
+      val resolvedName =
+        preferredDisplayName?.trim()?.takeIf { it.isNotBlank() } ?: "Origami Strategist"
+      repo
+        .ensureOrCreateProfile(resolvedName)
+        .onSuccess { createdProfile ->
+          _cloudProfileState.value = createdProfile
+          _cloudSyncStatus.value =
+            "Synced to Firebase Firestore ✓ (users/$uid · ${createdProfile.displayName})"
+        }
+        .onFailure { err ->
+          _cloudSyncStatus.value =
+            "Firebase sync error: ${err.localizedMessage ?: "Permission or network issue"}"
+        }
       repo
         .observeUserProfile(uid)
         .catch { error ->
@@ -121,6 +147,9 @@ class GameViewModel(
         }
         .collect { profile: UserProfileDocument? ->
           if (profile != null) {
+            _cloudProfileState.value = profile
+            _cloudSyncStatus.value =
+              "Synced to Firebase Firestore ✓ (users/$uid · ${profile.displayName})"
             val unlocked = profile.unlockedSkins.toSet() + "washi_classic"
             val equipped =
               GameCatalog.COSMETIC_SKINS.find { it.id == profile.equippedTileSkin }
@@ -202,58 +231,18 @@ class GameViewModel(
   }
 
   fun onRackTileTapped(tile: Tile, haptics: HapticFeedback? = null) {
-    val current = _puzzleState.value
-    val matchingSlot =
-      current.focusedCellCoord?.takeIf { c ->
-        val cell = current.cellAt(c.x, c.y)
-        cell != null &&
-          cell.isBlankTarget &&
-          cell.placedTile == null &&
-          !cell.isLockedCompleted &&
-          cell.expectedLetter?.equals(tile.char, ignoreCase = true) == true
-      }
-        ?: current.targetWords
-          .find { it.id == current.focusedWordId }
-          ?.coordinates()
-          ?.firstOrNull { c ->
-            val cell = current.cellAt(c.x, c.y)
-            cell != null &&
-              cell.isBlankTarget &&
-              cell.placedTile == null &&
-              !cell.isLockedCompleted &&
-              cell.expectedLetter?.equals(tile.char, ignoreCase = true) == true
-          }
-        ?: current.cells
-          .flatten()
-          .firstOrNull { cell ->
-            cell.isBlankTarget &&
-              cell.placedTile == null &&
-              !cell.isLockedCompleted &&
-              cell.expectedLetter?.equals(tile.char, ignoreCase = true) == true
-          }
-          ?.coordinate
-
-    // Tapping an already-selected tile auto-places it straight into its matching slot!
-    if (current.rackState.selectedTileId == tile.id && matchingSlot != null) {
-      onTileDropOnCoord(tile.id, matchingSlot, haptics)
-      return
-    }
-
     soundEngine.onTilePickup(haptics)
     _puzzleState.update { s ->
       val nextSelected = if (s.rackState.selectedTileId == tile.id) null else tile.id
       s.copy(
         rackState = s.rackState.copy(selectedTileId = nextSelected),
-        focusedCellCoord = matchingSlot ?: s.focusedCellCoord,
-        highlightedHintCoord = if (nextSelected != null) matchingSlot else null,
+        highlightedHintCoord = null,
         lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
         statusMessage =
-          if (nextSelected != null && matchingSlot != null) {
-            "Selected '${tile.char}' — tap again or tap the glowing slot at (${matchingSlot.x + 1}, ${matchingSlot.y + 1}) to snap!"
-          } else if (nextSelected != null) {
-            "Selected '${tile.char}' (${tile.baseScore} pts) — tap an open blank slot on the grid!"
+          if (nextSelected != null) {
+            "Selected '${tile.char}' (${tile.baseScore} pts) — tap an open blank slot on the grid to place it!"
           } else {
-            "Tap any blank slot or letter tile to fold intersecting words."
+            "Select a letter tile or drag it onto an intersecting blank slot."
           },
         isStatusError = false,
       )
@@ -465,16 +454,24 @@ class GameViewModel(
       return
     }
 
-    // Smart Tap-to-Fill: If a tile is explicitly selected, use it; otherwise automatically pull
-    // the matching letter tile from the rack so tapping any blank cell immediately snaps!
-    val selectedTileId =
-      state.rackState.selectedTileId
-        ?: state.rackState.tiles
-          .firstOrNull { it.char.equals(cell.expectedLetter ?: ' ', ignoreCase = true) }
-          ?.id
-        ?: state.rackState.tiles.firstOrNull()?.id
-        ?: return
-    onTileDropOnCoord(selectedTileId, tappedCoord, haptics)
+    // If a rack tile is currently selected, drop it onto this blank slot.
+    // Otherwise, focus this cell and cycle/focus the intersecting word clue!
+    val selectedTileId = state.rackState.selectedTileId
+    if (selectedTileId != null) {
+      onTileDropOnCoord(selectedTileId, tappedCoord, haptics)
+    } else {
+      val wordsHere = state.targetWords.filter { it.containsCoordinate(x, y) }
+      if (wordsHere.isNotEmpty()) {
+        val nextWord =
+          if (wordsHere.size >= 2 && wordsHere.first().id == state.focusedWordId) {
+            wordsHere[1]
+          } else {
+            wordsHere.first()
+          }
+        selectClueWord(nextWord.id, haptics)
+        _puzzleState.update { it.copy(focusedCellCoord = tappedCoord) }
+      }
+    }
   }
 
   /**
@@ -659,9 +656,9 @@ class GameViewModel(
   }
 
   /**
-   * Smart Intersection Hint ("Instant Fold" Boost):
-   * Prioritizes open intersection blank slots (`isIntersection && isOpenBlank`) first
-   * and automatically snaps the matching rack tile straight into the board!
+   * Smart Intersection Hint:
+   * Highlights the highest-priority open intersection blank slot and selects the matching
+   * letter tile in the rack so the player can snap it in.
    */
   fun triggerSmartHint(haptics: HapticFeedback? = null) {
     val state = _puzzleState.value
@@ -676,22 +673,18 @@ class GameViewModel(
     val matchingTile =
       state.rackState.tiles.firstOrNull { it.char.equals(expectedChar, ignoreCase = true) }
 
+    soundEngine.onTileSnapToGrid(haptics, 1.25f)
     _puzzleState.update { s ->
-      s.copy(hintsRemaining = (s.hintsRemaining - 1).coerceAtLeast(0))
-    }
-
-    if (matchingTile != null) {
-      onTileDropOnCoord(matchingTile.id, targetBlank.coordinate, haptics)
-    } else {
-      soundEngine.onTileSnapToGrid(haptics, 1.25f)
-      _puzzleState.update { s ->
-        s.copy(
-          highlightedHintCoord = targetBlank.coordinate,
-          lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id,
-          statusMessage = "Hint: Place '$expectedChar' at (${targetBlank.x + 1}, ${targetBlank.y + 1})!",
-          isStatusError = false,
-        )
-      }
+      s.copy(
+        hintsRemaining = (s.hintsRemaining - 1).coerceAtLeast(0),
+        focusedCellCoord = targetBlank.coordinate,
+        highlightedHintCoord = targetBlank.coordinate,
+        rackState = s.rackState.copy(selectedTileId = matchingTile?.id ?: s.rackState.selectedTileId),
+        lastSoundTriggered = AudioPlayer.SoundEffect.SNAP.id,
+        statusMessage =
+          "Smart Hint: Place '$expectedChar' at intersection (${targetBlank.x + 1}, ${targetBlank.y + 1})!",
+        isStatusError = false,
+      )
     }
   }
 

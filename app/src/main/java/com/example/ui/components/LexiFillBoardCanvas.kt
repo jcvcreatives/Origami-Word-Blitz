@@ -753,16 +753,6 @@ fun LexiFillBoardCanvas(
                   textY,
                   letterPaint,
                 )
-              } else if (puzzleState.focusedCellCoord == coord && cell.expectedLetter != null) {
-                letterPaint.color = SkyCyan.copy(alpha = 0.34f).toArgb()
-                letterPaint.textSize = innerSize * 0.48f
-                val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
-                drawContext.canvas.nativeCanvas.drawText(
-                  cell.expectedLetter.toString(),
-                  cellCenter.x,
-                  textY,
-                  letterPaint,
-                )
               } else if (cell.multiplier != SquareMultiplier.NONE) {
                 subPaint.color = WashiCream.copy(alpha = 0.78f).toArgb()
                 subPaint.textSize = innerSize * 0.27f

@@ -118,23 +118,108 @@ import kotlinx.coroutines.withContext
 data class LocalOrigamiAccount(
   val username: String,
   val email: String,
+  val firebaseUid: String = "",
+  val syncedToFirebase: Boolean = false,
+  val registeredAtMs: Long = 0L,
 )
 
 object LocalAccountStore {
   private const val PREFS_NAME = "origami_accounts_prefs"
   private const val KEY_ACTIVE_USERNAME = "active_username"
   private const val KEY_ACTIVE_EMAIL = "active_email"
+  private const val KEY_REGISTERED_KEYS = "registered_user_keys"
 
   private fun sha256(input: String): String {
     val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
     return bytes.joinToString("") { "%02x".format(it) }
   }
 
+  private fun addRegisteredUserKey(prefs: android.content.SharedPreferences, userKey: String) {
+    val existing =
+      prefs
+        .getString(KEY_REGISTERED_KEYS, "")
+        .orEmpty()
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .toMutableList()
+    existing.remove(userKey)
+    existing.add(0, userKey)
+    prefs.edit().putString(KEY_REGISTERED_KEYS, existing.take(30).joinToString(",")).apply()
+  }
+
+  fun getAllRegisteredAccounts(context: Context): List<LocalOrigamiAccount> {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val keys =
+      prefs
+        .getString(KEY_REGISTERED_KEYS, "")
+        .orEmpty()
+        .split(",")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+    val activeUser = prefs.getString(KEY_ACTIVE_USERNAME, null)?.lowercase()
+    val allKeys =
+      if (activeUser != null && activeUser !in keys) listOf(activeUser) + keys else keys
+    return allKeys.mapNotNull { key ->
+      val username = prefs.getString("acct_user_$key", null)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+      val email = prefs.getString("acct_email_$key", "$key@origami.local") ?: "$key@origami.local"
+      val uid = prefs.getString("acct_uid_$key", "") ?: ""
+      val regTime = prefs.getLong("acct_time_$key", 0L)
+      LocalOrigamiAccount(
+        username = username,
+        email = email,
+        firebaseUid = uid,
+        syncedToFirebase = uid.isNotBlank(),
+        registeredAtMs = regTime,
+      )
+    }
+  }
+
+  fun recordFirebaseRegistration(
+    context: Context,
+    username: String,
+    email: String,
+    firebaseUid: String,
+  ): LocalOrigamiAccount {
+    val cleanUser = username.trim().ifBlank { "Origami Strategist" }
+    val userKey = cleanUser.lowercase()
+    val cleanEmail = email.trim().lowercase().ifBlank { "$userKey@origami.local" }
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val now = System.currentTimeMillis()
+    val existingTime = prefs.getLong("acct_time_$userKey", 0L).let { if (it > 0L) it else now }
+    prefs
+      .edit()
+      .putString("acct_user_$userKey", cleanUser)
+      .putString("acct_email_$userKey", cleanEmail)
+      .putString("acct_uid_$userKey", firebaseUid)
+      .putLong("acct_time_$userKey", existingTime)
+      .putString(KEY_ACTIVE_USERNAME, cleanUser)
+      .putString(KEY_ACTIVE_EMAIL, cleanEmail)
+      .apply()
+    addRegisteredUserKey(prefs, userKey)
+    return LocalOrigamiAccount(
+      username = cleanUser,
+      email = cleanEmail,
+      firebaseUid = firebaseUid,
+      syncedToFirebase = firebaseUid.isNotBlank(),
+      registeredAtMs = existingTime,
+    )
+  }
+
   fun getActiveAccount(context: Context): LocalOrigamiAccount? {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val username = prefs.getString(KEY_ACTIVE_USERNAME, null)?.takeIf { it.isNotBlank() } ?: return null
+    val userKey = username.lowercase()
     val email = prefs.getString(KEY_ACTIVE_EMAIL, "") ?: ""
-    return LocalOrigamiAccount(username = username, email = email)
+    val uid = prefs.getString("acct_uid_$userKey", "") ?: ""
+    val regTime = prefs.getLong("acct_time_$userKey", 0L)
+    return LocalOrigamiAccount(
+      username = username,
+      email = email,
+      firebaseUid = uid,
+      syncedToFirebase = uid.isNotBlank(),
+      registeredAtMs = regTime,
+    )
   }
 
   fun registerAccount(
@@ -155,18 +240,36 @@ object LocalAccountStore {
     val passHash = sha256(passwordPlain)
     val userKey = cleanUser.lowercase()
     val cleanEmail = email.trim().lowercase().ifBlank { "$userKey@origami.local" }
+    val now = System.currentTimeMillis()
+    val currentUid =
+      try {
+        Firebase.auth.currentUser?.uid.orEmpty()
+      } catch (e: Exception) {
+        ""
+      }
 
     prefs
       .edit()
       .putString("acct_user_$userKey", cleanUser)
       .putString("acct_email_$userKey", cleanEmail)
       .putString("acct_pass_$userKey", passHash)
+      .putString("acct_uid_$userKey", currentUid)
+      .putLong("acct_time_$userKey", now)
       .putString("acct_user_by_email_$cleanEmail", userKey)
       .putString(KEY_ACTIVE_USERNAME, cleanUser)
       .putString(KEY_ACTIVE_EMAIL, cleanEmail)
       .apply()
+    addRegisteredUserKey(prefs, userKey)
 
-    return Result.success(LocalOrigamiAccount(username = cleanUser, email = cleanEmail))
+    return Result.success(
+      LocalOrigamiAccount(
+        username = cleanUser,
+        email = cleanEmail,
+        firebaseUid = currentUid,
+        syncedToFirebase = currentUid.isNotBlank(),
+        registeredAtMs = now,
+      )
+    )
   }
 
   fun loginAccount(
@@ -204,6 +307,14 @@ object LocalAccountStore {
     val resolvedEmail =
       prefs.getString("acct_email_$lookupKey", null)
         ?: if (cleanId.contains("@")) cleanId.lowercase() else "$lookupKey@origami.local"
+    val now = System.currentTimeMillis()
+    val existingTime = prefs.getLong("acct_time_$lookupKey", 0L).let { if (it > 0L) it else now }
+    val currentUid =
+      try {
+        Firebase.auth.currentUser?.uid ?: prefs.getString("acct_uid_$lookupKey", "").orEmpty()
+      } catch (e: Exception) {
+        prefs.getString("acct_uid_$lookupKey", "").orEmpty()
+      }
 
     // Persist if first-time login so subsequent logins remember credentials
     if (storedPassHash == null) {
@@ -212,17 +323,28 @@ object LocalAccountStore {
         .putString("acct_user_$lookupKey", resolvedUsername)
         .putString("acct_email_$lookupKey", resolvedEmail)
         .putString("acct_pass_$lookupKey", inputHash)
+        .putLong("acct_time_$lookupKey", existingTime)
         .putString("acct_user_by_email_$resolvedEmail", lookupKey)
         .apply()
     }
 
     prefs
       .edit()
+      .putString("acct_uid_$lookupKey", currentUid)
       .putString(KEY_ACTIVE_USERNAME, resolvedUsername)
       .putString(KEY_ACTIVE_EMAIL, resolvedEmail)
       .apply()
+    addRegisteredUserKey(prefs, lookupKey)
 
-    return Result.success(LocalOrigamiAccount(username = resolvedUsername, email = resolvedEmail))
+    return Result.success(
+      LocalOrigamiAccount(
+        username = resolvedUsername,
+        email = resolvedEmail,
+        firebaseUid = currentUid,
+        syncedToFirebase = currentUid.isNotBlank(),
+        registeredAtMs = existingTime,
+      )
+    )
   }
 
   fun clearActiveAccount(context: Context) {
@@ -560,7 +682,7 @@ fun OrigamiAuthScreen(
 
           Spacer(modifier = Modifier.height(12.dp))
 
-          // 1. MAIN CTA: Create Account / Log In
+          // 1. MAIN CTA: Create Account / Log In (Registers account & links to Firebase Cloud)
           Button(
             onClick = {
               errorMessage = null
@@ -579,7 +701,62 @@ fun OrigamiAuthScreen(
                   )
                 }
               result
-                .onSuccess { account -> onLocalAccountAuthenticated(account) }
+                .onSuccess { account ->
+                  val existingFirebaseUser =
+                    try {
+                      Firebase.auth.currentUser
+                    } catch (e: Exception) {
+                      null
+                    }
+                  if (existingFirebaseUser != null) {
+                    val synced =
+                      LocalAccountStore.recordFirebaseRegistration(
+                        context = context,
+                        username = account.username,
+                        email = existingFirebaseUser.email ?: account.email,
+                        firebaseUid = existingFirebaseUser.uid,
+                      )
+                    onLocalAccountAuthenticated(synced)
+                    onAuthSuccess()
+                  } else {
+                    isLoading = true
+                    onGoogleSignInClicked(
+                      context = context,
+                      credentialManager = credentialManager,
+                      onAuthSuccess = {
+                        isLoading = false
+                        val fbUser =
+                          try {
+                            Firebase.auth.currentUser
+                          } catch (e: Exception) {
+                            null
+                          }
+                        val synced =
+                          if (fbUser != null) {
+                            LocalAccountStore.recordFirebaseRegistration(
+                              context = context,
+                              username = account.username,
+                              email = fbUser.email ?: account.email,
+                              firebaseUid = fbUser.uid,
+                            )
+                          } else {
+                            account
+                          }
+                        onLocalAccountAuthenticated(synced)
+                        onAuthSuccess()
+                      },
+                      onAuthError = { _ ->
+                        isLoading = false
+                        onLocalAccountAuthenticated(account)
+                      },
+                      scope = scope,
+                      onAuthCancelled = {
+                        isLoading = false
+                        onLocalAccountAuthenticated(account)
+                      },
+                    )
+                  }
+                }
                 .onFailure { err -> errorMessage = err.message ?: "Authentication failed" }
             },
             enabled = !isLoading,
@@ -633,6 +810,28 @@ fun OrigamiAuthScreen(
                 credentialManager = credentialManager,
                 onAuthSuccess = {
                   isLoading = false
+                  val fbUser =
+                    try {
+                      Firebase.auth.currentUser
+                    } catch (e: Exception) {
+                      null
+                    }
+                  if (fbUser != null) {
+                    val chosenName =
+                      usernameInput.trim().ifBlank {
+                        fbUser.displayName?.takeIf { it.isNotBlank() }
+                          ?: fbUser.email?.substringBefore("@")
+                          ?: "Origami Strategist"
+                      }
+                    val synced =
+                      LocalAccountStore.recordFirebaseRegistration(
+                        context = context,
+                        username = chosenName,
+                        email = fbUser.email ?: "$chosenName@gmail.com",
+                        firebaseUid = fbUser.uid,
+                      )
+                    onLocalAccountAuthenticated(synced)
+                  }
                   onAuthSuccess()
                 },
                 onAuthError = { msg ->
@@ -721,6 +920,75 @@ fun OrigamiAuthScreen(
               fontWeight = FontWeight.ExtraBold,
               color = WashiCream,
             )
+          }
+
+          val registeredAccounts =
+            remember(usernameInput, isCreateAccountMode, isLoading) {
+              LocalAccountStore.getAllRegisteredAccounts(context)
+            }
+          if (registeredAccounts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Surface(
+              shape = RoundedCornerShape(14.dp),
+              color = IndigoCard,
+              modifier =
+                Modifier.fillMaxWidth()
+                  .padding(horizontal = 20.dp)
+                  .border(1.dp, IndigoElevated, RoundedCornerShape(14.dp))
+                  .testTag("registered_accounts_list"),
+            ) {
+              Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+              ) {
+                Text(
+                  text = "REGISTERED ACCOUNTS (${registeredAccounts.size})",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = SkyCyan,
+                )
+                registeredAccounts.take(5).forEach { acct ->
+                  Row(
+                    modifier =
+                      Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(IndigoSurface)
+                        .clickable {
+                          usernameInput = acct.username
+                          isCreateAccountMode = false
+                        }
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                  ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                      Text(
+                        text = acct.username,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = WashiCream,
+                      )
+                      Text(
+                        text =
+                          if (acct.syncedToFirebase) {
+                            "Firebase Cloud Synced ✓ (UID: ${acct.firebaseUid.take(8)}…)"
+                          } else {
+                            acct.email
+                          },
+                        fontSize = 10.sp,
+                        color = if (acct.syncedToFirebase) CeladonJade else WashiMuted,
+                      )
+                    }
+                    Text(
+                      text = if (acct.syncedToFirebase) "Cloud ✓" else "Tap to Fill",
+                      fontSize = 10.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = if (acct.syncedToFirebase) CeladonJade else KyotoGold,
+                    )
+                  }
+                }
+              }
+            }
           }
         }
       }

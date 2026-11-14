@@ -77,6 +77,7 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
   ): Result<UserProfileDocument> = runCatching {
     val uid = requireUserId()
     val docRef = db.collection("users").document(uid)
+    val safeName = displayName.trim().ifBlank { "Origami Strategist" }.take(50)
     try {
       val existing = docRef.get().await()
       if (existing.exists()) {
@@ -85,9 +86,25 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
             UserProfileDocument::class.java,
             DocumentSnapshot.ServerTimestampBehavior.ESTIMATE,
           )
-        if (loaded != null) return@runCatching loaded
+        if (loaded != null) {
+          if (
+            safeName != "Origami Strategist" &&
+              safeName != "Origami Apprentice" &&
+              loaded.displayName != safeName
+          ) {
+            docRef
+              .update(
+                mapOf(
+                  "displayName" to safeName,
+                  "updatedAt" to FieldValue.serverTimestamp(),
+                )
+              )
+              .await()
+            return@runCatching loaded.copy(displayName = safeName)
+          }
+          return@runCatching loaded
+        }
       }
-      val safeName = displayName.trim().ifBlank { "Origami Strategist" }.take(50)
       val payload =
         mapOf(
           "userId" to uid,

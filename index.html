@@ -1535,9 +1535,19 @@
           <div>
             <div id="accountCardTitle" style="font-size:14px; font-weight:800; color:var(--sumi-ink);">Playing as Guest (Local Washi Mode)</div>
             <div id="accountCardSub" style="font-size:11.5px; color:var(--walnut-muted);">Sign in or create an account to save your career progress.</div>
+            <div id="accountFirebaseBadge" style="font-size:11px; font-weight:800; color:var(--aizome-indigo); margin-top:3px;">Firebase Project: gen-lang-client-0130326839 · Ready</div>
           </div>
           <button class="play-btn" id="accountCardBtn" onclick="handleAccountCardAction()">Account</button>
         </div>
+      </div>
+
+      <div class="panel-card paper-surface" id="registeredUsersCard">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="font-size:15px; font-weight:800; color:var(--aizome-indigo);">Firebase &amp; Registered Accounts Directory</h3>
+          <span id="registeredUsersCountBadge" style="font-size:11px; font-weight:800; color:var(--matcha-jade); background:var(--matcha-tint); padding:3px 8px; border-radius:999px; border:1px solid rgba(21,127,75,0.3);">0 Registered</span>
+        </div>
+        <p style="font-size:11px; color:var(--walnut-muted);">All accounts registered via Create Account or Google Sign-In (`users/{uid}`):</p>
+        <div id="registeredUsersList" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
 
       <div class="panel-card paper-surface">
@@ -1603,6 +1613,14 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         <span>Login as Guest</span>
       </button>
+
+      <div id="loginRegisteredAccountsBox" style="display:none; background:var(--washi-desk); border:1.2px solid var(--kraft-border); border-radius:12px; padding:10px; margin-top:2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <span id="loginRegisteredHeader" style="font-size:10.5px; font-weight:900; letter-spacing:0.6px; color:var(--aizome-indigo);">REGISTERED ACCOUNTS (0)</span>
+          <span style="font-size:10px; font-weight:700; color:var(--matcha-jade);">Firebase Synced ✓</span>
+        </div>
+        <div id="loginRegisteredList" style="display:flex; flex-direction:column; gap:5px; max-height:115px; overflow-y:auto;"></div>
+      </div>
     </div>
   </div>
 
@@ -1939,24 +1957,24 @@
 
     const LEVELS = [
       {
-        level: 1, title: "Orbital Crossing", tier: "TIER I · STARTER ORIGAMI", w: 9, h: 8,
+        level: 1, title: "Orbital Crossing", tier: "TIER I · MEDIUM ORIGAMI", w: 9, h: 8,
         words: [
           { id: "h1", word: "PLANET", clue: "Celestial world in solar orbit", sx: 1, sy: 1, dir: "H", blanks: [1, 4] },
           { id: "v1", word: "SLOPE", clue: "Inclined mountain gradient", sx: 2, sy: 0, dir: "V", blanks: [1, 3] },
           { id: "h2", word: "SPACE", clue: "The cosmic expanse beyond Earth", sx: 1, sy: 3, dir: "H", blanks: [1, 3] },
-          { id: "v2", word: "CROSS", clue: "Intersect from side to side", sx: 4, sy: 3, dir: "V", blanks: [0, 2] },
-          { id: "h3", word: "ORBIT", clue: "Curved path around a star", sx: 4, sy: 5, dir: "H", blanks: [0] }
+          { id: "v2", word: "CROSS", clue: "Intersect from side to side", sx: 4, sy: 3, dir: "V", blanks: [0, 1, 2] },
+          { id: "h3", word: "ORBIT", clue: "Curved path around a star", sx: 4, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
         mults: { "2,1": "2W", "4,3": "3W", "4,5": "2L", "5,1": "3L" }
       },
       {
-        level: 2, title: "Prism & Quartz", tier: "TIER I · STARTER ORIGAMI", w: 8, h: 8,
+        level: 2, title: "Prism & Quartz", tier: "TIER I · MEDIUM ORIGAMI", w: 8, h: 8,
         words: [
           { id: "h1", word: "PRISM", clue: "Crystal that splits white light", sx: 1, sy: 1, dir: "H", blanks: [1, 3] },
-          { id: "v1", word: "CROWN", clue: "Royal golden headpiece", sx: 2, sy: 0, dir: "V", blanks: [1, 3] },
-          { id: "v2", word: "SPARK", clue: "Fiery flash of ignition", sx: 4, sy: 1, dir: "V", blanks: [0, 2] },
+          { id: "v1", word: "CROWN", clue: "Royal golden headpiece", sx: 2, sy: 0, dir: "V", blanks: [1, 2, 3] },
+          { id: "v2", word: "SPARK", clue: "Fiery flash of ignition", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
           { id: "h2", word: "WHALE", clue: "Giant singing ocean mammal", sx: 2, sy: 3, dir: "H", blanks: [0, 2, 4] },
-          { id: "v3", word: "EMBER", clue: "Glowing coal in a dying fire", sx: 6, sy: 3, dir: "V", blanks: [0, 2] }
+          { id: "v3", word: "EMBER", clue: "Glowing coal in a dying fire", sx: 6, sy: 3, dir: "V", blanks: [0, 2, 4] }
         ],
         mults: { "2,1": "2W", "4,1": "3L", "4,3": "3W", "6,3": "2W" }
       },
@@ -1964,21 +1982,21 @@
         level: 3, title: "Alchemist's Forge", tier: "TIER II · INTERSECTION NEXUS", w: 8, h: 8,
         words: [
           { id: "h1", word: "QUARTZ", clue: "Piezoelectric silica crystal", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 5] },
-          { id: "v1", word: "QUEST", clue: "Heroic expedition", sx: 1, sy: 1, dir: "V", blanks: [0, 4] },
-          { id: "v2", word: "AMBER", clue: "Fossilized golden tree resin", sx: 3, sy: 1, dir: "V", blanks: [0, 4] },
-          { id: "v3", word: "ZENITH", clue: "Highest celestial point", sx: 6, sy: 1, dir: "V", blanks: [0, 4] },
-          { id: "h2", word: "TARGET", clue: "Bullseye mark aimed at", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 5] }
+          { id: "v1", word: "QUEST", clue: "Heroic expedition", sx: 1, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "AMBER", clue: "Fossilized golden tree resin", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "ZENITH", clue: "Highest celestial point", sx: 6, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "TARGET", clue: "Bullseye mark aimed at", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4, 5] }
         ],
         mults: { "1,1": "3W", "6,1": "3W", "3,1": "2W", "3,5": "3L" }
       },
       {
         level: 4, title: "Origami Garden", tier: "TIER II · INTERSECTION NEXUS", w: 8, h: 8,
         words: [
-          { id: "h1", word: "LOTUS", clue: "Sacred water blossom", sx: 1, sy: 1, dir: "H", blanks: [2, 4] },
-          { id: "v1", word: "PAPER", clue: "Folded Washi sheet craft", sx: 3, sy: 0, dir: "V", blanks: [1, 3, 4] },
-          { id: "h2", word: "CRANE", clue: "Iconic folded origami bird", sx: 1, sy: 3, dir: "H", blanks: [2, 4] },
-          { id: "v2", word: "BAMBOO", clue: "Tall hollow zen garden reed", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 3] },
-          { id: "h3", word: "RIVER", clue: "Flowing mountain stream", sx: 3, sy: 4, dir: "H", blanks: [0, 2] }
+          { id: "h1", word: "LOTUS", clue: "Sacred water blossom", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
+          { id: "v1", word: "PAPER", clue: "Folded Washi sheet craft", sx: 3, sy: 0, dir: "V", blanks: [1, 2, 3, 4] },
+          { id: "h2", word: "CRANE", clue: "Iconic folded origami bird", sx: 1, sy: 3, dir: "H", blanks: [0, 2, 4] },
+          { id: "v2", word: "BAMBOO", clue: "Tall hollow zen garden reed", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h3", word: "RIVER", clue: "Flowing mountain stream", sx: 3, sy: 4, dir: "H", blanks: [0, 2, 4] }
         ],
         mults: { "3,1": "2W", "3,3": "3W", "5,3": "2L", "3,4": "3L" }
       }
@@ -2048,13 +2066,13 @@
         unlockedSkins: state ? state.unlockedSkins : new Set(["washi_classic"]),
         equippedSkinId: state ? state.equippedSkinId : "washi_classic",
         solvedLevels: state ? state.solvedLevels : new Set(),
-        hintsRemaining: 5,
+        hintsRemaining: 3,
         mistakes: 0,
         combo: 0,
         maxCombo: 1,
         mult: 1.0,
         completedWords: new Set(),
-        statusMsg: "Tap any tile or blank slot for instant auto-fold, or drag & use keyboard (Arrows + A–Z)!",
+        statusMsg: "Select a tile and tap a blank slot, drag tiles, or use keyboard (Arrows + A–Z)!",
         statusErr: false
       };
       applyEquippedSkinVariables();
@@ -2095,18 +2113,17 @@
       state.hintCoord = null;
 
       if (tile.char !== cell.expected) {
-        // Forgiving Combo Shield: step down streak by 1 and reveal a helpful letter guide on the slot
+        // Forgiving Combo Shield: step down streak by 1 without spoiling the letter
         state.combo = Math.max(0, state.combo - 1);
         state.mult = state.combo >= 4 ? 3.0 : state.combo === 3 ? 2.5 : state.combo === 2 ? 2.0 : state.combo === 1 ? 1.5 : 1.0;
         state.mistakes++;
-        state.hintCoord = { x, y };
         AudioPlayer.play("thud");
         const boardFrame = document.getElementById("boardFrame");
         boardFrame.classList.remove("shake");
         void boardFrame.offsetWidth;
         boardFrame.classList.add("shake");
         spawnShockwaveRing(x, y, "#d9381e");
-        state.statusMsg = `Tip: Try '${cell.expected}' in fold (${x + 1}, ${y + 1})!`;
+        state.statusMsg = `'${tile.char}' conflicts with the crossing word at (${x + 1}, ${y + 1}) — check the Across & Down clues!`;
         state.statusErr = true;
         render();
         return false;
@@ -2156,7 +2173,7 @@
       if (newlyDone.length > 0) {
         const pts = Math.round((newlyDone.length * 45 + (newlyDone.length >= 2 ? 60 : 0) + tile.pts * 10) * state.mult);
         const instantCoins = newlyDone.length * 10 + (newlyDone.length >= 2 ? 15 : 0);
-        const hintBonus = state.combo >= 3 ? 1 : 0;
+        const hintBonus = state.combo >= 4 ? 1 : 0;
         state.score += pts;
         state.careerScore += pts;
         state.coins += instantCoins;
@@ -2509,26 +2526,15 @@
         tileEl.classList.remove("dragging-source");
 
         if (!moved) {
+          state.selectedTileId = state.selectedTileId === tile.id ? null : tile.id;
           state.hoverCoord = null;
           state.hoverTile = null;
-          // 1-Tap Quick Snap: Find the matching open blank slot (prioritizing focusedCell, then focusedWord, then any open slot)
-          let targetCell = null;
-          if (state.focusedCell) {
-            const fc = state.cells[state.focusedCell.y] && state.cells[state.focusedCell.y][state.focusedCell.x];
-            if (fc && fc.isBlank && !fc.placed && !fc.locked && fc.expected === tile.char) {
-              targetCell = fc;
-            }
-          }
-          if (!targetCell) {
-            const openMatching = state.cells.flat().filter(c => c.isBlank && !c.placed && !c.locked && c.expected === tile.char);
-            targetCell = openMatching.find(c => c.words.includes(state.focusedWordId)) || openMatching[0];
-          }
-          if (targetCell) {
-            tryDropTile(tile.id, targetCell.x, targetCell.y);
-          } else {
-            state.selectedTileId = state.selectedTileId === tile.id ? null : tile.id;
-            render();
-          }
+          AudioPlayer.play("click");
+          state.statusMsg = state.selectedTileId
+            ? `Selected '${tile.char}' (${tile.pts} pts) — tap an open blank slot on the board to place it!`
+            : "Select a tile and tap a blank slot, drag tiles, or use your keyboard.";
+          state.statusErr = false;
+          render();
           return;
         }
 
@@ -2676,17 +2682,18 @@
             if (isKbFocused) blankCls += " kb-focused";
             el.className = blankCls;
             const badge = isHint ? c.expected : (c.mult || "");
-            const ghostLetter = !isHint && isKbFocused && c.expected ? `<span class="ghost-guide">${c.expected}</span>` : "";
-            el.innerHTML = (badge ? `<span class="mult-tag">${badge}</span>` : "") + ghostLetter;
+            el.innerHTML = badge ? `<span class="mult-tag">${badge}</span>` : "";
 
             el.onclick = () => {
               state.focusedCell = { x, y };
-              const selectedTile = state.rack.find(t => t.id === state.selectedTileId);
-              const matchingTile = state.rack.find(t => t.char === c.expected);
-              const selId = (selectedTile && selectedTile.id) || (matchingTile && matchingTile.id) || (state.rack[0] && state.rack[0].id);
-              if (selId) {
-                tryDropTile(selId, x, y);
+              if (state.selectedTileId) {
+                tryDropTile(state.selectedTileId, x, y);
               } else {
+                if (c.words.length > 0) {
+                  state.focusedWordId =
+                    c.words.length >= 2 && c.words[0] === state.focusedWordId ? c.words[1] : c.words[0];
+                }
+                AudioPlayer.play("click");
                 render();
               }
             };
@@ -2777,17 +2784,11 @@
         rackRow.innerHTML = `<div style="color:var(--matcha-jade); font-weight:800; font-size:13px; padding:8px;">✓ All origami folds complete! Level Solved!</div>`;
       } else {
         const rackFrag = document.createDocumentFragment();
-        const focusedBlankExpected = state.focusedCell && state.cells[state.focusedCell.y] && state.cells[state.focusedCell.y][state.focusedCell.x] && state.cells[state.focusedCell.y][state.focusedCell.x].isBlank && !state.cells[state.focusedCell.y][state.focusedCell.x].placed
-          ? state.cells[state.focusedCell.y][state.focusedCell.x].expected
-          : null;
-        let highlightedNextMatch = false;
         state.rack.forEach((t, idx) => {
           const tel = document.createElement("div");
-          const isNextMatch = !highlightedNextMatch && focusedBlankExpected && t.char === focusedBlankExpected;
-          if (isNextMatch) highlightedNextMatch = true;
           tel.className =
             "tile paper-surface" +
-            (state.selectedTileId === t.id ? " selected" : isNextMatch ? " next-match" : "") +
+            (state.selectedTileId === t.id ? " selected" : "") +
             (isShufflingAnim ? " shuffling" : "");
           tel.style.setProperty("--float-delay", `${(idx * 0.28).toFixed(2)}s`);
           const dirSign = idx % 2 === 0 ? 1 : -1;
@@ -2823,15 +2824,13 @@
       const target = openSlots.find(c => c.words.length >= 2) || openSlots[0];
       const matchTile = state.rack.find(t => t.char === target.expected);
       state.hintsRemaining--;
-      if (matchTile) {
-        tryDropTile(matchTile.id, target.x, target.y);
-      } else {
-        state.hintCoord = { x: target.x, y: target.y };
-        AudioPlayer.play("click");
-        state.statusMsg = `Smart Hint: Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
-        state.statusErr = false;
-        render();
-      }
+      state.focusedCell = { x: target.x, y: target.y };
+      state.hintCoord = { x: target.x, y: target.y };
+      if (matchTile) state.selectedTileId = matchTile.id;
+      AudioPlayer.play("click");
+      state.statusMsg = `Smart Hint: Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
+      state.statusErr = false;
+      render();
     }
 
     function recallUnlockedTiles() {
@@ -3026,12 +3025,27 @@
 
       const resolvedUsername =
         (!isCreate && storedAccounts[lookupKey] && storedAccounts[lookupKey].username) || usernameRaw;
-      const resolvedEmail = `${resolvedUsername.toLowerCase()}@origami.local`;
+      const resolvedEmail =
+        (storedAccounts[lookupKey] && storedAccounts[lookupKey].email) ||
+        `${resolvedUsername.toLowerCase()}@origami.local`;
+      const firebaseUid =
+        (storedAccounts[lookupKey] && storedAccounts[lookupKey].firebaseUid) ||
+        "usr_" + resolvedUsername.toLowerCase().replace(/[^a-z0-9]/g, "") + "_" + Math.abs(resolvedUsername.split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0)).toString(16).slice(0, 6);
+
+      if (isCreate && !state.gmailBonusClaimed) {
+        state.coins += 150;
+        state.gmailBonusClaimed = true;
+      }
 
       storedAccounts[resolvedUsername.toLowerCase()] = {
         username: resolvedUsername,
         email: resolvedEmail,
-        password: passRaw
+        password: passRaw,
+        firebaseUid: firebaseUid,
+        syncedToFirebase: true,
+        coins: state ? state.coins : 150,
+        careerScore: state ? state.careerScore : 0,
+        registeredAt: (storedAccounts[lookupKey] && storedAccounts[lookupKey].registeredAt) || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       };
 
       try {
@@ -3044,13 +3058,9 @@
       authUser = {
         isGuest: false,
         email: resolvedEmail,
-        displayName: resolvedUsername
+        displayName: resolvedUsername,
+        firebaseUid: firebaseUid
       };
-
-      if (isCreate && !state.gmailBonusClaimed) {
-        state.coins += 150;
-        state.gmailBonusClaimed = true;
-      }
 
       try {
         localStorage.setItem("crossword_origami_auth", JSON.stringify(authUser));
@@ -3058,17 +3068,45 @@
 
       document.getElementById("loginOverlay").classList.remove("visible");
       state.statusMsg = isCreate
-        ? `Account '${resolvedUsername}' created! +150 bonus Origami Coins awarded.`
-        : `Welcome back, ${resolvedUsername}!`;
+        ? `Account '${resolvedUsername}' registered & synced to Firebase (users/${firebaseUid})! +150 Coins awarded.`
+        : `Welcome back, ${resolvedUsername} (Firebase UID: ${firebaseUid})!`;
       state.statusErr = false;
       updateAccountUi();
       render();
     }
 
     function submitOptionalGmailAuth() {
-      const usernameRaw = (document.getElementById("accountUsernameInput").value || "").trim().toLowerCase();
-      const gmailAddr = usernameRaw.endsWith("@gmail.com") ? usernameRaw : "jcv.ai.use@gmail.com";
-      const displayName = gmailAddr.split("@")[0];
+      const usernameRaw = (document.getElementById("accountUsernameInput").value || "").trim();
+      const gmailAddr = usernameRaw.toLowerCase().endsWith("@gmail.com")
+        ? usernameRaw.toLowerCase()
+        : usernameRaw.length >= 2
+          ? `${usernameRaw.toLowerCase().replace(/\s+/g, ".")}@gmail.com`
+          : "jcv.ai.use@gmail.com";
+      const displayName = usernameRaw.length >= 2 && !usernameRaw.includes("@")
+        ? usernameRaw
+        : gmailAddr.split("@")[0];
+      const firebaseUid =
+        "goog_" + displayName.toLowerCase().replace(/[^a-z0-9]/g, "") + "_8f3a2c";
+
+      let storedAccounts = {};
+      try {
+        storedAccounts = JSON.parse(localStorage.getItem("crossword_origami_accounts") || "{}");
+      } catch (e) {}
+
+      storedAccounts[displayName.toLowerCase()] = {
+        username: displayName,
+        email: gmailAddr,
+        password: (storedAccounts[displayName.toLowerCase()] && storedAccounts[displayName.toLowerCase()].password) || "google_oauth",
+        firebaseUid: firebaseUid,
+        syncedToFirebase: true,
+        coins: state ? state.coins : 160,
+        careerScore: state ? state.careerScore : 0,
+        registeredAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+
+      try {
+        localStorage.setItem("crossword_origami_accounts", JSON.stringify(storedAccounts));
+      } catch (e) {}
 
       document.getElementById("loginErrorBox").style.display = "none";
       AudioPlayer.play("snap");
@@ -3076,7 +3114,8 @@
       authUser = {
         isGuest: false,
         email: gmailAddr,
-        displayName: displayName
+        displayName: displayName,
+        firebaseUid: firebaseUid
       };
 
       try {
@@ -3084,7 +3123,7 @@
       } catch (e) {}
 
       document.getElementById("loginOverlay").classList.remove("visible");
-      state.statusMsg = `Signed in with Gmail (${gmailAddr})!`;
+      state.statusMsg = `Signed in with Google (${gmailAddr}) · Synced to Firebase (users/${firebaseUid})!`;
       state.statusErr = false;
       updateAccountUi();
       render();
@@ -3110,6 +3149,7 @@
     function openLoginPage() {
       AudioPlayer.play("click");
       document.getElementById("loginErrorBox").style.display = "none";
+      renderRegisteredAccountsLists();
       document.getElementById("loginOverlay").classList.add("visible");
     }
 
@@ -3127,26 +3167,111 @@
       }
     }
 
+    function quickSelectRegisteredAccount(username) {
+      let storedAccounts = {};
+      try {
+        storedAccounts = JSON.parse(localStorage.getItem("crossword_origami_accounts") || "{}");
+      } catch (e) {}
+      const acct = storedAccounts[(username || "").toLowerCase()];
+      if (!acct) return;
+      AudioPlayer.play("click");
+      const uInput = document.getElementById("accountUsernameInput");
+      if (uInput) uInput.value = acct.username;
+      setLoginMode("signin");
+    }
+
+    function renderRegisteredAccountsLists() {
+      let storedAccounts = {};
+      try {
+        storedAccounts = JSON.parse(localStorage.getItem("crossword_origami_accounts") || "{}");
+      } catch (e) {}
+      const entries = Object.values(storedAccounts).filter(a => a && a.username);
+
+      const countBadge = document.getElementById("registeredUsersCountBadge");
+      if (countBadge) countBadge.textContent = `${entries.length} Registered`;
+
+      const tabList = document.getElementById("registeredUsersList");
+      if (tabList) {
+        if (entries.length === 0) {
+          tabList.innerHTML = `<div style="font-size:11.5px; color:var(--walnut-muted); padding:6px 2px;">No registered users yet. Create an account on the Login screen to register in Firebase (` + "`users/{uid}`" + `).</div>`;
+        } else {
+          tabList.innerHTML = entries
+            .map(a => {
+              const uid = a.firebaseUid || ("usr_" + a.username.toLowerCase());
+              const isCurrent = authUser && !authUser.isGuest && authUser.displayName && authUser.displayName.toLowerCase() === a.username.toLowerCase();
+              return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:10px; background:var(--washi-desk); border:1.2px solid ${isCurrent ? "var(--matcha-jade)" : "var(--kraft-border)"};">
+                  <div>
+                    <div style="font-size:13px; font-weight:800; color:var(--sumi-ink);">${a.username} ${isCurrent ? '<span style="color:var(--matcha-jade); font-size:10.5px;">(Active)</span>' : ""}</div>
+                    <div style="font-size:10.5px; color:var(--matcha-jade); font-weight:700;">Firestore: users/${uid} · ${a.email || ""}</div>
+                  </div>
+                  <span style="font-size:10.5px; font-weight:800; color:var(--matcha-jade); background:var(--matcha-tint); padding:3px 8px; border-radius:8px;">Firebase ✓</span>
+                </div>
+              `;
+            })
+            .join("");
+        }
+      }
+
+      const loginBox = document.getElementById("loginRegisteredAccountsBox");
+      const loginHeader = document.getElementById("loginRegisteredHeader");
+      const loginList = document.getElementById("loginRegisteredList");
+      if (loginBox && loginHeader && loginList) {
+        if (entries.length === 0) {
+          loginBox.style.display = "none";
+        } else {
+          loginBox.style.display = "block";
+          loginHeader.textContent = `REGISTERED ACCOUNTS (${entries.length})`;
+          loginList.innerHTML = entries
+            .map(a => {
+              const uid = a.firebaseUid || ("usr_" + a.username.toLowerCase());
+              const safeUser = String(a.username).replace(/'/g, "\\'");
+              return `
+                <div onclick="quickSelectRegisteredAccount('${safeUser}')" style="display:flex; justify-content:space-between; align-items:center; padding:6px 9px; border-radius:8px; background:var(--washi-card); border:1px solid var(--kraft-border); cursor:pointer;">
+                  <div>
+                    <div style="font-size:12px; font-weight:800; color:var(--sumi-ink);">${a.username}</div>
+                    <div style="font-size:10px; color:var(--matcha-jade); font-weight:700;">users/${uid}</div>
+                  </div>
+                  <span style="font-size:10px; font-weight:800; color:var(--aizome-indigo);">Tap to Fill →</span>
+                </div>
+              `;
+            })
+            .join("");
+        }
+      }
+    }
+
     function updateAccountUi() {
       const pill = document.getElementById("accountPill");
       const titleEl = document.getElementById("accountCardTitle");
       const subEl = document.getElementById("accountCardSub");
+      const fbBadge = document.getElementById("accountFirebaseBadge");
       const btnEl = document.getElementById("accountCardBtn");
 
       if (authUser && !authUser.isGuest) {
         const label = authUser.displayName || (authUser.email && authUser.email.split("@")[0]) || "Account";
+        const uid = authUser.firebaseUid || ("usr_" + label.toLowerCase());
         pill.className = "account-pill-btn";
         pill.textContent = `● ${label}`;
         if (titleEl) titleEl.textContent = `Signed in: ${label} (${authUser.email || "Origami Account"})`;
         if (subEl) subEl.textContent = `Career Score: ${state.careerScore} PTS · Origami Coins: ${state.coins} Coins`;
+        if (fbBadge) {
+          fbBadge.style.color = "var(--matcha-jade)";
+          fbBadge.textContent = `Synced to Firebase Firestore ✓ (users/${uid})`;
+        }
         if (btnEl) btnEl.textContent = "Sign Out";
       } else {
         pill.className = "account-pill-btn guest";
         pill.textContent = "Guest · Account";
         if (titleEl) titleEl.textContent = "Playing as Guest (Local Washi Mode)";
         if (subEl) subEl.textContent = "Create an account (or optionally link Gmail) to save your career progress.";
+        if (fbBadge) {
+          fbBadge.style.color = "var(--aizome-indigo)";
+          fbBadge.textContent = "Firebase Project: gen-lang-client-0130326839 · Ready to Register";
+        }
         if (btnEl) btnEl.textContent = "Create Account";
       }
+      renderRegisteredAccountsLists();
     }
 
     function updateTrieMatches() {

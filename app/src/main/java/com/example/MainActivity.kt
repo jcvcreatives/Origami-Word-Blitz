@@ -109,10 +109,29 @@ fun LexiFillAppRoot() {
     )
   } else if (activeFirebaseUser != null) {
     val uid = activeFirebaseUser.uid
-    val emailLabel =
-      activeFirebaseUser.email?.takeIf { it.isNotBlank() }
+    val preferredName =
+      activeLocalAccount?.username?.takeIf { it.isNotBlank() }
         ?: activeFirebaseUser.displayName?.takeIf { it.isNotBlank() }
-        ?: "Gmail Account"
+        ?: activeFirebaseUser.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+        ?: "Origami Strategist"
+    val emailLabel =
+      if (activeLocalAccount != null) {
+        "${activeLocalAccount.username} · ${activeFirebaseUser.email ?: activeLocalAccount.email}"
+      } else {
+        activeFirebaseUser.email?.takeIf { it.isNotBlank() }
+          ?: activeFirebaseUser.displayName?.takeIf { it.isNotBlank() }
+          ?: preferredName
+      }
+    DisposableEffect(uid, preferredName) {
+      localAccount =
+        LocalAccountStore.recordFirebaseRegistration(
+          context = context,
+          username = preferredName,
+          email = activeFirebaseUser.email ?: activeLocalAccount?.email.orEmpty(),
+          firebaseUid = uid,
+        )
+      onDispose {}
+    }
     key(uid) {
       val gameViewModel: GameViewModel =
         viewModel(
@@ -128,6 +147,7 @@ fun LexiFillAppRoot() {
                 GameViewModel(
                   repository = OrigamiCloudRepository(app),
                   currentUserId = uid,
+                  preferredDisplayName = preferredName,
                   soundEngine = soundEngine,
                 )
               }
