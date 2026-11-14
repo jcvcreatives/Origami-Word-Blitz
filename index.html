@@ -315,12 +315,15 @@
       width: 100%;
       max-width: min(100%, 44dvh);
       margin: 0 auto;
-      background: linear-gradient(180deg, var(--washi-sheet) 0%, #f6f0e2 100%);
+      background: linear-gradient(175deg, var(--washi-sheet) 0%, #f7f1e4 55%, #efe6d5 100%);
       border: 1.5px solid var(--kraft-border);
       border-radius: 16px;
       padding: 8px;
       aspect-ratio: 9 / 8;
-      box-shadow: 0 3px 10px rgba(74, 56, 35, 0.09);
+      box-shadow:
+        0 4px 12px rgba(74, 56, 35, 0.10),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.90),
+        inset 0 -3px 8px rgba(122, 100, 70, 0.14);
       touch-action: none;
     }
     .board-frame.shake {
@@ -374,6 +377,14 @@
     .cell.corridor {
       box-shadow: 0 0 0 2px rgba(29, 91, 143, 0.16);
     }
+    .cell.blank.corridor {
+      box-shadow:
+        inset 0 2.5px 4.5px rgba(74, 56, 35, 0.22),
+        inset 1.2px 1.2px 2.5px rgba(74, 56, 35, 0.11),
+        inset 0 -1.5px 2px rgba(255, 253, 247, 0.84),
+        0 1.5px 0 rgba(255, 254, 250, 0.92),
+        0 0 0 2px rgba(29, 91, 143, 0.18);
+    }
     .cell.kb-focused {
       outline: 2.4px solid var(--aizome-indigo);
       outline-offset: 1px;
@@ -390,11 +401,13 @@
 
     /* 1. Permanent Fixed Clue Letter Cell (Clean Tactile 3D Origami Tile — no slash lines) */
     .cell.fixed {
-      background: linear-gradient(180deg, #efe7d6 0%, #e4d8c3 100%);
+      background: linear-gradient(180deg, #f2ead9 0%, #e4d8c3 100%);
       border: 1.5px solid #c4b397;
       border-bottom: 3px solid #b3a082;
       color: var(--sumi-ink);
-      box-shadow: 0 2px 4px rgba(107, 94, 76, 0.12);
+      box-shadow:
+        0 2px 4px rgba(107, 94, 76, 0.14),
+        inset 0 1px 0 rgba(255, 253, 248, 0.78);
       overflow: hidden;
     }
     .dog-ear {
@@ -408,25 +421,77 @@
       pointer-events: none;
     }
 
-    /* 2. Open Blank Target Paper Cutout Socket (Clean Recessed Well — no dashed lines or '+' clutter) */
+    /* 2. Open Blank Target Paper Cutout Socket (Embossed 'Pressed-Paper' Letterpress Depth-Map) */
     .cell.blank {
-      background: #e9e1d0;
-      border: 1.5px solid #c7b89e;
-      box-shadow: inset 0 2px 4px rgba(107, 94, 76, 0.12), inset 0 0 0 1.5px rgba(255, 255, 255, 0.48);
+      background: linear-gradient(168deg, #ded3be 0%, #e9e0ce 46%, #f3ecde 100%);
+      border: 1.4px solid #c2b195;
+      border-top-color: #b19e7f;
+      border-bottom-color: #d8ccb6;
+      box-shadow:
+        inset 0 2.6px 4.8px rgba(78, 60, 36, 0.23),
+        inset 1.4px 1.4px 2.8px rgba(78, 60, 36, 0.12),
+        inset 0 -1.6px 2.4px rgba(255, 253, 247, 0.86),
+        inset -1px -1px 2px rgba(255, 253, 247, 0.56),
+        0 1.5px 0 rgba(255, 254, 250, 0.94),
+        0 -0.6px 1px rgba(96, 76, 50, 0.14);
       color: var(--walnut-muted);
       cursor: pointer;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
-    .cell.blank.mult-2W { background: var(--mult-dw-bg); border-color: #dfaab9; }
-    .cell.blank.mult-3W { background: var(--mult-tw-bg); border-color: #dc9b9b; }
-    .cell.blank.mult-2L { background: var(--mult-dl-bg); border-color: #9dc3de; }
-    .cell.blank.mult-3L { background: var(--mult-tl-bg); border-color: #7fb2d9; }
+    .cell.blank:hover {
+      box-shadow:
+        inset 0 3.2px 5.6px rgba(78, 60, 36, 0.27),
+        inset 1.6px 1.6px 3.2px rgba(78, 60, 36, 0.15),
+        inset 0 -1.6px 2.4px rgba(255, 253, 247, 0.90),
+        0 1.5px 0 rgba(255, 254, 250, 0.96);
+    }
+    .cell.blank.mult-2W {
+      background: linear-gradient(168deg, #f3ceda 0%, #FADCE6 50%, #fdeadf 100%);
+      border-color: #dfaab9;
+      border-top-color: #cc90a1;
+      box-shadow:
+        inset 0 2.6px 4.8px rgba(138, 56, 80, 0.20),
+        inset 1.2px 1.2px 2.5px rgba(138, 56, 80, 0.10),
+        inset 0 -1.6px 2.4px rgba(255, 250, 252, 0.86),
+        0 1.5px 0 rgba(255, 254, 250, 0.94);
+    }
+    .cell.blank.mult-3W {
+      background: linear-gradient(168deg, #efc0c0 0%, #F7D1D1 50%, #fbe3e3 100%);
+      border-color: #dc9b9b;
+      border-top-color: #c77f7f;
+      box-shadow:
+        inset 0 2.6px 4.8px rgba(145, 45, 45, 0.21),
+        inset 1.2px 1.2px 2.5px rgba(145, 45, 45, 0.11),
+        inset 0 -1.6px 2.4px rgba(255, 250, 250, 0.86),
+        0 1.5px 0 rgba(255, 254, 250, 0.94);
+    }
+    .cell.blank.mult-2L {
+      background: linear-gradient(168deg, #bddbf2 0%, #D2E8F8 50%, #e5f2fc 100%);
+      border-color: #9dc3de;
+      border-top-color: #7ea9c9;
+      box-shadow:
+        inset 0 2.6px 4.8px rgba(32, 84, 128, 0.20),
+        inset 1.2px 1.2px 2.5px rgba(32, 84, 128, 0.10),
+        inset 0 -1.6px 2.4px rgba(248, 253, 255, 0.88),
+        0 1.5px 0 rgba(255, 254, 250, 0.94);
+    }
+    .cell.blank.mult-3L {
+      background: linear-gradient(168deg, #a3ccf0 0%, #B8DAF4 50%, #d4eafb 100%);
+      border-color: #7fb2d9;
+      border-top-color: #6298c4;
+      box-shadow:
+        inset 0 2.6px 4.8px rgba(24, 72, 118, 0.22),
+        inset 1.2px 1.2px 2.5px rgba(24, 72, 118, 0.11),
+        inset 0 -1.6px 2.4px rgba(246, 252, 255, 0.88),
+        0 1.5px 0 rgba(255, 254, 250, 0.94);
+    }
     .cell.blank.intersection {
       border-color: rgba(200, 125, 10, 0.72);
+      border-top-color: rgba(168, 102, 4, 0.80);
     }
     .cell.blank.hint-glow {
       border-color: var(--kyoto-gold);
-      background: rgba(200, 125, 10, 0.18);
+      background: linear-gradient(168deg, rgba(200, 125, 10, 0.24) 0%, rgba(200, 125, 10, 0.12) 100%);
       color: var(--kyoto-gold);
       animation: hintPulse 0.85s infinite alternate ease-in-out;
     }
@@ -994,20 +1059,63 @@
     .play-btn.solved {
       background: var(--matcha-jade);
     }
-    .sfx-grid {
+    .kit-selector {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-bottom: 4px;
     }
-    .sfx-btn {
-      height: 40px;
+    .kit-chip {
+      padding: 8px 6px;
       border-radius: 10px;
-      border: 1.2px solid var(--kraft-border);
-      background: var(--kraft-card);
-      color: var(--aizome-indigo);
+      border: 1.4px solid var(--kraft-border);
+      background: var(--washi-desk);
+      color: var(--sumi-ink);
       font-weight: 800;
       font-size: 11px;
       cursor: pointer;
+      text-align: center;
+      transition: all 0.14s ease;
+    }
+    .kit-chip.active {
+      background: #dfecf6;
+      border-color: var(--aizome-indigo);
+      color: var(--aizome-indigo);
+      box-shadow: 0 2px 6px rgba(29, 91, 143, 0.14);
+    }
+    .sfx-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .sfx-btn {
+      min-height: 54px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1.4px solid var(--kraft-border);
+      border-bottom: 3px solid var(--kraft-deep);
+      background: var(--kraft-card);
+      color: var(--sumi-ink);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      transition: transform 0.08s ease, background 0.14s ease;
+    }
+    .sfx-btn:active {
+      transform: translateY(1.5px);
+    }
+    .sfx-btn-title {
+      font-weight: 900;
+      font-size: 12px;
+      color: var(--aizome-indigo);
+    }
+    .sfx-btn-sub {
+      font-weight: 700;
+      font-size: 10px;
+      color: var(--walnut-muted);
     }
 
     /* Level Clear Origami Fanfare Modal */
@@ -1367,21 +1475,38 @@
     <div class="tab-panel" id="tab-levels">
       <div class="panel-card paper-surface">
         <h2 style="font-size:19px; font-weight:900;">Crossword Origami Vault</h2>
-        <p style="font-size:12px; color:var(--aizome-indigo); font-weight:700;">100% Offline-First Kriss-Kross Fill-In Grids · Zero Network Quota</p>
+        <p style="font-size:12px; color:var(--aizome-indigo); font-weight:700;">Handcrafted Kriss-Kross Origami Puzzles · Fold Intersecting Words</p>
       </div>
       <div id="levelsVaultList" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 
-    <!-- TAB 3: STUDIO & AUDIOPLAYER SYNTHESIZER -->
+    <!-- TAB 3: WASHI & HINOKI ACOUSTIC FOLEY WORKSHOP -->
     <div class="tab-panel" id="tab-studio">
       <div class="panel-card paper-surface">
-        <h3 style="font-size:15.5px; font-weight:800;">AudioPlayer Sound Synthesizer</h3>
-        <p style="font-size:11.5px; color:var(--walnut-muted);">Audition the 4 real-time synthesized sound effects triggered on game events:</p>
+        <h3 style="font-size:15.5px; font-weight:800;">Washi &amp; Hinoki Acoustic Workshop</h3>
+        <p style="font-size:11.5px; color:var(--walnut-muted);">Physical-modeling Japanese paper friction, cedar woodblocks, and plucked Koto harp strings:</p>
+        <div class="kit-selector" id="acousticKitSelector">
+          <button type="button" class="kit-chip active" data-kit="hinoki_washi" onclick="selectAcousticKit('hinoki_washi')">Hinoki &amp; Washi</button>
+          <button type="button" class="kit-chip" data-kit="kyoto_bamboo" onclick="selectAcousticKit('kyoto_bamboo')">Kyoto Bamboo</button>
+          <button type="button" class="kit-chip" data-kit="sumi_ceramic" onclick="selectAcousticKit('sumi_ceramic')">Sumi Porcelain</button>
+        </div>
         <div class="sfx-grid">
-          <button class="sfx-btn" onclick="AudioPlayer.play('click')">CLICK</button>
-          <button class="sfx-btn" onclick="AudioPlayer.play('snap')">SNAP</button>
-          <button class="sfx-btn" onclick="AudioPlayer.play('thud')">THUD</button>
-          <button class="sfx-btn" onclick="AudioPlayer.play('fanfare')">FANFARE</button>
+          <button type="button" class="sfx-btn" onclick="AudioPlayer.play('click')">
+            <span class="sfx-btn-title">Washi Tap</span>
+            <span class="sfx-btn-sub">Hinoki Wood &amp; Paper Brush</span>
+          </button>
+          <button type="button" class="sfx-btn" onclick="AudioPlayer.play('snap')">
+            <span class="sfx-btn-title">Origami Fold</span>
+            <span class="sfx-btn-sub">Crease Snap &amp; Bamboo Chime</span>
+          </button>
+          <button type="button" class="sfx-btn" onclick="AudioPlayer.play('thud')">
+            <span class="sfx-btn-title">Tatami Settle</span>
+            <span class="sfx-btn-sub">Muted Cedar Tray Bump</span>
+          </button>
+          <button type="button" class="sfx-btn" onclick="AudioPlayer.play('fanfare')">
+            <span class="sfx-btn-title">Koto Ensemble</span>
+            <span class="sfx-btn-sub">Kyoto Harp &amp; Furin Bell</span>
+          </button>
         </div>
       </div>
 
@@ -1391,21 +1516,21 @@
       </div>
     </div>
 
-    <!-- TAB 4: TRIE SOLVER & ACCOUNT -->
+    <!-- TAB 4: WORDBOOK & ACCOUNT -->
     <div class="tab-panel" id="tab-trie">
       <div class="panel-card paper-surface">
         <div class="level-row">
           <div>
             <div id="accountCardTitle" style="font-size:14px; font-weight:800; color:var(--sumi-ink);">Playing as Guest (Local Washi Mode)</div>
-            <div id="accountCardSub" style="font-size:11.5px; color:var(--walnut-muted);">Sign in or create an account with Gmail to sync your career progress.</div>
+            <div id="accountCardSub" style="font-size:11.5px; color:var(--walnut-muted);">Sign in or create an account to save your career progress.</div>
           </div>
-          <button class="play-btn" id="accountCardBtn" onclick="handleAccountCardAction()">Gmail Login</button>
+          <button class="play-btn" id="accountCardBtn" onclick="handleAccountCardAction()">Account</button>
         </div>
       </div>
 
       <div class="panel-card paper-surface">
-        <h3 style="font-size:17px; font-weight:800;">&lt;1ms In-Memory Trie Engine</h3>
-        <p style="font-size:11.5px; color:var(--walnut-muted);">Test wildcard skeleton patterns using '_' for missing blank slots (e.g., P_AN_T, C_OSS, Q_A_T_):</p>
+        <h3 style="font-size:17px; font-weight:800;">Crossword Wordbook &amp; Pattern Finder</h3>
+        <p style="font-size:11.5px; color:var(--walnut-muted);">Search curated crossword words using '_' for open blank tiles (e.g., P_AN_T, C_OSS, Q_A_T_):</p>
         <input
           id="trieInput"
           type="text"
@@ -1518,15 +1643,24 @@
 
   <script>
     /**
-     * Real-Time WebAudio Synthesizer matching Android's AudioPlayer.kt:
-     * - 'click': Crisp woody paper tap on tile selection / shuffle
-     * - 'snap': Harmonic chime pop on valid tile placement
-     * - 'thud': Low muted bass bump on invalid placement
-     * - 'fanfare': Ascending 4-note major pentatonic origami arpeggio on level completion
+     * Physical-Modeling WebAudio Acoustic Foley & Japanese Instrument Engine (matches AudioPlayer.kt):
+     * Replaces generic sine/triangle oscillator beeps with custom PCM AudioBuffers:
+     * - 'click' (Washi Tap): Washi paper fiber brush + modal Hinoki cypress woodblock tap
+     * - 'snap' (Origami Fold): Crisp origami paper crease transient + Hirajoshi bamboo/Koto fifth
+     * - 'thud' (Tatami Settle): Double-damped hollow cedar tray bump + soft paper slide-back
+     * - 'fanfare' (Koto Ensemble): Polyphonic Kyoto Koto harp arpeggio with oshide vibrato & Furin wind bell
      */
     const AudioPlayer = (() => {
       let ctx = null;
       let muted = false;
+      let activeKitId = "hinoki_washi";
+      const bufferCache = {};
+
+      const KITS = {
+        hinoki_washi: { woodBaseHz: 385.0, chimeScaleRatio: 1.0, paperPresence: 1.0 },
+        kyoto_bamboo: { woodBaseHz: 468.0, chimeScaleRatio: 1.12246, paperPresence: 0.85 },
+        sumi_ceramic: { woodBaseHz: 560.0, chimeScaleRatio: 0.8909, paperPresence: 0.72 }
+      };
 
       function ensureCtx() {
         if (!ctx) {
@@ -1537,49 +1671,253 @@
         return ctx;
       }
 
-      function playTone(freqStart, freqEnd, durationSec, type = "sine", gainPeak = 0.22, delaySec = 0) {
-        const audio = ensureCtx();
-        if (!audio) return;
-        const now = audio.currentTime + delaySec;
-        const osc = audio.createOscillator();
-        const gain = audio.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freqStart, now);
-        if (freqEnd !== freqStart) {
-          osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + durationSec);
+      function warmPaperNoise(index, seed) {
+        let n = (Math.imul(index, 1664525) + Math.imul(seed, 1013904223)) ^ (index << 13);
+        n = Math.imul(n, Math.imul(n, Math.imul(n, 15731)) + 789221) + 1376312589;
+        return ((n & 0x7fffffff) / 1073741824.0) - 1.0;
+      }
+
+      function warmSaturate(x) {
+        const c = Math.max(-2.5, Math.min(2.5, x));
+        return (c * (27.0 + c * c)) / (27.0 + 9.0 * c * c);
+      }
+
+      function buildClickBuffer(audio, kit) {
+        const sr = audio.sampleRate;
+        const durationSec = 0.058;
+        const len = Math.floor(sr * durationSec);
+        const buf = audio.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        const f0 = kit.woodBaseHz;
+        let lp = 0.0, bp = 0.0;
+
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const p = i / len;
+          const raw = warmPaperNoise(i, 41);
+          lp += 0.28 * (raw - lp);
+          const hp = raw - lp;
+          bp += 0.42 * (hp - bp);
+          const paperEnv = Math.sin(Math.PI * Math.min(1.0, p / 0.42)) * Math.exp(-5.2 * p);
+          const paperBrush = bp * paperEnv * 0.42 * kit.paperPresence;
+
+          const bend = 1.0 + 0.14 * Math.exp(-38.0 * p);
+          const m1 = Math.sin(2.0 * Math.PI * (f0 * bend) * t) * Math.exp(-6.8 * p);
+          const m2 = Math.sin(2.0 * Math.PI * (f0 * 1.73 * bend) * t) * Math.exp(-13.5 * p) * 0.48;
+          const m3 = Math.sin(2.0 * Math.PI * (f0 * 2.61) * t) * Math.exp(-22.0 * p) * 0.28;
+          const m4 = Math.sin(2.0 * Math.PI * (f0 * 3.78) * t) * Math.exp(-34.0 * p) * 0.16;
+          const attack = Math.min(1.0, t / 0.0018);
+          const woodWave = (m1 + m2 + m3 + m4) * attack * 0.78;
+
+          data[i] = warmSaturate((woodWave + paperBrush) * 1.15) * 0.72;
         }
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(gainPeak, now + 0.008);
-        gain.gain.exponentialRampToValueAtTime(0.0008, now + durationSec);
-        osc.connect(gain);
-        gain.connect(audio.destination);
-        osc.start(now);
-        osc.stop(now + durationSec + 0.01);
+        return buf;
+      }
+
+      function buildSnapBuffer(audio, kit) {
+        const sr = audio.sampleRate;
+        const durationSec = 0.155;
+        const len = Math.floor(sr * durationSec);
+        const buf = audio.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        const note1Hz = 587.33 * kit.chimeScaleRatio; // D5
+        const note2Hz = 880.00 * kit.chimeScaleRatio; // A5
+        let fA = 0.0, fB = 0.0;
+
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const p = i / len;
+          const creaseP = Math.min(1.0, p / 0.26);
+          const raw = warmPaperNoise(i, 108);
+          const cutoff = 0.22 + 0.34 * Math.sin(Math.PI * creaseP);
+          fA += cutoff * (raw - fA);
+          fB += cutoff * (fA - fB);
+          const bandNoise = fA - fB;
+          const creaseEnv = p < 0.28 ? Math.sin(Math.PI * creaseP) * Math.exp(-3.2 * creaseP) : 0.0;
+          const thumbPress = Math.sin(2.0 * Math.PI * (178.0 - 48.0 * creaseP) * t) * Math.exp(-18.0 * p) * 0.45;
+          const paperCrease = (bandNoise * creaseEnv * 0.75 * kit.paperPresence) + thumbPress;
+
+          let chime = 0.0;
+          if (t >= 0.014) {
+            const t1 = t - 0.014;
+            const p1 = Math.min(1.0, t1 / 0.136);
+            const env1 = Math.min(1.0, t1 / 0.003) * Math.exp(-4.8 * p1);
+            chime += (
+              0.62 * Math.sin(2.0 * Math.PI * note1Hz * t1) +
+              0.24 * Math.sin(2.0 * Math.PI * (note1Hz * 2.0) * t1) * Math.exp(-3.5 * p1) +
+              0.14 * Math.sin(2.0 * Math.PI * (note1Hz * 3.0) * t1) * Math.exp(-7.0 * p1)
+            ) * env1 * 0.58;
+          }
+          if (t >= 0.034) {
+            const t2 = t - 0.034;
+            const p2 = Math.min(1.0, t2 / 0.116);
+            const env2 = Math.min(1.0, t2 / 0.0025) * Math.exp(-4.2 * p2);
+            chime += (
+              0.64 * Math.sin(2.0 * Math.PI * note2Hz * t2) +
+              0.22 * Math.sin(2.0 * Math.PI * (note2Hz * 2.0) * t2) * Math.exp(-4.0 * p2) +
+              0.14 * Math.sin(2.0 * Math.PI * (note2Hz * 2.756) * t2) * Math.exp(-8.5 * p2)
+            ) * env2 * 0.68;
+          }
+
+          data[i] = warmSaturate((paperCrease + chime) * 1.15) * 0.82;
+        }
+        return buf;
+      }
+
+      function buildThudBuffer(audio, kit) {
+        const sr = audio.sampleRate;
+        const durationSec = 0.17;
+        const len = Math.floor(sr * durationSec);
+        const buf = audio.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        const baseBoxHz = Math.max(110.0, Math.min(185.0, kit.woodBaseHz * 0.34));
+        let slideFilter = 0.0;
+
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const p = i / len;
+          const env1 = Math.min(1.0, t / 0.003) * Math.exp(-26.0 * t);
+          const knock1 = (
+            0.68 * Math.sin(2.0 * Math.PI * baseBoxHz * t) +
+            0.32 * Math.sin(2.0 * Math.PI * (baseBoxHz * 1.58) * t) * Math.exp(-42.0 * t) +
+            0.16 * Math.sin(2.0 * Math.PI * (baseBoxHz * 2.35) * t) * Math.exp(-65.0 * t)
+          ) * env1;
+
+          let knock2 = 0.0;
+          if (t >= 0.054) {
+            const t2 = t - 0.054;
+            const settleHz = baseBoxHz * 0.78;
+            const env2 = Math.min(1.0, t2 / 0.0035) * Math.exp(-22.0 * t2);
+            knock2 = (
+              0.74 * Math.sin(2.0 * Math.PI * settleHz * t2) +
+              0.26 * Math.sin(2.0 * Math.PI * (settleHz * 1.62) * t2) * Math.exp(-38.0 * t2)
+            ) * env2 * 0.82;
+          }
+
+          const raw = warmPaperNoise(i, 77);
+          slideFilter += 0.16 * (raw - slideFilter);
+          const slideEnv = Math.sin(Math.PI * p) * Math.exp(-3.4 * p);
+          const paperSlide = (raw - slideFilter) * slideEnv * 0.22 * kit.paperPresence;
+
+          data[i] = warmSaturate((knock1 + knock2 + paperSlide) * 1.25) * 0.80;
+        }
+        return buf;
+      }
+
+      function buildFanfareBuffer(audio, kit) {
+        const sr = audio.sampleRate;
+        const durationSec = 0.78;
+        const len = Math.floor(sr * durationSec);
+        const buf = audio.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        const s = kit.chimeScaleRatio;
+
+        const voices = [
+          { start: 0.000, dur: 0.42, freq: 293.66 * s, amp: 0.34 },
+          { start: 0.075, dur: 0.40, freq: 329.63 * s, amp: 0.32 },
+          { start: 0.150, dur: 0.42, freq: 440.00 * s, amp: 0.35 },
+          { start: 0.225, dur: 0.42, freq: 493.88 * s, amp: 0.35 },
+          { start: 0.300, dur: 0.46, freq: 587.33 * s, amp: 0.40 },
+          { start: 0.385, dur: 0.395, freq: 440.00 * s, amp: 0.26 },
+          { start: 0.385, dur: 0.395, freq: 587.33 * s, amp: 0.32 },
+          { start: 0.385, dur: 0.395, freq: 739.99 * s, amp: 0.30 },
+          { start: 0.385, dur: 0.395, freq: 880.00 * s, amp: 0.42 },
+          { start: 0.395, dur: 0.385, freq: 1174.66 * s, amp: 0.22 }
+        ];
+
+        for (let vIdx = 0; vIdx < voices.length; vIdx++) {
+          const v = voices[vIdx];
+          const startSample = Math.floor(v.start * sr);
+          const noteSamples = Math.floor(v.dur * sr);
+          let phase = 0.0;
+          let pickFilter = 0.0;
+
+          for (let i = 0; i < noteSamples; i++) {
+            const gIdx = startSample + i;
+            if (gIdx >= len) break;
+            const localT = i / sr;
+            const localP = i / Math.max(1, noteSamples);
+            const pluckBend = 1.0 + 0.018 * Math.exp(-45.0 * localT);
+            const vibrato = localT > 0.09 ? 1.0 + 0.0032 * Math.sin(2.0 * Math.PI * 5.4 * (localT - 0.09)) : 1.0;
+            const instFreq = v.freq * pluckBend * vibrato;
+            phase += (2.0 * Math.PI * instFreq) / sr;
+
+            const attack = Math.min(1.0, localT / 0.0022);
+            const env = attack * Math.exp(-3.6 * localP);
+
+            const h1 = Math.sin(phase) * 0.56;
+            const h2 = Math.sin(phase * 2.0) * Math.exp(-2.8 * localP) * 0.25;
+            const h3 = Math.sin(phase * 3.0) * Math.exp(-5.2 * localP) * 0.12;
+            const h4 = Math.sin(phase * 4.0) * Math.exp(-8.5 * localP) * 0.05;
+            const bell = Math.sin(phase * 2.756) * Math.exp(-9.5 * localP) * 0.04;
+
+            const raw = warmPaperNoise(i, 300 + vIdx * 19);
+            pickFilter += 0.35 * (raw - pickFilter);
+            const pickScrape = localT < 0.011 ? (raw - pickFilter) * Math.exp(-180.0 * localT) * 0.28 * kit.paperPresence : 0.0;
+
+            data[gIdx] += ((h1 + h2 + h3 + h4 + bell) * env + pickScrape) * v.amp;
+          }
+        }
+
+        for (let i = 0; i < len; i++) {
+          const fadeOut = i > len - 600 ? (len - i) / 600.0 : 1.0;
+          data[i] = warmSaturate(data[i] * fadeOut * 1.12) * 0.86;
+        }
+        return buf;
+      }
+
+      function getBuffer(audio, kitId, effect) {
+        const key = `${kitId}_${effect}`;
+        if (bufferCache[key]) return bufferCache[key];
+        const kit = KITS[kitId] || KITS.hinoki_washi;
+        let buf = null;
+        if (effect === "click") buf = buildClickBuffer(audio, kit);
+        else if (effect === "snap") buf = buildSnapBuffer(audio, kit);
+        else if (effect === "thud") buf = buildThudBuffer(audio, kit);
+        else if (effect === "fanfare") buf = buildFanfareBuffer(audio, kit);
+        if (buf) bufferCache[key] = buf;
+        return buf;
       }
 
       return {
         isMuted: () => muted,
         setMuted: (m) => { muted = !!m; },
-        play: (effect) => {
+        getKit: () => activeKitId,
+        setKit: (kitId) => {
+          if (KITS[kitId]) activeKitId = kitId;
+        },
+        play: (effect, playbackRate = 1.0, delaySec = 0) => {
           if (muted) return;
-          if (effect === "click") {
-            playTone(1050, 460, 0.045, "triangle", 0.20, 0);
-          } else if (effect === "snap") {
-            playTone(520, 960, 0.095, "sine", 0.24, 0);
-            playTone(1040, 1560, 0.085, "triangle", 0.12, 0.015);
-          } else if (effect === "thud") {
-            playTone(165, 62, 0.15, "sine", 0.28, 0);
-            playTone(230, 88, 0.13, "triangle", 0.14, 0);
-          } else if (effect === "fanfare") {
-            const notes = [523.25, 659.25, 783.99, 1046.50];
-            notes.forEach((n, idx) => {
-              playTone(n, n, 0.24, "sine", 0.20, idx * 0.085);
-              playTone(n * 1.5, n * 1.5, 0.20, "triangle", 0.08, idx * 0.085);
-            });
+          const audio = ensureCtx();
+          if (!audio) return;
+          const buf = getBuffer(audio, activeKitId, effect);
+          if (!buf) return;
+          const src = audio.createBufferSource();
+          src.buffer = buf;
+          src.playbackRate.value = Math.max(0.8, Math.min(1.42, playbackRate));
+          src.connect(audio.destination);
+          src.start(audio.currentTime + Math.max(0, delaySec));
+        },
+        playFoldCascade: (wordLength = 5, combo = 1) => {
+          if (muted) return;
+          const steps = Math.min(6, Math.max(2, wordLength));
+          const pentatonicRatios = [1.0, 1.122, 1.26, 1.498, 1.682, 2.0];
+          const baseBoost = 1.0 + Math.min(0.18, (combo - 1) * 0.05);
+          for (let i = 0; i < steps; i++) {
+            const rate = pentatonicRatios[i % pentatonicRatios.length] * baseBoost;
+            AudioPlayer.play(i === steps - 1 ? "snap" : "click", rate, i * 0.052);
           }
         }
       };
     })();
+
+    function selectAcousticKit(kitId) {
+      AudioPlayer.setKit(kitId);
+      document.querySelectorAll("#acousticKitSelector .kit-chip").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-kit") === kitId);
+      });
+      AudioPlayer.play("snap");
+    }
 
     const SKINS = [
       { id: "washi_classic", name: "Washi Ivory", rarity: "COMMON", cost: 0, base: "#fff8ec", border: "#d9b382", text: "#231e18", desc: "Handcrafted unbleached Washi paper with folded Kraft borders." },
@@ -1785,6 +2123,8 @@
       const allSolved = state.completedWords.size === state.tpl.words.length;
       if (allSolved) {
         AudioPlayer.play("fanfare");
+      } else if (newlyDone.length > 0) {
+        AudioPlayer.playFoldCascade(newlyDone[0].word.length, state.combo + newlyDone.length);
       } else {
         AudioPlayer.play("snap");
       }

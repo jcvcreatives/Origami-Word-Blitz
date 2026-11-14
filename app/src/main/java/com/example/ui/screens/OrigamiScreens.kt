@@ -234,6 +234,7 @@ fun LexiFillMainScreen(
         LexiFillDestination.CUSTOM_STUDIO -> {
           CustomStudioAndSkinsScreen(
             puzzleState = puzzleState,
+            audioPlayer = viewModel.audioPlayer,
             onLoadCompactCode = { code ->
               viewModel.loadCustomSkeleton(code)
               currentTab = LexiFillDestination.PUZZLE_GRID
@@ -907,7 +908,7 @@ private fun PuzzleVaultScreen(
         color = WashiCream,
       )
       Text(
-        text = "100% Offline-First Kriss-Kross Fill-In Grids · Zero Network Quota",
+        text = "Handcrafted Kriss-Kross Origami Puzzles · Fold Intersecting Words",
         style = MaterialTheme.typography.bodySmall,
         color = SkyCyan,
       )
@@ -1065,10 +1066,12 @@ private fun VaultStatColumn(label: String, value: String, valueColor: Color) {
 @Composable
 private fun CustomStudioAndSkinsScreen(
   puzzleState: PuzzleState,
+  audioPlayer: AudioPlayer,
   onLoadCompactCode: (String) -> Unit,
   onUnlockOrEquipSkin: (com.example.domain.model.CosmeticTileSkin) -> Unit,
   onAuditionSoundEffect: (AudioPlayer.SoundEffect) -> Unit,
 ) {
+  var selectedKit by remember { mutableStateOf(audioPlayer.activeKit) }
   var compactInput by
     rememberSaveable(puzzleState.levelTemplate.compactCode) {
       mutableStateOf(
@@ -1097,34 +1100,85 @@ private fun CustomStudioAndSkinsScreen(
           verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
           Text(
-            text = "AudioPlayer Sound Synthesizer",
+            text = "Washi & Hinoki Acoustic Workshop",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.ExtraBold,
             color = WashiCream,
           )
           Text(
             text =
-              "Audition the 4 real-time synthesized PCM/SoundPool effects triggered on game events:",
+              "Physical-modeling Japanese paper friction, cedar woodblocks, and plucked Koto harp strings:",
             style = MaterialTheme.typography.bodySmall,
             color = WashiMuted,
           )
+
+          // Acoustic Material Kit Selector
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
           ) {
-            for (sfx in AudioPlayer.SoundEffect.entries) {
-              OutlinedButton(
-                onClick = { onAuditionSoundEffect(sfx) },
-                modifier = Modifier.weight(1f).height(48.dp).testTag("btn_sfx_${sfx.id}"),
+            for (kit in AudioPlayer.AcousticKit.entries) {
+              val isSelected = selectedKit == kit
+              Surface(
                 shape = RoundedCornerShape(10.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp),
+                color = if (isSelected) SkyCyan.copy(alpha = 0.16f) else IndigoCard,
+                modifier =
+                  Modifier.weight(1f)
+                    .border(
+                      width = if (isSelected) 1.6.dp else 1.dp,
+                      color = if (isSelected) SkyCyan else IndigoElevated,
+                      shape = RoundedCornerShape(10.dp),
+                    )
+                    .clickable {
+                      selectedKit = kit
+                      audioPlayer.selectAcousticKit(kit)
+                      onAuditionSoundEffect(AudioPlayer.SoundEffect.SNAP)
+                    }
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .testTag("btn_kit_${kit.id}"),
               ) {
-                Text(
-                  text = sfx.id.uppercase(),
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = FontWeight.ExtraBold,
-                  color = SkyCyan,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                  Text(
+                    text = kit.title,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isSelected) SkyCyan else WashiCream,
+                    maxLines = 1,
+                  )
+                }
+              }
+            }
+          }
+
+          // 2x2 Tactile Foley Audition Pads
+          val effects = AudioPlayer.SoundEffect.entries
+          for (rowEffects in effects.chunked(2)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              for (sfx in rowEffects) {
+                OutlinedButton(
+                  onClick = { onAuditionSoundEffect(sfx) },
+                  modifier = Modifier.weight(1f).heightIn(min = 56.dp).testTag("btn_sfx_${sfx.id}"),
+                  shape = RoundedCornerShape(12.dp),
+                  contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                  Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                      text = sfx.label,
+                      style = MaterialTheme.typography.labelMedium,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = SkyCyan,
+                    )
+                    Text(
+                      text = sfx.subtitle,
+                      fontSize = 9.5.sp,
+                      color = WashiMuted,
+                      maxLines = 1,
+                    )
+                  }
+                }
               }
             }
           }
@@ -1359,14 +1413,14 @@ private fun TriePatternSolverScreen(
     }
 
     Text(
-      text = "<1ms In-Memory Kotlin Trie Engine",
+      text = "Crossword Wordbook & Pattern Finder",
       style = MaterialTheme.typography.headlineSmall,
       fontWeight = FontWeight.ExtraBold,
       color = WashiCream,
     )
     Text(
       text =
-        "Loaded ${viewModel.trieEngine.wordCount} dictionary words in memory. Test wildcard skeleton patterns using '_' for missing blank slots.",
+        "Explore ${viewModel.trieEngine.wordCount} curated dictionary words. Use '_' for open blank tiles to test intersecting words.",
       style = MaterialTheme.typography.bodySmall,
       color = WashiMuted,
     )

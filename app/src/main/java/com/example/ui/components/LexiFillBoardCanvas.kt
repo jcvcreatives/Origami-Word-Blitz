@@ -603,22 +603,81 @@ fun LexiFillBoardCanvas(
               }
             }
 
-            // 3. Open Blank Target Paper Cutout Socket (Needs a Letter!)
+            // 3. Open Blank Target Paper Cutout Socket (Embossed 'Pressed-Paper' Depth-Map)
             else -> {
-              val multBg =
+              val (topDepthCol, midDepthCol, botDepthCol) =
                 when (cell.multiplier) {
-                  SquareMultiplier.TW -> SquareTwBg
-                  SquareMultiplier.DW -> SquareDwBg
-                  SquareMultiplier.TL -> SquareTlBg
-                  SquareMultiplier.DL -> SquareDlBg
-                  else -> BlankSlotSocketBg
+                  SquareMultiplier.TW ->
+                    Triple(Color(0xFFEFBFC0), SquareTwBg, Color(0xFFFBE4E4))
+                  SquareMultiplier.DW ->
+                    Triple(Color(0xFFF3CEDA), SquareDwBg, Color(0xFFFDEBF0))
+                  SquareMultiplier.TL ->
+                    Triple(Color(0xFFA3CCF0), SquareTlBg, Color(0xFFD5EBFB))
+                  SquareMultiplier.DL ->
+                    Triple(Color(0xFFBBDDF3), SquareDlBg, Color(0xFFE6F3FC))
+                  else ->
+                    Triple(Color(0xFFDED3BE), BlankSlotSocketBg, Color(0xFFF3ECDE))
                 }
 
+              // Outer bottom paper-emboss ridge where the surrounding Washi sheet meets the pressed slot
               drawRoundRect(
-                color = multBg,
+                color = Color(0xFFFFFEFA).copy(alpha = 0.92f),
+                topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.032f),
+                size = Size(innerSize, innerSize),
+                cornerRadius = cornerRadius,
+              )
+
+              // Concave directional pressed-paper depth-map fill
+              drawRoundRect(
+                brush =
+                  Brush.verticalGradient(
+                    0.0f to topDepthCol,
+                    0.46f to midDepthCol,
+                    1.0f to botDepthCol,
+                    startY = topLeft.y,
+                    endY = topLeft.y + innerSize,
+                  ),
                 topLeft = topLeft,
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
+              )
+
+              // Top-edge inner recessed shadow gradient (simulates overhead light casting shadow inside the pressed cavity)
+              val shadowTint =
+                when (cell.multiplier) {
+                  SquareMultiplier.TW -> Color(0xFF8C2A2A)
+                  SquareMultiplier.DW -> Color(0xFF8A3850)
+                  SquareMultiplier.TL,
+                  SquareMultiplier.DL -> Color(0xFF1A4B78)
+                  else -> Color(0xFF4E3C24)
+                }
+              drawRoundRect(
+                brush =
+                  Brush.verticalGradient(
+                    0.0f to shadowTint.copy(alpha = 0.23f),
+                    0.34f to shadowTint.copy(alpha = 0.07f),
+                    0.65f to Color.Transparent,
+                    startY = topLeft.y,
+                    endY = topLeft.y + innerSize,
+                  ),
+                topLeft = topLeft,
+                size = Size(innerSize, innerSize),
+                cornerRadius = cornerRadius,
+              )
+
+              // Bottom-edge inner catchlight lip where overhead light catches the lower pressed paper bevel
+              drawRoundRect(
+                brush =
+                  Brush.verticalGradient(
+                    0.0f to Color.Transparent,
+                    0.68f to Color.Transparent,
+                    1.0f to Color(0xFFFFFDF7).copy(alpha = 0.82f),
+                    startY = topLeft.y,
+                    endY = topLeft.y + innerSize,
+                  ),
+                topLeft = Offset(topLeft.x + cellSize * 0.025f, topLeft.y + cellSize * 0.025f),
+                size = Size(innerSize - cellSize * 0.05f, innerSize - cellSize * 0.05f),
+                cornerRadius = CornerRadius(cellSize * 0.12f, cellSize * 0.12f),
               )
 
               val preview = puzzleState.hoverPreview
@@ -641,15 +700,6 @@ fun LexiFillBoardCanvas(
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
                 style = Stroke(width = strokeWidth),
-              )
-
-              // Subtle inner recessed well rim
-              drawRoundRect(
-                color = Color.White.copy(alpha = 0.55f),
-                topLeft = Offset(topLeft.x + cellSize * 0.04f, topLeft.y + cellSize * 0.04f),
-                size = Size(innerSize - cellSize * 0.08f, innerSize - cellSize * 0.08f),
-                cornerRadius = CornerRadius(cellSize * 0.11f, cellSize * 0.11f),
-                style = Stroke(width = cellSize * 0.018f),
               )
 
               // Magnetic Lock-On Ghost Letter & Target Reticle Brackets while Dragging!
