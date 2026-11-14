@@ -366,8 +366,18 @@ class GameViewModel(
     soundEngine.onTilePickup(haptics)
     _puzzleState.update { s ->
       val target = s.targetWords.find { it.id == wordId }
+      val nextCellFocus =
+        target
+          ?.coordinates()
+          ?.firstOrNull { c ->
+            val cell = s.cellAt(c.x, c.y)
+            cell != null && cell.isBlankTarget && cell.placedTile == null && !cell.isLockedCompleted
+          }
+          ?: target?.coordinates()?.firstOrNull()
+          ?: s.focusedCellCoord
       s.copy(
         focusedWordId = wordId,
+        focusedCellCoord = nextCellFocus,
         lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
         statusMessage =
           if (target != null) {
@@ -383,13 +393,17 @@ class GameViewModel(
   fun onBoardCellTapped(x: Int, y: Int, haptics: HapticFeedback? = null) {
     val state = _puzzleState.value
     val cell = state.cellAt(x, y) ?: return
+    if (!cell.isPlayable) return
+
+    val tappedCoord = Coordinate(x, y)
+    _puzzleState.update { it.copy(focusedCellCoord = tappedCoord) }
 
     // Recall unlocked placed tile if tapped
     if (cell.placedTile != null && !cell.isLockedCompleted) {
       soundEngine.onTilePickup(haptics)
       _puzzleState.value =
         lexiFillEngine
-          .recallPlacedTileAt(state, x, y)
+          .recallPlacedTileAt(_puzzleState.value, x, y)
           .copy(lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id)
       return
     }
@@ -405,13 +419,156 @@ class GameViewModel(
             wordsHere.first()
           }
         selectClueWord(nextWord.id, haptics)
+        _puzzleState.update { it.copy(focusedCellCoord = tappedCoord) }
       }
       return
     }
 
     val selectedTileId =
       state.rackState.selectedTileId ?: state.rackState.tiles.firstOrNull()?.id ?: return
-    onTileDropOnCoord(selectedTileId, Coordinate(x, y), haptics)
+    onTileDropOnCoord(selectedTileId, tappedCoord, haptics)
+  }
+
+  /**
+   * Navigates the focused crossword cell using physical keyboard arrow keys (`dx`, `dy`).
+   * Prioritizes playable cells directly along the movement axis, falling back to the nearest
+   * playable cell in the requested direction.
+   */
+  fun moveFocusedCell(dx: Int, dy: Int, haptics: HapticFeedback? = null) {
+    if (dx == 0 && dy == 0) return
+    val state = _puzzleState.value
+    val playableCoords =
+      state.cells.flatten().filter { it.isPlayable }.map { it.coordinate }
+    if (playableCoords.isEmpty()) return
+
+    val current =
+      state.focusedCellCoord
+        ?: playableCoords.firstOrNull { c ->
+          val cell = state.cellAt(c.x, c.y)
+          cell != null && cell.isOpenBlank
+        }
+        ?: playableCoords.first()
+
+    // 1. Check direct ray along (dx, dy)
+    var step = 1
+    var directMatch: Coordinate? = null
+    while (step <= maxOf(state.boardWidth, state.boardHeight)) {
+      val cx = current.x + dx * step
+      val cy = current.y + dy * step
+      if (cx !in 0 until state.boardWidth || cy !in 0 until state.boardHeight) break
+      val candidate = state.cellAt(cx, cy)
+      if (candidate != null && candidate.isPlayable) {
+        directMatch = candidate.coordinate
+        break
+      }
+      step++
+    }
+
+    // 2. Otherwise pick the closest playable cell in the requested directional half-plane
+    val nextCoord =
+      directMatch
+        ?: playableCoords
+          .filter { c ->
+            c != current && ((c.x - current.x) * dx + (c.y - current.y) * dy) > 0
+          }
+          .minByOrNull { c ->
+            val primaryDist = kotlin.math.abs((c.x - current.x) * dx + (c.y - current.y) * dy)
+            val orthoDist = kotlin.math.abs((c.x - current.x) * dy + (c.y - current.y) * dx)
+            primaryDist * 10 + orthoDist * 28
+          }
+        ?: return
+
+    soundEngine.onTilePickup(haptics, pitchMultiplier = 1.08f)
+    val wordsAtNext = state.targetWords.filter { it.containsCoordinate(nextCoord.x, nextCoord.y) }
+    val preferredDir =
+      if (dx != 0) com.example.domain.model.WordDirection.HORIZONTAL
+      else com.example.domain.model.WordDirection.VERTICAL
+    val matchedWord =
+      wordsAtNext.find { it.direction == preferredDir }
+        ?: wordsAtNext.find { it.id == state.focusedWordId }
+        ?: wordsAtNext.firstOrNull()
+
+    _puzzleState.update { s ->
+      s.copy(
+        focusedCellCoord = nextCoord,
+        focusedWordId = matchedWord?.id ?: s.focusedWordId,
+        lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id,
+      )
+    }
+  }
+
+  /**
+   * Handles physical keyboard letter key presses (`A`–`Z`).
+   * Places a matching letter tile from the rack into the currently focused cell (or the next
+   * open blank cell in the focused word if the focused cell is already filled).
+   */
+  fun typeLetterInFocusedCell(rawChar: Char, haptics: HapticFeedback? = null): Boolean {
+    val letter = rawChar.uppercaseChar()
+    if (letter !in 'A'..'Z') return false
+    val state = _puzzleState.value
+
+    val targetCoord =
+      state.focusedCellCoord?.takeIf { c ->
+        val cell = state.cellAt(c.x, c.y)
+        cell != null && cell.isBlankTarget && !cell.isLockedCompleted
+      }
+        ?: state.targetWords
+          .find { it.id == state.focusedWordId }
+          ?.coordinates()
+          ?.firstOrNull { c ->
+            val cell = state.cellAt(c.x, c.y)
+            cell != null && cell.isBlankTarget && cell.placedTile == null && !cell.isLockedCompleted
+          }
+        ?: state.cells
+          .flatten()
+          .firstOrNull { it.isBlankTarget && it.placedTile == null && !it.isLockedCompleted }
+          ?.coordinate
+        ?: return false
+
+    val matchingTile =
+      state.rackState.tiles.firstOrNull { it.char.equals(letter, ignoreCase = true) }
+    if (matchingTile == null) {
+      soundEngine.onInvalidWord(haptics)
+      _puzzleState.update { s ->
+        s.copy(
+          focusedCellCoord = targetCoord,
+          lastSoundTriggered = AudioPlayer.SoundEffect.THUD.id,
+          statusMessage = "No '$letter' tile available in your rack!",
+          isStatusError = true,
+        )
+      }
+      return false
+    }
+
+    return onTileDropOnCoord(matchingTile.id, targetCoord, haptics)
+  }
+
+  /**
+   * Handles `Backspace` / `Delete` key presses on the crossword grid, recalling an unlocked
+   * placed tile at the focused cell (or the most recently filled unlocked cell in the focused word).
+   */
+  fun backspaceInFocusedCell(haptics: HapticFeedback? = null): Boolean {
+    val state = _puzzleState.value
+    val fc = state.focusedCellCoord
+    val directCell = fc?.let { state.cellAt(it.x, it.y) }
+    val targetCell =
+      if (directCell != null && directCell.placedTile != null && !directCell.isLockedCompleted) {
+        directCell
+      } else {
+        state.targetWords
+          .find { it.id == state.focusedWordId }
+          ?.coordinates()
+          ?.reversed()
+          ?.mapNotNull { state.cellAt(it.x, it.y) }
+          ?.firstOrNull { it.placedTile != null && !it.isLockedCompleted }
+      } ?: return false
+
+    soundEngine.onTilePickup(haptics)
+    _puzzleState.value =
+      lexiFillEngine
+        .recallPlacedTileAt(state, targetCell.x, targetCell.y)
+        .copy(lastSoundTriggered = AudioPlayer.SoundEffect.CLICK.id)
+    return true
   }
 
   fun shuffleRack(haptics: HapticFeedback? = null) {

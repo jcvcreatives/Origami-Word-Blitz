@@ -217,6 +217,9 @@ fun LexiFillMainScreen(
             onNextLevel = { viewModel.advanceToNextLevel() },
             onToggleSoundMute = { viewModel.toggleSoundMute(haptics) },
             onShakeConsumed = { viewModel.clearShake() },
+            onMoveFocusedCell = { dx, dy -> viewModel.moveFocusedCell(dx, dy, haptics) },
+            onTypeLetter = { ch -> viewModel.typeLetterInFocusedCell(ch, haptics) },
+            onBackspaceCell = { viewModel.backspaceInFocusedCell(haptics) },
           )
         }
         LexiFillDestination.PUZZLE_VAULT -> {
@@ -273,6 +276,9 @@ private fun SkeletonPuzzleArena(
   onNextLevel: () -> Unit,
   onToggleSoundMute: () -> Unit,
   onShakeConsumed: () -> Unit,
+  onMoveFocusedCell: (Int, Int) -> Unit,
+  onTypeLetter: (Char) -> Boolean,
+  onBackspaceCell: () -> Boolean,
 ) {
   var boardGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
   val scrollState = rememberScrollState()
@@ -324,6 +330,9 @@ private fun SkeletonPuzzleArena(
         onGeometryUpdated = { boardGeometry = it },
         onBlankSlotTapped = onBoardCellTapped,
         onShakeConsumed = onShakeConsumed,
+        onMoveFocusedCell = onMoveFocusedCell,
+        onTypeLetter = onTypeLetter,
+        onBackspaceCell = onBackspaceCell,
         modifier = Modifier.heightIn(max = maxBoardHeight),
       )
 

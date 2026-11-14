@@ -140,16 +140,12 @@ object LocalAccountStore {
   fun registerAccount(
     context: Context,
     username: String,
-    email: String,
     passwordPlain: String,
+    email: String = "",
   ): Result<LocalOrigamiAccount> {
     val cleanUser = username.trim()
-    val cleanEmail = email.trim().lowercase()
     if (cleanUser.length < 2) {
       return Result.failure(IllegalArgumentException("Please enter a username (at least 2 characters)."))
-    }
-    if (cleanEmail.isBlank() || !cleanEmail.contains("@")) {
-      return Result.failure(IllegalArgumentException("Please enter a valid email address."))
     }
     if (passwordPlain.length < 4) {
       return Result.failure(IllegalArgumentException("Password must be at least 4 characters."))
@@ -158,6 +154,7 @@ object LocalAccountStore {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val passHash = sha256(passwordPlain)
     val userKey = cleanUser.lowercase()
+    val cleanEmail = email.trim().lowercase().ifBlank { "$userKey@origami.local" }
 
     prefs
       .edit()
@@ -179,7 +176,7 @@ object LocalAccountStore {
   ): Result<LocalOrigamiAccount> {
     val cleanId = identifier.trim()
     if (cleanId.isBlank()) {
-      return Result.failure(IllegalArgumentException("Please enter your username or email."))
+      return Result.failure(IllegalArgumentException("Please enter your username."))
     }
     if (passwordPlain.isBlank()) {
       return Result.failure(IllegalArgumentException("Please enter your password."))
@@ -371,7 +368,6 @@ fun OrigamiAuthScreen(
   // Main flow defaults to "Create Account" (true); user can switch to "Log In" (false)
   var isCreateAccountMode by rememberSaveable { mutableStateOf(true) }
   var usernameInput by rememberSaveable { mutableStateOf("") }
-  var emailOrIdInput by rememberSaveable { mutableStateOf("") }
   var passwordInput by rememberSaveable { mutableStateOf("") }
   var passwordVisible by rememberSaveable { mutableStateOf(false) }
   var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -496,46 +492,25 @@ fun OrigamiAuthScreen(
 
           Spacer(modifier = Modifier.height(12.dp))
 
-          // Main Account Creation / Login Form Fields
+          // Main Account Creation / Login Form Fields (Username & Password only)
           Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
           ) {
-            if (isCreateAccountMode) {
-              OutlinedTextField(
-                value = usernameInput,
-                onValueChange = {
-                  usernameInput = it
-                  errorMessage = null
-                },
-                label = { Text("Username") },
-                placeholder = { Text("e.g. OrigamiMaster") },
-                leadingIcon = {
-                  Icon(Icons.Default.Person, contentDescription = null, tint = SkyCyan)
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().testTag("input_account_username"),
-              )
-            }
-
             OutlinedTextField(
-              value = emailOrIdInput,
+              value = usernameInput,
               onValueChange = {
-                emailOrIdInput = it
+                usernameInput = it
                 errorMessage = null
               },
-              label = { Text(if (isCreateAccountMode) "Email Address" else "Username or Email") },
-              placeholder = {
-                Text(if (isCreateAccountMode) "you@example.com" else "Username or email")
-              },
+              label = { Text("Username") },
+              placeholder = { Text("e.g. OrigamiMaster") },
               leadingIcon = {
-                Icon(Icons.Default.Email, contentDescription = null, tint = SkyCyan)
+                Icon(Icons.Default.Person, contentDescription = null, tint = SkyCyan)
               },
-              keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
               singleLine = true,
               shape = RoundedCornerShape(12.dp),
-              modifier = Modifier.fillMaxWidth().testTag("input_account_identifier"),
+              modifier = Modifier.fillMaxWidth().testTag("input_account_username"),
             )
 
             OutlinedTextField(
@@ -602,13 +577,12 @@ fun OrigamiAuthScreen(
                   LocalAccountStore.registerAccount(
                     context = context,
                     username = usernameInput,
-                    email = emailOrIdInput,
                     passwordPlain = passwordInput,
                   )
                 } else {
                   LocalAccountStore.loginAccount(
                     context = context,
-                    identifier = emailOrIdInput,
+                    identifier = usernameInput,
                     passwordPlain = passwordInput,
                   )
                 }

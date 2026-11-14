@@ -261,6 +261,7 @@ data class PuzzleState(
   val hoverPreview: DropPreviewEvaluation? = null,
   val highlightedHintCoord: Coordinate? = null,
   val focusedWordId: String? = null,
+  val focusedCellCoord: Coordinate? = null,
   val scorePopups: List<ScorePopupEvent> = emptyList(),
   val particleBursts: List<ParticleBurst> = emptyList(),
   val confettiExplosions: List<ConfettiExplosionEvent> = emptyList(),

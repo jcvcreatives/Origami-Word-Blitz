@@ -188,6 +188,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
       completedLevels = completedLevels,
       highestUnlockedLevel = highestUnlockedLevel,
       focusedWordId = normalizedTargetWords.firstOrNull()?.id,
+      focusedCellCoord = blankCoordsOrdered.firstOrNull(),
       equippedSkin = skin,
       unlockedSkinIds = unlockedSkinIds,
       lexiCoins = lexiCoins,
@@ -596,6 +597,24 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           "Placed '${tile.char}' at (${targetX + 1}, ${targetY + 1}). ${updatedTargetWords.count { !it.isCompleted }} words remaining."
       }
 
+    val nextFocusedWord =
+      updatedTargetWords.firstOrNull { !it.isCompleted && it.containsCoordinate(targetX, targetY) }
+        ?: updatedTargetWords.firstOrNull { !it.isCompleted }
+        ?: updatedTargetWords.find { it.id == state.focusedWordId }
+
+    val nextFocusedCell =
+      nextFocusedWord
+        ?.coordinates()
+        ?.firstOrNull { c ->
+          val fc = finalCells.getOrNull(c.y)?.getOrNull(c.x)
+          fc != null && fc.isBlankTarget && fc.placedTile == null && !fc.isLockedCompleted
+        }
+        ?: finalCells
+          .flatten()
+          .firstOrNull { it.isBlankTarget && it.placedTile == null && !it.isLockedCompleted }
+          ?.coordinate
+        ?: dropCoord
+
     val nextState =
       state.copy(
         cells = finalCells,
@@ -618,12 +637,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         hoverCoord = null,
         hoverPreview = null,
         highlightedHintCoord = null,
-        focusedWordId =
-          updatedTargetWords
-            .firstOrNull { !it.isCompleted && it.containsCoordinate(targetX, targetY) }
-            ?.id
-            ?: updatedTargetWords.firstOrNull { !it.isCompleted }?.id
-            ?: state.focusedWordId,
+        focusedWordId = nextFocusedWord?.id ?: state.focusedWordId,
+        focusedCellCoord = nextFocusedCell,
         scorePopups = newPopups,
         particleBursts = newParticles,
         confettiExplosions = newConfetti,
@@ -674,6 +689,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
     return state.copy(
       cells = newCells,
       rackState = state.rackState.copy(tiles = state.rackState.tiles + placed),
+      focusedCellCoord = Coordinate(x, y),
       statusMessage = "Returned '${placed.char}' to rack.",
       isStatusError = false,
     )

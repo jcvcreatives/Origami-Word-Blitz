@@ -13,6 +13,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -33,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -45,6 +48,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -157,7 +166,14 @@ fun LexiFillBoardCanvas(
   onBlankSlotTapped: (Int, Int) -> Unit,
   onShakeConsumed: () -> Unit,
   modifier: Modifier = Modifier,
+  onMoveFocusedCell: (Int, Int) -> Unit = { _, _ -> },
+  onTypeLetter: (Char) -> Boolean = { false },
+  onBackspaceCell: () -> Boolean = { false },
 ) {
+  val boardFocusRequester = remember { FocusRequester() }
+  LaunchedEffect(puzzleState.levelTemplate.levelNumber) {
+    runCatching { boardFocusRequester.requestFocus() }
+  }
   val infiniteTransition = rememberInfiniteTransition(label = "origami_paper_pulse")
   val pulseAlpha by
     infiniteTransition.animateFloat(
@@ -282,6 +298,41 @@ fun LexiFillBoardCanvas(
           RoundedCornerShape(18.dp),
         )
         .padding(10.dp)
+        .focusRequester(boardFocusRequester)
+        .focusable()
+        .onKeyEvent { keyEvent ->
+          if (keyEvent.type != KeyEventType.KeyDown) return@onKeyEvent false
+          when (keyEvent.key) {
+            Key.DirectionLeft -> {
+              onMoveFocusedCell(-1, 0)
+              true
+            }
+            Key.DirectionRight -> {
+              onMoveFocusedCell(1, 0)
+              true
+            }
+            Key.DirectionUp -> {
+              onMoveFocusedCell(0, -1)
+              true
+            }
+            Key.DirectionDown -> {
+              onMoveFocusedCell(0, 1)
+              true
+            }
+            Key.Backspace,
+            Key.Delete -> {
+              onBackspaceCell()
+            }
+            else -> {
+              val ch = keyEvent.utf16CodePoint.toChar().uppercaseChar()
+              if (ch in 'A'..'Z') {
+                onTypeLetter(ch)
+              } else {
+                false
+              }
+            }
+          }
+        }
         .testTag("lexifill_board_canvas"),
     contentAlignment = Alignment.Center,
   ) {
@@ -309,6 +360,7 @@ fun LexiFillBoardCanvas(
           }
           .pointerInput(puzzleState.boardWidth, puzzleState.boardHeight, currentGeometry) {
             detectTapGestures { tapOffset ->
+              runCatching { boardFocusRequester.requestFocus() }
               val cellSize = currentGeometry.cellSizePx
               if (cellSize > 1f) {
                 val gx = ((tapOffset.x - currentGeometry.gridOffsetInCanvas.x) / cellSize).toInt()
@@ -689,6 +741,19 @@ fun LexiFillBoardCanvas(
               radius = cellSize * (0.42f + 0.65f * rt),
               center = cellCenter,
               style = Stroke(width = cellSize * 0.045f * rAlpha),
+            )
+          }
+
+          // Keyboard-focused cell indicator ring
+          if (puzzleState.focusedCellCoord == coord && !isHoveredTarget) {
+            val focusCol =
+              if (cell.isOpenBlank) SkyCyan else KyotoGold.copy(alpha = 0.85f)
+            drawRoundRect(
+              color = focusCol,
+              topLeft = Offset(topLeft.x - cellSize * 0.024f, topLeft.y - cellSize * 0.024f),
+              size = Size(innerSize + cellSize * 0.048f, innerSize + cellSize * 0.048f),
+              cornerRadius = CornerRadius(cellSize * 0.16f, cellSize * 0.16f),
+              style = Stroke(width = cellSize * 0.052f),
             )
           }
         }
