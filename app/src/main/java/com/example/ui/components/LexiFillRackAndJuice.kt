@@ -396,9 +396,9 @@ fun LexiFillDraggableRack(
       label = "shuffle_btn_spin",
     )
 
-  // Shared single InfiniteTransition for all idle floating rack tiles (eliminates N per-tile coroutines)
+  // Shared single InfiniteTransition for all idle floating rack tiles; read only in graphicsLayer (0 recompositions)
   val sharedRackInfinite = rememberInfiniteTransition(label = "shared_rack_tile_float")
-  val sharedFloatPhase by
+  val sharedFloatPhaseState =
     sharedRackInfinite.animateFloat(
       initialValue = 0f,
       targetValue = (2f * PI).toFloat(),
@@ -507,7 +507,7 @@ fun LexiFillDraggableRack(
                 SpringDraggableRackTile(
                   tile = tile,
                   tileIndex = index,
-                  sharedFloatPhase = sharedFloatPhase,
+                  sharedFloatPhaseProvider = { sharedFloatPhaseState.value },
                   shuffleGeneration = shuffleGeneration,
                   isSelected = tile.id == selectedTileId,
                   skin = equippedSkin,
@@ -618,7 +618,7 @@ private fun LegendMiniPill(label: String, color: Color) {
 private fun SpringDraggableRackTile(
   tile: Tile,
   tileIndex: Int,
-  sharedFloatPhase: Float,
+  sharedFloatPhaseProvider: () -> Float,
   shuffleGeneration: Int,
   isSelected: Boolean,
   skin: CosmeticTileSkin,
@@ -708,13 +708,9 @@ private fun SpringDraggableRackTile(
   var dragVelocity by remember(tile.id) { mutableStateOf(Offset.Zero) }
   var trailOffsets by remember(tile.id) { mutableStateOf<List<Offset>>(emptyList()) }
 
-  // 1. Subtle continuous 'float' animation driven by the shared rack phase clock
-  val phaseAngle = sharedFloatPhase + (tileIndex * 0.85f)
-  val floatAmplitudePx = with(density) { 2.8.dp.toPx() }
-  val idleFloatY = if (!isDragging) sin(phaseAngle) * floatAmplitudePx else 0f
-  val idleFloatTilt = if (!isDragging) cos(phaseAngle) * 1.4f else 0f
+  val floatAmplitudePx = remember(density) { with(density) { 2.6.dp.toPx() } }
 
-  val scale by
+  val scaleState =
     animateFloatAsState(
       targetValue =
         when {
@@ -742,13 +738,6 @@ private fun SpringDraggableRackTile(
   val textColor = Color(skin.textColorHex)
   val dogEarFoldPath = remember { Path() }
 
-  // Combined visual offset = raw finger drag + magnetic spring snap pull + shuffle arc + idle rack float
-  val totalVisualOffset =
-    Offset(
-      x = dragOffset.value.x + magneticPullOffset.value.x + shuffleOffset.value.x,
-      y = dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y + idleFloatY,
-    )
-
   Box(
     modifier =
       Modifier.zIndex(if (isDragging) 50f else if (isSelected) 10f else 1f)
@@ -759,7 +748,12 @@ private fun SpringDraggableRackTile(
     if (isDragging) {
       Canvas(modifier = Modifier.fillMaxSize()) {
         val center = Offset(size.width / 2f, size.height / 2f)
-        val currentPos = center + totalVisualOffset
+        val currentPos =
+          center +
+            Offset(
+              x = dragOffset.value.x + magneticPullOffset.value.x + shuffleOffset.value.x,
+              y = dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y,
+            )
 
         // Soft paper-breeze trail dots behind dragged tile
         trailOffsets.forEachIndexed { idx, pastOffset ->
@@ -787,14 +781,16 @@ private fun SpringDraggableRackTile(
 
     Box(
       modifier =
-        Modifier.offset {
-            IntOffset(
-              totalVisualOffset.x.roundToInt(),
-              totalVisualOffset.y.roundToInt(),
-            )
-          }
-          .scale(scale * shufflePopScale.value)
-          .graphicsLayer {
+        Modifier.graphicsLayer {
+            val phaseAngle = sharedFloatPhaseProvider() + (tileIndex * 0.85f)
+            val idleFloatY = if (!isDragging) sin(phaseAngle) * floatAmplitudePx else 0f
+            val idleFloatTilt = if (!isDragging) cos(phaseAngle) * 1.4f else 0f
+            val combinedScale = scaleState.value * shufflePopScale.value
+            translationX = dragOffset.value.x + magneticPullOffset.value.x + shuffleOffset.value.x
+            translationY =
+              dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y + idleFloatY
+            scaleX = combinedScale
+            scaleY = combinedScale
             rotationZ =
               if (isDragging) tiltZ.value else (idleFloatTilt + shuffleTiltZ.value)
             rotationX = (-dragVelocity.y * 0.35f).coerceIn(-12f, 12f)

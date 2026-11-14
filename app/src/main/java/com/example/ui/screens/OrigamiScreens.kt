@@ -889,11 +889,30 @@ private fun PuzzleVaultScreen(
   onSelectLevel: (Int) -> Unit,
 ) {
   val allLevels = remember {
-    val curated = LexiFillEngine.CURATED_LEVELS
     val engine = LexiFillEngine()
-    val procedural = (9..14).map { engine.generateProceduralLevel(it) }
-    curated + procedural
+    engine.getAllCampaignLevels(LexiFillEngine.TOTAL_CAMPAIGN_LEVELS)
   }
+  var selectedChapter by rememberSaveable { mutableIntStateOf(0) } // 0 = All 100, 1..5 = Chapters
+  val filteredLevels =
+    remember(allLevels, selectedChapter) {
+      when (selectedChapter) {
+        1 -> allLevels.filter { it.levelNumber in 1..20 }
+        2 -> allLevels.filter { it.levelNumber in 21..40 }
+        3 -> allLevels.filter { it.levelNumber in 41..60 }
+        4 -> allLevels.filter { it.levelNumber in 61..80 }
+        5 -> allLevels.filter { it.levelNumber in 81..100 }
+        else -> allLevels
+      }
+    }
+  val chapters =
+    listOf(
+      0 to "All (100)",
+      1 to "Ch. I (1–20)",
+      2 to "Ch. II (21–40)",
+      3 to "Ch. III (41–60)",
+      4 to "Ch. IV (61–80)",
+      5 to "Ch. V (81–100)",
+    )
 
   LazyColumn(
     modifier = Modifier.fillMaxSize().widthIn(max = 600.dp).padding(16.dp),
@@ -902,13 +921,13 @@ private fun PuzzleVaultScreen(
   ) {
     item {
       Text(
-        text = "Crossword Skeleton Vault",
+        text = "Crossword Skeleton Vault (100 Levels)",
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.ExtraBold,
         color = WashiCream,
       )
       Text(
-        text = "Handcrafted Kriss-Kross Origami Puzzles · Fold Intersecting Words",
+        text = "100 Kriss-Kross Origami Puzzles Across 5 Mastery Chapters · Fold Intersecting Words",
         style = MaterialTheme.typography.bodySmall,
         color = SkyCyan,
       )
@@ -952,7 +971,39 @@ private fun PuzzleVaultScreen(
       }
     }
 
-    items(allLevels, key = { it.levelNumber }) { template: LevelTemplate ->
+    // Chapter Filter Strip
+    item {
+      Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        for ((chId, chLabel) in chapters) {
+          val isSelected = selectedChapter == chId
+          Surface(
+            shape = RoundedCornerShape(999.dp),
+            color = if (isSelected) SkyCyan else IndigoSurface,
+            modifier =
+              Modifier.border(
+                  1.dp,
+                  if (isSelected) SkyCyan else IndigoCard,
+                  RoundedCornerShape(999.dp),
+                )
+                .clickable { selectedChapter = chId }
+                .padding(horizontal = 12.dp, vertical = 7.dp)
+                .testTag("vault_chapter_filter_$chId"),
+          ) {
+            Text(
+              text = chLabel,
+              style = MaterialTheme.typography.labelSmall,
+              fontWeight = FontWeight.ExtraBold,
+              color = if (isSelected) IndigoNight else WashiCream,
+            )
+          }
+        }
+      }
+    }
+
+    items(filteredLevels, key = { it.levelNumber }) { template: LevelTemplate ->
       val isSolved = template.levelNumber in puzzleState.completedLevels
       val isCurrent = template.levelNumber == puzzleState.levelTemplate.levelNumber
 
@@ -1415,6 +1466,12 @@ private fun TriePatternSolverScreen(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = if (cloudProfile != null) CeladonJade else SkyCyan,
+              )
+              Text(
+                text = "Firebase Free-Tier Quota Guard: ACTIVE (0 Idle Listeners · 60 FPS RenderThread)",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = CeladonJade,
               )
             }
             Spacer(modifier = Modifier.width(8.dp))

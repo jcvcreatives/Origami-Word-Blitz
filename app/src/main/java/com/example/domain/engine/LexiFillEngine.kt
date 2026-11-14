@@ -848,33 +848,85 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
   }
 
   /**
-   * Generates a deterministic, offline-first procedural Crossword Skeleton level for levels beyond
-   * the curated campaign, guaranteeing 100% valid intersections and zero network usage.
+   * Returns the complete 100-level Crossword Origami campaign.
+   */
+  fun getAllCampaignLevels(totalCount: Int = TOTAL_CAMPAIGN_LEVELS): List<LevelTemplate> =
+    (1..totalCount).map { getLevelTemplate(it) }
+
+  /**
+   * Generates a deterministic, offline-first Crossword Skeleton level for Levels 21..100+
+   * across 5 Origami Mastery Chapters, guaranteeing 100% valid intersections, balanced Medium
+   * blank density (8–10 blanks per puzzle), and unique Japanese/Origami titles.
    */
   fun generateProceduralLevel(levelNumber: Int): LevelTemplate {
     val templatePool = CURATED_LEVELS
     val base = templatePool[(levelNumber - 1) % templatePool.size]
-    val rng = Random(levelNumber * 31337L)
+    val chapterIndex = ((levelNumber - 1) / templatePool.size).coerceAtLeast(1)
+    val rng = Random(levelNumber * 31337L + chapterIndex * 7919L)
 
-    // Increase blank density on higher procedural levels for extra challenge
+    // Find all intersection coordinates so we can keep dual-axis crossings engaging
+    val wordCoordCounts = HashMap<Coordinate, Int>()
+    for (tw in base.targetWords) {
+      for (c in tw.coordinates()) {
+        wordCoordCounts[c] = (wordCoordCounts[c] ?: 0) + 1
+      }
+    }
+    val intersectionCoords = wordCoordCounts.filterValues { it >= 2 }.keys
+
     val remixedWords =
-      base.targetWords.map { tw ->
-        val extraIdx =
-          (0 until tw.word.length)
-            .filter { it !in tw.missingBlankIndices }
-            .shuffled(rng)
-            .take(1)
+      base.targetWords.mapIndexed { wIdx, tw ->
+        val coords = tw.coordinates()
+        val crossingIndices =
+          coords.mapIndexedNotNull { idx, c -> if (c in intersectionCoords) idx else null }
+        val nonCrossingIndices =
+          (0 until tw.word.length).filter { it !in crossingIndices }
+        // Keep Medium balance: all crossing letters + 1 deterministic body letter per word (leaving >= 2 fixed letters)
+        val targetBodyBlanks = if (chapterIndex >= 3 && tw.word.length >= 6 && wIdx % 2 == 0) 2 else 1
+        val chosenBodyIndices =
+          nonCrossingIndices.shuffled(rng).take(targetBodyBlanks.coerceAtMost((tw.word.length - crossingIndices.size - 2).coerceAtLeast(0)))
+        val combinedBlanks =
+          (crossingIndices + chosenBodyIndices)
+            .distinct()
+            .sorted()
+            .ifEmpty { tw.missingBlankIndices }
         tw.copy(
-          id = "proc_${levelNumber}_${tw.id}",
-          missingBlankIndices = (tw.missingBlankIndices + extraIdx).distinct().sorted(),
+          id = "lvl${levelNumber}_${tw.id}",
+          missingBlankIndices = combinedBlanks,
         )
+      }
+
+    // Rotate Scrabble multipliers across intersections for fresh scoring strategy
+    val multCycle =
+      listOf(
+        SquareMultiplier.DW,
+        SquareMultiplier.TL,
+        SquareMultiplier.TW,
+        SquareMultiplier.DL,
+      )
+    val remixedMultipliers = HashMap<Coordinate, SquareMultiplier>()
+    intersectionCoords.sortedWith(compareBy<Coordinate> { it.y }.thenBy { it.x }).forEachIndexed { i, c ->
+      remixedMultipliers[c] = multCycle[(i + chapterIndex + levelNumber) % multCycle.size]
+    }
+
+    val customTitle =
+      CAMPAIGN_TITLES_21_TO_100.getOrNull(levelNumber - 21)
+        ?: "${base.title} · Fold ${levelNumber}"
+
+    val chapterBadge =
+      when (levelNumber) {
+        in 21..40 -> "TIER II · KYOTO STUDIO"
+        in 41..60 -> "TIER III · AIZOME NEXUS"
+        in 61..80 -> "TIER IV · KOTO MASTER"
+        in 81..100 -> "TIER V · SHOGUN GRANDMASTER"
+        else -> "TIER VI · ENDLESS ORIGAMI"
       }
 
     return base.copy(
       levelNumber = levelNumber,
-      title = "${base.title} · Remix ${levelNumber - templatePool.size}",
-      tierBadge = "PROCEDURAL TIER",
+      title = customTitle,
+      tierBadge = chapterBadge,
       targetWords = remixedWords,
+      multipliers = remixedMultipliers,
     )
   }
 
@@ -1482,6 +1534,15 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(0, 2, 3, 4), // (1,5)P, (3,5)L, (4,5)S, (5,5)E
               ),
+              TargetWord(
+                id = "l8_v3",
+                word = "CAPE",
+                clue = "Sleeveless cloak worn over the shoulders",
+                startX = 1,
+                startY = 3,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2), // (1,3)C, (1,5)P
+              ),
             ),
           multipliers =
             mapOf(
@@ -1492,8 +1553,848 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(5, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Shogun's Scroll|H:1,1:KATANA:0,2,4|V:3,1:TEMPLE:0,2,4,5|V:5,1:NOBLE:0,2,4|H:1,5:PULSE:0,2,3,4",
+            "8x8|title:Shogun's Scroll|H:1,1:KATANA:0,2,4|V:3,1:TEMPLE:0,2,4,5|V:5,1:NOBLE:0,2,4|H:1,5:PULSE:0,2,3,4|V:1,3:CAPE:0,2",
         ),
+
+        // LEVEL 9: 8x8 — "Origami Garden"
+        LevelTemplate(
+          levelNumber = 9,
+          title = "Origami Garden",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l9_h1",
+                word = "LOTUS",
+                clue = "Sacred water blossom of serene ponds",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)L, (3,1)T, (5,1)S
+              ),
+              TargetWord(
+                id = "l9_v1",
+                word = "START",
+                clue = "Embark on a new journey",
+                startX = 3,
+                startY = 0,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(1, 3, 4), // (3,1)T, (3,3)R, (3,4)T
+              ),
+              TargetWord(
+                id = "l9_h2",
+                word = "CRANE",
+                clue = "Iconic folded origami bird of peace",
+                startX = 2,
+                startY = 3,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 1, 3), // (2,3)C, (3,3)R, (5,3)N
+              ),
+              TargetWord(
+                id = "l9_v2",
+                word = "SENSE",
+                clue = "Intuitive perception and awareness",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)S, (5,3)N, (5,5)E
+              ),
+              TargetWord(
+                id = "l9_h3",
+                word = "RIVER",
+                clue = "Flowing mountain stream",
+                startX = 2,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(1, 3, 4), // (3,5)I, (5,5)E, (6,5)R
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(3, 1) to SquareMultiplier.DW,
+              Coordinate(5, 1) to SquareMultiplier.TL,
+              Coordinate(3, 3) to SquareMultiplier.TW,
+              Coordinate(5, 3) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.DL,
+            ),
+          compactCode =
+            "8x8|title:Origami Garden|H:1,1:LOTUS:0,2,4|V:3,0:START:1,3,4|H:2,3:CRANE:0,1,3|V:5,1:SENSE:0,2,4|H:2,5:RIVER:1,3,4",
+        ),
+
+        // LEVEL 10: 8x8 — "Kyoto Lanterns"
+        LevelTemplate(
+          levelNumber = 10,
+          title = "Kyoto Lanterns",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l10_h1",
+                word = "BRIDGE",
+                clue = "Arched timber crossing over a canal",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(1, 3, 5), // (2,1)R, (4,1)D, (6,1)E
+              ),
+              TargetWord(
+                id = "l10_v1",
+                word = "RIVER",
+                clue = "Winding waterway reflecting lanterns",
+                startX = 2,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (2,1)R, (2,3)V, (2,5)R
+              ),
+              TargetWord(
+                id = "l10_v2",
+                word = "DANCE",
+                clue = "Graceful rhythmic festival movement",
+                startX = 4,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (4,1)D, (4,3)N, (4,5)E
+              ),
+              TargetWord(
+                id = "l10_v3",
+                word = "ECHO",
+                clue = "Resounding reflection of sound",
+                startX = 6,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2), // (6,1)E, (6,3)H
+              ),
+              TargetWord(
+                id = "l10_h2",
+                word = "GREEN",
+                clue = "Verdant hue of mossy temple gardens",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(1, 3, 4), // (2,5)R, (4,5)E, (5,5)N
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(2, 1) to SquareMultiplier.DW,
+              Coordinate(4, 1) to SquareMultiplier.TW,
+              Coordinate(6, 1) to SquareMultiplier.DL,
+              Coordinate(2, 5) to SquareMultiplier.TL,
+              Coordinate(4, 5) to SquareMultiplier.DW,
+            ),
+          compactCode =
+            "8x8|title:Kyoto Lanterns|H:1,1:BRIDGE:1,3,5|V:2,1:RIVER:0,2,4|V:4,1:DANCE:0,2,4|V:6,1:ECHO:0,2|H:1,5:GREEN:1,3,4",
+        ),
+
+        // LEVEL 11: 8x8 — "Coral Sanctuary"
+        LevelTemplate(
+          levelNumber = 11,
+          title = "Coral Sanctuary",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l11_h1",
+                word = "CORAL",
+                clue = "Reef-building marine formation",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (3,1)R, (5,1)L
+              ),
+              TargetWord(
+                id = "l11_v1",
+                word = "CHESS",
+                clue = "Strategic board game of kings and knights",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (1,3)E, (1,5)S
+              ),
+              TargetWord(
+                id = "l11_v2",
+                word = "RADIO",
+                clue = "Wireless receiver of broadcast waves",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)R, (3,3)D, (3,5)O
+              ),
+              TargetWord(
+                id = "l11_v3",
+                word = "LANCE",
+                clue = "Jousting spear carried by a cavalry knight",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)L, (5,3)N, (5,5)E
+              ),
+              TargetWord(
+                id = "l11_h2",
+                word = "SHORE",
+                clue = "Sandy coastline where ocean waves break",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)S, (3,5)O, (5,5)E
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TL,
+              Coordinate(5, 1) to SquareMultiplier.DW,
+              Coordinate(1, 5) to SquareMultiplier.DL,
+              Coordinate(3, 5) to SquareMultiplier.TW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Coral Sanctuary|H:1,1:CORAL:0,2,4|V:1,1:CHESS:0,2,4|V:3,1:RADIO:0,2,4|V:5,1:LANCE:0,2,4|H:1,5:SHORE:0,2,4",
+        ),
+
+        // LEVEL 12: 8x8 — "Solar Eclipse"
+        LevelTemplate(
+          levelNumber = 12,
+          title = "Solar Eclipse",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l12_h1",
+                word = "SOLAR",
+                clue = "Radiating from the sun's corona",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)S, (3,1)L, (5,1)R
+              ),
+              TargetWord(
+                id = "l12_v1",
+                word = "STEAM",
+                clue = "Heated water vapor rising from hot springs",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)S, (1,3)E, (1,5)M
+              ),
+              TargetWord(
+                id = "l12_v2",
+                word = "LIGHT",
+                clue = "Luminous beams that banish shadow",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)L, (3,3)G, (3,5)T
+              ),
+              TargetWord(
+                id = "l12_v3",
+                word = "RIVER",
+                clue = "Freshwater current carving a valley",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)R, (5,3)V, (5,5)R
+              ),
+              TargetWord(
+                id = "l12_h2",
+                word = "MOTOR",
+                clue = "Rotary engine that drives motion",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)M, (3,5)T, (5,5)R
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.TW,
+              Coordinate(3, 1) to SquareMultiplier.DW,
+              Coordinate(5, 1) to SquareMultiplier.DL,
+              Coordinate(1, 5) to SquareMultiplier.TL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Solar Eclipse|H:1,1:SOLAR:0,2,4|V:1,1:STEAM:0,2,4|V:3,1:LIGHT:0,2,4|V:5,1:RIVER:0,2,4|H:1,5:MOTOR:0,2,4",
+        ),
+
+        // LEVEL 13: 8x8 — "Samurai Armor"
+        LevelTemplate(
+          levelNumber = 13,
+          title = "Samurai Armor",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l13_h1",
+                word = "SWORD",
+                clue = "Forged steel blade of a warrior",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)S, (3,1)O, (5,1)D
+              ),
+              TargetWord(
+                id = "l13_v1",
+                word = "SCALE",
+                clue = "Overlapping protective armor plate",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)S, (1,3)A, (1,5)E
+              ),
+              TargetWord(
+                id = "l13_v2",
+                word = "OCEAN",
+                clue = "Deep blue sea surrounding the archipelago",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)O, (3,3)E, (3,5)N
+              ),
+              TargetWord(
+                id = "l13_v3",
+                word = "DRAMA",
+                clue = "Theatrical Noh or Kabuki stage performance",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)D, (5,3)A, (5,5)A
+              ),
+              TargetWord(
+                id = "l13_h2",
+                word = "ARENA",
+                clue = "Central tournament ground for champions",
+                startX = 1,
+                startY = 3,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,3)A, (3,3)E, (5,3)A
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TL,
+              Coordinate(5, 1) to SquareMultiplier.DW,
+              Coordinate(1, 3) to SquareMultiplier.TL,
+              Coordinate(3, 3) to SquareMultiplier.TW,
+              Coordinate(5, 3) to SquareMultiplier.DL,
+            ),
+          compactCode =
+            "8x8|title:Samurai Armor|H:1,1:SWORD:0,2,4|V:1,1:SCALE:0,2,4|V:3,1:OCEAN:0,2,4|V:5,1:DRAMA:0,2,4|H:1,3:ARENA:0,2,4",
+        ),
+
+        // LEVEL 14: 8x8 — "Velvet Horizon"
+        LevelTemplate(
+          levelNumber = 14,
+          title = "Velvet Horizon",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l14_h1",
+                word = "CLOUD",
+                clue = "Billowing mist drifting across mountain peaks",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (3,1)O, (5,1)D
+              ),
+              TargetWord(
+                id = "l14_v1",
+                word = "CHEST",
+                clue = "Ornate cedar box for storing scrolls",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (1,3)E, (1,5)T
+              ),
+              TargetWord(
+                id = "l14_v2",
+                word = "OCEAN",
+                clue = "Boundless maritime horizon",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)O, (3,3)E, (3,5)N
+              ),
+              TargetWord(
+                id = "l14_v3",
+                word = "DANCE",
+                clue = "Choreographed motion of falling petals",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)D, (5,3)N, (5,5)E
+              ),
+              TargetWord(
+                id = "l14_h2",
+                word = "TENSE",
+                clue = "Stretched taut like a tuned Koto string",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)T, (3,5)N, (5,5)E
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TW,
+              Coordinate(5, 1) to SquareMultiplier.DL,
+              Coordinate(1, 5) to SquareMultiplier.TL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Velvet Horizon|H:1,1:CLOUD:0,2,4|V:1,1:CHEST:0,2,4|V:3,1:OCEAN:0,2,4|V:5,1:DANCE:0,2,4|H:1,5:TENSE:0,2,4",
+        ),
+
+        // LEVEL 15: 8x8 — "Glacier Peak"
+        LevelTemplate(
+          levelNumber = 15,
+          title = "Glacier Peak",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l15_h1",
+                word = "FROST",
+                clue = "Crystalline rime formed on winter mornings",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)F, (3,1)O, (5,1)T
+              ),
+              TargetWord(
+                id = "l15_v1",
+                word = "FOCUS",
+                clue = "Center of sharp optical clarity",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)F, (1,3)C, (1,5)S
+              ),
+              TargetWord(
+                id = "l15_v2",
+                word = "OPERA",
+                clue = "Grand dramatic work set to orchestral music",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)O, (3,3)E, (3,5)A
+              ),
+              TargetWord(
+                id = "l15_v3",
+                word = "TOWER",
+                clue = "Multi-tiered pagoda rising above the pines",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)T, (5,3)W, (5,5)R
+              ),
+              TargetWord(
+                id = "l15_h2",
+                word = "STAIR",
+                clue = "Stone steps ascending a mountain shrine",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)S, (3,5)A, (5,5)R
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.TL,
+              Coordinate(3, 1) to SquareMultiplier.DW,
+              Coordinate(5, 1) to SquareMultiplier.DW,
+              Coordinate(1, 5) to SquareMultiplier.DL,
+              Coordinate(3, 5) to SquareMultiplier.TW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Glacier Peak|H:1,1:FROST:0,2,4|V:1,1:FOCUS:0,2,4|V:3,1:OPERA:0,2,4|V:5,1:TOWER:0,2,4|H:1,5:STAIR:0,2,4",
+        ),
+
+        // LEVEL 16: 8x8 — "Golden Pavilion"
+        LevelTemplate(
+          levelNumber = 16,
+          title = "Golden Pavilion",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l16_h1",
+                word = "PEARL",
+                clue = "Iridescent treasure of the oyster shell",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)P, (3,1)A, (5,1)L
+              ),
+              TargetWord(
+                id = "l16_v1",
+                word = "PLANT",
+                clue = "Living botanical sprout in a bonsai pot",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)P, (1,3)A, (1,5)T
+              ),
+              TargetWord(
+                id = "l16_v2",
+                word = "ARENA",
+                clue = "Enclosed stage for martial exhibition",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)A, (3,3)E, (3,5)A
+              ),
+              TargetWord(
+                id = "l16_v3",
+                word = "LEMON",
+                clue = "Bright citrus fruit with zest and tang",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)L, (5,3)M, (5,5)N
+              ),
+              TargetWord(
+                id = "l16_h2",
+                word = "TRAIN",
+                clue = "Express rail gliding past Mount Fuji",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)T, (3,5)A, (5,5)N
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TW,
+              Coordinate(5, 1) to SquareMultiplier.DL,
+              Coordinate(1, 5) to SquareMultiplier.TL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Golden Pavilion|H:1,1:PEARL:0,2,4|V:1,1:PLANT:0,2,4|V:3,1:ARENA:0,2,4|V:5,1:LEMON:0,2,4|H:1,5:TRAIN:0,2,4",
+        ),
+
+        // LEVEL 17: 8x8 — "Koto Harmony"
+        LevelTemplate(
+          levelNumber = 17,
+          title = "Koto Harmony",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l17_h1",
+                word = "MUSIC",
+                clue = "Melodic art of plucked strings and chimes",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)M, (3,1)S, (5,1)C
+              ),
+              TargetWord(
+                id = "l17_v1",
+                word = "MAGIC",
+                clue = "Enchanting wonder and sleight of hand",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)M, (1,3)G, (1,5)C
+              ),
+              TargetWord(
+                id = "l17_v2",
+                word = "SCALE",
+                clue = "Ascending sequence of musical notes",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)S, (3,3)A, (3,5)E
+              ),
+              TargetWord(
+                id = "l17_v3",
+                word = "CROWN",
+                clue = "Sovereign diadem of gold",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)C, (5,3)O, (5,5)N
+              ),
+              TargetWord(
+                id = "l17_h2",
+                word = "CLEAN",
+                clue = "Pure, unblemished, and freshly swept",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)C, (3,5)E, (5,5)N
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.TW,
+              Coordinate(3, 1) to SquareMultiplier.DW,
+              Coordinate(5, 1) to SquareMultiplier.TL,
+              Coordinate(1, 5) to SquareMultiplier.DW,
+              Coordinate(3, 5) to SquareMultiplier.DL,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Koto Harmony|H:1,1:MUSIC:0,2,4|V:1,1:MAGIC:0,2,4|V:3,1:SCALE:0,2,4|V:5,1:CROWN:0,2,4|H:1,5:CLEAN:0,2,4",
+        ),
+
+        // LEVEL 18: 8x8 — "Bamboo Fortress"
+        LevelTemplate(
+          levelNumber = 18,
+          title = "Bamboo Fortress",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l18_h1",
+                word = "BLADE",
+                clue = "Keen edge of a bamboo-cutting knife",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)B, (3,1)A, (5,1)E
+              ),
+              TargetWord(
+                id = "l18_v1",
+                word = "BEACH",
+                clue = "Pebbled cove along the inland sea",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)B, (1,3)A, (1,5)H
+              ),
+              TargetWord(
+                id = "l18_v2",
+                word = "ARENA",
+                clue = "Grand courtyard of competitive mastery",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)A, (3,3)E, (3,5)A
+              ),
+              TargetWord(
+                id = "l18_v3",
+                word = "EVENT",
+                clue = "Notable celebration on the lunar calendar",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)E, (5,3)E, (5,5)T
+              ),
+              TargetWord(
+                id = "l18_h2",
+                word = "HEART",
+                clue = "Core of courage and steadfast spirit",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)H, (3,5)A, (5,5)T
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TL,
+              Coordinate(5, 1) to SquareMultiplier.DW,
+              Coordinate(1, 5) to SquareMultiplier.TW,
+              Coordinate(3, 5) to SquareMultiplier.DL,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Bamboo Fortress|H:1,1:BLADE:0,2,4|V:1,1:BEACH:0,2,4|V:3,1:ARENA:0,2,4|V:5,1:EVENT:0,2,4|H:1,5:HEART:0,2,4",
+        ),
+
+        // LEVEL 19: 8x8 — "Starlight Compass"
+        LevelTemplate(
+          levelNumber = 19,
+          title = "Starlight Compass",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l19_h1",
+                word = "COMET",
+                clue = "Icy celestial traveler with a glowing tail",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (3,1)M, (5,1)T
+              ),
+              TargetWord(
+                id = "l19_v1",
+                word = "CHAIR",
+                clue = "Carved wooden seat in the study hall",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (1,3)A, (1,5)R
+              ),
+              TargetWord(
+                id = "l19_v2",
+                word = "MEDIA",
+                clue = "Channels of artistic communication",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)M, (3,3)D, (3,5)A
+              ),
+              TargetWord(
+                id = "l19_v3",
+                word = "TRUTH",
+                clue = "Verifiable reality and honest principle",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)T, (5,3)U, (5,5)H
+              ),
+              TargetWord(
+                id = "l19_h2",
+                word = "REACH",
+                clue = "Extend one's hand toward the stars",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)R, (3,5)A, (5,5)H
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.TL,
+              Coordinate(3, 1) to SquareMultiplier.DW,
+              Coordinate(5, 1) to SquareMultiplier.TW,
+              Coordinate(1, 5) to SquareMultiplier.DW,
+              Coordinate(3, 5) to SquareMultiplier.TL,
+              Coordinate(5, 5) to SquareMultiplier.DL,
+            ),
+          compactCode =
+            "8x8|title:Starlight Compass|H:1,1:COMET:0,2,4|V:1,1:CHAIR:0,2,4|V:3,1:MEDIA:0,2,4|V:5,1:TRUTH:0,2,4|H:1,5:REACH:0,2,4",
+        ),
+
+        // LEVEL 20: 8x8 — "Celestial Crane"
+        LevelTemplate(
+          levelNumber = 20,
+          title = "Celestial Crane",
+          tierBadge = "TIER I · STARTER SKELETON",
+          boardWidth = 8,
+          boardHeight = 8,
+          targetWords =
+            listOf(
+              TargetWord(
+                id = "l20_h1",
+                word = "FLAME",
+                clue = "Flickering lantern fire in the night breeze",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)F, (3,1)A, (5,1)E
+              ),
+              TargetWord(
+                id = "l20_v1",
+                word = "FIELD",
+                clue = "Open meadow of wildflowers",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)F, (1,3)E, (1,5)D
+              ),
+              TargetWord(
+                id = "l20_v2",
+                word = "ANGEL",
+                clue = "Winged celestial messenger",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)A, (3,3)G, (3,5)L
+              ),
+              TargetWord(
+                id = "l20_v3",
+                word = "EARLY",
+                clue = "Arriving with the first light of dawn",
+                startX = 5,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)E, (5,3)R, (5,5)Y
+              ),
+              TargetWord(
+                id = "l20_h2",
+                word = "DELAY",
+                clue = "Momentary pause before the next fold",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)D, (3,5)L, (5,5)Y
+              ),
+            ),
+          multipliers =
+            mapOf(
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TW,
+              Coordinate(5, 1) to SquareMultiplier.DL,
+              Coordinate(1, 5) to SquareMultiplier.TL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
+            ),
+          compactCode =
+            "8x8|title:Celestial Crane|H:1,1:FLAME:0,2,4|V:1,1:FIELD:0,2,4|V:3,1:ANGEL:0,2,4|V:5,1:EARLY:0,2,4|H:1,5:DELAY:0,2,4",
+        ),
+      )
+
+    const val TOTAL_CAMPAIGN_LEVELS = 100
+
+    val CAMPAIGN_TITLES_21_TO_100: List<String> =
+      listOf(
+        // Chapter II: Levels 21–40 (Kyoto Studio)
+        "Hinoki Courtyard", "Sakura Whisper", "Matcha Pavilion", "Aizome Tide", "Kamo River Mist",
+        "Arashiyama Grove", "Fushimi Torii", "Gion Twilight", "Kinkaku Reflection", "Nijo Bastion",
+        "Byodoin Phoenix", "Philosopher's Walk", "Kiyomizu Stage", "Nanzen Aqueduct", "Ryoanji Zen Stone",
+        "Katsura MoonDeck", "Heian Shrine Gate", "Kurama Mountain", "Uji Tea Terrace", "Toji Pagoda Spire",
+        // Chapter III: Levels 41–60 (Aizome Nexus)
+        "Indigo Loom", "Washi Artisan", "Furin Wind Chime", "Kintsugi Gold Seam", "Tatami Symmetry",
+        "Shoji Lantern Glow", "Suiseki Scholar", "Bonsai Canopy", "Sumi Ink Cascade", "Calligraphy Scroll",
+        "Origami Starfold", "Tsuru Wing Crease", "Kusudama Sphere", "Chiyogami Pattern", "Mizuhiki Knot",
+        "Kumiko Lattice", "Edo Woodblock", "Hakone Marquetry", "Imari Porcelain", "Kutani Glaze",
+        // Chapter IV: Levels 61–80 (Koto Master)
+        "Hirajoshi Chord", "Shakuhachi Breath", "Biwa Ballad", "Shamisen Pluck", "Taiko Thunder",
+        "Kagura Ritual", "Gagaku Court", "Noh Mask Shadow", "Kabuki Fan Fold", "Tsugaru Cadence",
+        "Koto Thirteen Strings", "Yatsuhashi Bridge", "Furin Summer Breeze", "Suikinkutsu Echo", "Suzu Temple Bell",
+        "Sho Harmony Reed", "Hichiriki Air", "Tsuzumi Shoulder Drum", "Kane Bronze Gong", "Matsuri Finale",
+        // Chapter V: Levels 81–100 (Shogun Grandmaster)
+        "Azuchi Keep", "Himeji White Heron", "Matsumoto Crow", "Kumamoto Rampart", "Inuyama Watchtower",
+        "Hikone Moat", "Bitchu Cloud Keep", "Matsue Lake Bastion", "Maruoka Ancient Stone", "Hirosaki Blossom Keep",
+        "Uwajima Sea Gate", "Kochi Hilltop", "Tsurugaoka Banner", "Sekigahara Vanguard", "Edo Citadel Crown",
+        "Tokugawa Crest", "Meiji Dawn Horizon", "Imperial Garden Fold", "Thousandth Paper Crane", "Grand Shogun's 100th Fold",
       )
   }
 }

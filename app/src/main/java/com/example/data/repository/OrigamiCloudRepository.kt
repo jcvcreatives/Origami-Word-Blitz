@@ -33,6 +33,15 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
 
   private val auth = Firebase.auth
 
+  @Volatile private var cachedUserId: String? = null
+  @Volatile private var cachedProfile: UserProfileDocument? = null
+  @Volatile var sessionReadsCount: Int = 0
+    private set
+  @Volatile var sessionWritesCount: Int = 0
+    private set
+
+  fun getCachedProfile(): UserProfileDocument? = cachedProfile
+
   private fun requireUserId(): String {
     return auth.currentUser?.uid
       ?: throw IllegalStateException(
@@ -48,11 +57,15 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
         .document(userId)
         .snapshots()
         .map { snapshot ->
+          sessionReadsCount++
           if (snapshot.exists()) {
             snapshot.toObject(
               UserProfileDocument::class.java,
               DocumentSnapshot.ServerTimestampBehavior.ESTIMATE,
-            )
+            )?.also {
+              cachedUserId = userId
+              cachedProfile = it
+            }
           } else {
             null
           }
@@ -76,9 +89,23 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
     displayName: String = "Origami Strategist"
   ): Result<UserProfileDocument> = runCatching {
     val uid = requireUserId()
-    val docRef = db.collection("users").document(uid)
     val safeName = displayName.trim().ifBlank { "Origami Strategist" }.take(50)
+
+    // Free-Tier Quota Guard: Reuse in-memory cached profile if already fetched this session
+    val memoryProfile = cachedProfile
+    if (cachedUserId == uid && memoryProfile != null) {
+      if (
+        safeName == "Origami Strategist" ||
+          safeName == "Origami Apprentice" ||
+          memoryProfile.displayName == safeName
+      ) {
+        return@runCatching memoryProfile
+      }
+    }
+
+    val docRef = db.collection("users").document(uid)
     try {
+      sessionReadsCount++
       val existing = docRef.get().await()
       if (existing.exists()) {
         val loaded =
@@ -92,6 +119,7 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
               safeName != "Origami Apprentice" &&
               loaded.displayName != safeName
           ) {
+            sessionWritesCount++
             docRef
               .update(
                 mapOf(
@@ -100,8 +128,13 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
                 )
               )
               .await()
-            return@runCatching loaded.copy(displayName = safeName)
+            val updated = loaded.copy(displayName = safeName)
+            cachedUserId = uid
+            cachedProfile = updated
+            return@runCatching updated
           }
+          cachedUserId = uid
+          cachedProfile = loaded
           return@runCatching loaded
         }
       }
@@ -120,12 +153,26 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
           "createdAt" to FieldValue.serverTimestamp(),
           "updatedAt" to FieldValue.serverTimestamp(),
         )
+      sessionWritesCount++
       docRef.set(payload).await()
-      val created = docRef.get().await()
-      created.toObject(
-        UserProfileDocument::class.java,
-        DocumentSnapshot.ServerTimestampBehavior.ESTIMATE,
-      ) ?: UserProfileDocument(id = uid, userId = uid, displayName = safeName)
+      // Free-Tier Quota Guard: Construct profile in memory instead of issuing a second .get() read
+      val createdDoc =
+        UserProfileDocument(
+          id = uid,
+          userId = uid,
+          displayName = safeName,
+          totalScore = 0L,
+          highestWordScore = 0L,
+          bestWord = "",
+          campaignStage = 1L,
+          dailyStreak = 1L,
+          paperCoins = 150L,
+          equippedTileSkin = "washi_classic",
+          unlockedSkins = listOf("washi_classic"),
+        )
+      cachedUserId = uid
+      cachedProfile = createdDoc
+      createdDoc
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
@@ -135,8 +182,12 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
   }
 
   suspend fun getProfileById(targetUserId: String): Result<UserProfileDocument?> = runCatching {
+    if (cachedUserId == targetUserId && cachedProfile != null) {
+      return@runCatching cachedProfile
+    }
     val docRef = db.collection("users").document(targetUserId)
     try {
+      sessionReadsCount++
       val snap = docRef.get().await()
       snap.toObject(
         UserProfileDocument::class.java,
@@ -162,17 +213,15 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
     val uid = requireUserId()
     val docRef = db.collection("users").document(uid)
     try {
-      val snapshot = docRef.get().await()
+      // Free-Tier Quota Guard: Use cached in-memory profile to avoid a redundant .get() read before every update
       val current =
-        if (snapshot.exists()) {
-          snapshot.toObject(
-            UserProfileDocument::class.java,
-            DocumentSnapshot.ServerTimestampBehavior.ESTIMATE,
-          ) ?: ensureOrCreateProfile().getOrThrow()
+        if (cachedUserId == uid && cachedProfile != null) {
+          cachedProfile!!
         } else {
           ensureOrCreateProfile().getOrThrow()
         }
 
+      val newTotalScore = maxOf(0L, current.totalScore + scoreDelta.toLong())
       val newHighestWordScore = maxOf(current.highestWordScore, wordScore.toLong())
       val newBestWord =
         if (wordScore.toLong() >= current.highestWordScore && playedWord.isNotBlank()) {
@@ -182,9 +231,9 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
         }
       val newCampaignStage =
         if (advanceCampaignTo != null) {
-          maxOf(current.campaignStage, advanceCampaignTo.toLong()).coerceIn(1L, 10L)
+          maxOf(current.campaignStage, advanceCampaignTo.toLong()).coerceIn(1L, 100L)
         } else {
-          current.campaignStage.coerceIn(1L, 10L)
+          current.campaignStage.coerceIn(1L, 100L)
         }
       val updatedUnlocked =
         if (unlockSkin != null && !current.unlockedSkins.contains(unlockSkin)) {
@@ -193,19 +242,44 @@ class OrigamiCloudRepository(private val db: FirebaseFirestore) {
           current.unlockedSkins.take(20)
         }
       val updatedEquipped = (equipSkin ?: current.equippedTileSkin).take(40)
+      val newCoins = maxOf(0L, current.paperCoins + coinsDelta.toLong())
+
+      // Skip network write if nothing meaningfully changed
+      if (
+        newTotalScore == current.totalScore &&
+          newHighestWordScore == current.highestWordScore &&
+          newCampaignStage == current.campaignStage &&
+          newCoins == current.paperCoins &&
+          updatedEquipped == current.equippedTileSkin &&
+          updatedUnlocked == current.unlockedSkins
+      ) {
+        return@runCatching
+      }
 
       val updates =
         mapOf(
-          "totalScore" to maxOf(0L, current.totalScore + scoreDelta.toLong()),
+          "totalScore" to newTotalScore,
           "highestWordScore" to newHighestWordScore,
           "bestWord" to newBestWord,
           "campaignStage" to newCampaignStage,
-          "paperCoins" to maxOf(0L, current.paperCoins + coinsDelta.toLong()),
+          "paperCoins" to newCoins,
           "equippedTileSkin" to updatedEquipped,
           "unlockedSkins" to updatedUnlocked,
           "updatedAt" to FieldValue.serverTimestamp(),
         )
+      sessionWritesCount++
       docRef.update(updates).await()
+      cachedUserId = uid
+      cachedProfile =
+        current.copy(
+          totalScore = newTotalScore,
+          highestWordScore = newHighestWordScore,
+          bestWord = newBestWord,
+          campaignStage = newCampaignStage,
+          paperCoins = newCoins,
+          equippedTileSkin = updatedEquipped,
+          unlockedSkins = updatedUnlocked,
+        )
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {

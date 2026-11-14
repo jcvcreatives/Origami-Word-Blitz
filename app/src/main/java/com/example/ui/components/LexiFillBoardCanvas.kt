@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.Key
@@ -83,6 +84,7 @@ import com.example.ui.theme.SquareTwBg
 import com.example.ui.theme.VermilionRed
 import com.example.ui.theme.WashiCream
 import com.example.ui.theme.WashiMuted
+import com.example.ui.theme.drawLockedWashiCellShader
 import com.example.ui.theme.paperGrainOverlay
 import kotlinx.coroutines.delay
 import kotlin.math.PI
@@ -174,30 +176,63 @@ fun LexiFillBoardCanvas(
   LaunchedEffect(puzzleState.levelTemplate.levelNumber) {
     runCatching { boardFocusRequester.requestFocus() }
   }
-  val infiniteTransition = rememberInfiniteTransition(label = "origami_paper_pulse")
-  val pulseAlpha by
-    infiniteTransition.animateFloat(
-      initialValue = 0.35f,
-      targetValue = 0.90f,
-      animationSpec =
-        infiniteRepeatable(
-          animation = tween(900, easing = FastOutSlowInEasing),
-          repeatMode = RepeatMode.Reverse,
-        ),
-      label = "pulse_alpha",
-    )
+  val isBoardActivelyPulsing =
+    puzzleState.hoverCoord != null || puzzleState.highlightedHintCoord != null
+  val pulseAlpha: Float
+  val reticlePhase: Float
+  if (isBoardActivelyPulsing) {
+    val infiniteTransition = rememberInfiniteTransition(label = "origami_paper_pulse")
+    val animPulse by
+      infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.90f,
+        animationSpec =
+          infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+          ),
+        label = "pulse_alpha",
+      )
+    val animReticle by
+      infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+          infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+          ),
+        label = "reticle_phase",
+      )
+    pulseAlpha = animPulse
+    reticlePhase = animReticle
+  } else {
+    pulseAlpha = 0.52f
+    reticlePhase = 0f
+  }
 
-  val reticlePhase by
-    infiniteTransition.animateFloat(
-      initialValue = 0f,
-      targetValue = 1f,
-      animationSpec =
-        infiniteRepeatable(
-          animation = tween(700, easing = FastOutSlowInEasing),
-          repeatMode = RepeatMode.Reverse,
-        ),
-      label = "reticle_phase",
-    )
+  val hasLockedCells =
+    remember(puzzleState.cells) {
+      puzzleState.cells.any { row -> row.any { it.isLockedCompleted } }
+    }
+  val washiShaderTimeSec: Float
+  if (hasLockedCells) {
+    val lockedShaderTransition = rememberInfiniteTransition(label = "locked_washi_grain_shader")
+    val animShaderTime by
+      lockedShaderTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2.0 * PI).toFloat(),
+        animationSpec =
+          infiniteRepeatable(
+            animation = tween(durationMillis = 6400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+          ),
+        label = "washi_shader_time",
+      )
+    washiShaderTimeSec = animShaderTime
+  } else {
+    washiShaderTimeSec = 0f
+  }
 
   // Frame clock tick for smooth tile-snap squash/stretch, subtle paper shimmer & popups
   var frameNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -283,7 +318,7 @@ fun LexiFillBoardCanvas(
       modifier
         .fillMaxWidth()
         .aspectRatio(aspectRatio)
-        .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
+        .graphicsLayer { translationX = shakeOffset.value }
         .shadow(elevation = 4.dp, shape = RoundedCornerShape(18.dp))
         .clip(RoundedCornerShape(18.dp))
         .background(
@@ -456,6 +491,18 @@ fun LexiFillBoardCanvas(
                   cornerRadius = cornerRadius,
                 )
 
+                // Animated Washi Paper Texture Shader when cell becomes locked
+                if (showLockedGreen) {
+                  drawLockedWashiCellShader(
+                    topLeft = topLeft,
+                    size = Size(innerSize, innerSize),
+                    cornerRadius = cornerRadius,
+                    timeSec = washiShaderTimeSec,
+                    foldBoost = foldAnim.creaseAlpha,
+                    cellSeed = x * 31 + y * 17,
+                  )
+                }
+
                 // Paper-fold crease shadow/highlight during active fold transition
                 if (foldAnim.creaseAlpha > 0f) {
                   drawRoundRect(
@@ -541,6 +588,18 @@ fun LexiFillBoardCanvas(
                   size = Size(innerSize, innerSize),
                   cornerRadius = cornerRadius,
                 )
+
+                // Animated Washi Paper Texture Shader when placed tile becomes locked
+                if (showLockedGreen) {
+                  drawLockedWashiCellShader(
+                    topLeft = topLeft,
+                    size = Size(innerSize, innerSize),
+                    cornerRadius = cornerRadius,
+                    timeSec = washiShaderTimeSec,
+                    foldBoost = foldAnim.creaseAlpha,
+                    cellSeed = x * 31 + y * 17 + 7,
+                  )
+                }
 
                 if (foldAnim.creaseAlpha > 0f) {
                   drawRoundRect(

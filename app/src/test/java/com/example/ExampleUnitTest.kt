@@ -96,4 +96,38 @@ class ExampleUnitTest {
     assertEquals(AudioPlayer.SoundEffect.FANFARE, viewModel.audioPlayer.lastPlayedEffect)
     assertEquals("fanfare", viewModel.puzzleState.value.lastSoundTriggered)
   }
+
+  @Test
+  fun campaignLevels_all100LevelsHaveValidIntersectionsAndAreSolvable() {
+    val engine = LexiFillEngine()
+    val allLevels = engine.getAllCampaignLevels(100)
+    assertEquals(100, allLevels.size)
+
+    for (template in allLevels) {
+      val coordCharMap = HashMap<Coordinate, Char>()
+      for (tw in template.targetWords) {
+        assertTrue("Word ${tw.word} must be in Trie", engine.trie.isValidWord(tw.word))
+        tw.coordinates().forEachIndexed { idx, coord ->
+          val ch = tw.word[idx].uppercaseChar()
+          val prev = coordCharMap[coord]
+          if (prev != null) {
+            assertEquals(
+              "Intersection mismatch in Level ${template.levelNumber} (${template.title}) at $coord",
+              prev,
+              ch,
+            )
+          }
+          coordCharMap[coord] = ch
+        }
+      }
+
+      val state = engine.createPuzzleState(template)
+      val openBlanks = state.cells.flatten().filter { it.isBlankTarget }
+      assertTrue(
+        "Level ${template.levelNumber} should have at least 5 blanks",
+        openBlanks.size >= 5,
+      )
+      assertEquals(openBlanks.size, state.rackState.tiles.size)
+    }
+  }
 }

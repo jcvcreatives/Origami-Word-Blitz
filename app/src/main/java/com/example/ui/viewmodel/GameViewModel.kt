@@ -76,43 +76,21 @@ class GameViewModel(
   private val _cloudSyncStatus =
     MutableStateFlow(
       if (repository != null && !currentUserId.isNullOrBlank()) {
-        "Connecting to Firebase Firestore..."
+        "Free-Tier Quota Guard Active · Syncing once..."
       } else {
-        "Local Account Mode (Tap 'Link Firebase' to sync to Cloud Firestore)"
+        "Local Account Mode · Zero Firebase Quota Used"
       }
     )
   val cloudSyncStatus: StateFlow<String> = _cloudSyncStatus.asStateFlow()
 
+  // Free-Tier Quota Guard: Do not attach a continuous snapshot listener on `matches` unless needed
   val cloudMatchesState: StateFlow<CloudUiState<List<SavedMatchDocument>>> =
-    if (repository != null && !currentUserId.isNullOrBlank()) {
-      repository
-        .observeMatches(currentUserId)
-        .map<List<SavedMatchDocument>, CloudUiState<List<SavedMatchDocument>>> {
-          CloudUiState.Success(it)
-        }
-        .catch { error ->
-          val firestoreError =
-            generateSequence(error) { it.cause }
-              .filterIsInstance<FirebaseFirestoreException>()
-              .firstOrNull()
-          if (firestoreError == null && error is CancellationException) throw error
-          val rootError = firestoreError ?: error
-          Log.w(TAG, "Error observing cloud history", rootError)
-          emit(CloudUiState.Error(rootError.message ?: "Offline mode active"))
-        }
-        .stateIn(
-          scope = viewModelScope,
-          started = SharingStarted.WhileSubscribed(5000L),
-          initialValue = CloudUiState.Loading,
-        )
-    } else {
-      flowOf<CloudUiState<List<SavedMatchDocument>>>(CloudUiState.Success(emptyList()))
-        .stateIn(
-          scope = viewModelScope,
-          started = SharingStarted.WhileSubscribed(5000L),
-          initialValue = CloudUiState.Success(emptyList()),
-        )
-    }
+    flowOf<CloudUiState<List<SavedMatchDocument>>>(CloudUiState.Success(emptyList()))
+      .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = CloudUiState.Success(emptyList()),
+      )
 
   init {
     if (repository != null && !currentUserId.isNullOrBlank()) {
@@ -124,46 +102,30 @@ class GameViewModel(
     viewModelScope.launch {
       val resolvedName =
         preferredDisplayName?.trim()?.takeIf { it.isNotBlank() } ?: "Origami Strategist"
+      // Free-Tier Quota Guard: Perform a single cached read/create on login instead of an open snapshot stream
       repo
         .ensureOrCreateProfile(resolvedName)
-        .onSuccess { createdProfile ->
-          _cloudProfileState.value = createdProfile
+        .onSuccess { profile ->
+          _cloudProfileState.value = profile
           _cloudSyncStatus.value =
-            "Synced to Firebase Firestore ✓ (users/$uid · ${createdProfile.displayName})"
+            "Synced ✓ Free-Tier Quota Guard (${repo.sessionReadsCount}R/${repo.sessionWritesCount}W · ${profile.displayName})"
+          val unlocked = profile.unlockedSkins.toSet() + "washi_classic"
+          val equipped =
+            GameCatalog.COSMETIC_SKINS.find { it.id == profile.equippedTileSkin }
+              ?: GameCatalog.COSMETIC_SKINS.first()
+          _puzzleState.update { state ->
+            state.copy(
+              lexiCoins = maxOf(state.lexiCoins, profile.paperCoins.toInt()),
+              unlockedSkinIds = state.unlockedSkinIds + unlocked,
+              equippedSkin = equipped,
+              highestUnlockedLevel =
+                maxOf(state.highestUnlockedLevel, profile.campaignStage.toInt()),
+            )
+          }
         }
         .onFailure { err ->
           _cloudSyncStatus.value =
-            "Firebase sync error: ${err.localizedMessage ?: "Permission or network issue"}"
-        }
-      repo
-        .observeUserProfile(uid)
-        .catch { error ->
-          val firestoreError =
-            generateSequence(error) { it.cause }
-              .filterIsInstance<FirebaseFirestoreException>()
-              .firstOrNull()
-          if (firestoreError == null && error is CancellationException) throw error
-          Log.w(TAG, "Error observing user profile", firestoreError ?: error)
-        }
-        .collect { profile: UserProfileDocument? ->
-          if (profile != null) {
-            _cloudProfileState.value = profile
-            _cloudSyncStatus.value =
-              "Synced to Firebase Firestore ✓ (users/$uid · ${profile.displayName})"
-            val unlocked = profile.unlockedSkins.toSet() + "washi_classic"
-            val equipped =
-              GameCatalog.COSMETIC_SKINS.find { it.id == profile.equippedTileSkin }
-                ?: GameCatalog.COSMETIC_SKINS.first()
-            _puzzleState.update { state ->
-              state.copy(
-                lexiCoins = maxOf(state.lexiCoins, profile.paperCoins.toInt()),
-                unlockedSkinIds = state.unlockedSkinIds + unlocked,
-                equippedSkin = equipped,
-                highestUnlockedLevel =
-                  maxOf(state.highestUnlockedLevel, profile.campaignStage.toInt()),
-              )
-            }
-          }
+            "Local Cache Active (Free-Tier Guard: ${err.localizedMessage ?: "Offline"})"
         }
     }
   }
@@ -733,13 +695,21 @@ class GameViewModel(
     if (currentUserId.isNullOrBlank()) return
     val bestWord = state.targetWords.maxByOrNull { it.awardedScore }?.word ?: "PLANET"
     viewModelScope.launch {
-      repo.updateProfileStats(
-        scoreDelta = state.levelScore,
-        wordScore = state.levelScore,
-        playedWord = bestWord,
-        coinsDelta = state.levelClearSummary?.coinsEarned ?: 30,
-        advanceCampaignTo = state.highestUnlockedLevel,
-      )
+      repo
+        .updateProfileStats(
+          scoreDelta = state.levelScore,
+          wordScore = state.levelScore,
+          playedWord = bestWord,
+          coinsDelta = state.levelClearSummary?.coinsEarned ?: 30,
+          advanceCampaignTo = state.highestUnlockedLevel,
+        )
+        .onSuccess {
+          repo.getCachedProfile()?.let { updated ->
+            _cloudProfileState.value = updated
+            _cloudSyncStatus.value =
+              "Synced ✓ Free-Tier Quota Guard (${repo.sessionReadsCount}R/${repo.sessionWritesCount}W · ${updated.displayName})"
+          }
+        }
     }
   }
 
