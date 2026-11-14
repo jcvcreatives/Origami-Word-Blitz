@@ -909,6 +909,18 @@
       border: 2.2px solid var(--kyoto-gold);
       box-shadow: 0 6px 12px rgba(200, 125, 10, 0.28);
     }
+    .tile.next-match {
+      border: 1.8px solid rgba(200, 125, 10, 0.72);
+      box-shadow: 0 4px 10px rgba(200, 125, 10, 0.22), 0 0 0 2px rgba(254, 243, 199, 0.65);
+    }
+    .ghost-guide {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(13px, 3vw, 18px);
+      font-weight: 900;
+      color: rgba(29, 91, 143, 0.34);
+      pointer-events: none;
+      line-height: 1;
+    }
     .tile.dragging-source {
       opacity: 0.25;
       animation: none;
@@ -1932,8 +1944,8 @@
           { id: "h1", word: "PLANET", clue: "Celestial world in solar orbit", sx: 1, sy: 1, dir: "H", blanks: [1, 4] },
           { id: "v1", word: "SLOPE", clue: "Inclined mountain gradient", sx: 2, sy: 0, dir: "V", blanks: [1, 3] },
           { id: "h2", word: "SPACE", clue: "The cosmic expanse beyond Earth", sx: 1, sy: 3, dir: "H", blanks: [1, 3] },
-          { id: "v2", word: "CROSS", clue: "Intersect from side to side", sx: 4, sy: 3, dir: "V", blanks: [0, 1, 2] },
-          { id: "h3", word: "ORBIT", clue: "Curved path around a star", sx: 4, sy: 5, dir: "H", blanks: [0, 2] }
+          { id: "v2", word: "CROSS", clue: "Intersect from side to side", sx: 4, sy: 3, dir: "V", blanks: [0, 2] },
+          { id: "h3", word: "ORBIT", clue: "Curved path around a star", sx: 4, sy: 5, dir: "H", blanks: [0] }
         ],
         mults: { "2,1": "2W", "4,3": "3W", "4,5": "2L", "5,1": "3L" }
       },
@@ -1941,10 +1953,10 @@
         level: 2, title: "Prism & Quartz", tier: "TIER I · STARTER ORIGAMI", w: 8, h: 8,
         words: [
           { id: "h1", word: "PRISM", clue: "Crystal that splits white light", sx: 1, sy: 1, dir: "H", blanks: [1, 3] },
-          { id: "v1", word: "CROWN", clue: "Royal golden headpiece", sx: 2, sy: 0, dir: "V", blanks: [1, 2, 4] },
-          { id: "v2", word: "SPARK", clue: "Fiery flash of ignition", sx: 4, sy: 1, dir: "V", blanks: [0, 3] },
-          { id: "h2", word: "WHALE", clue: "Giant singing ocean mammal", sx: 2, sy: 3, dir: "H", blanks: [1, 2, 4] },
-          { id: "v3", word: "EMBER", clue: "Glowing coal in a dying fire", sx: 6, sy: 3, dir: "V", blanks: [0, 2, 4] }
+          { id: "v1", word: "CROWN", clue: "Royal golden headpiece", sx: 2, sy: 0, dir: "V", blanks: [1, 3] },
+          { id: "v2", word: "SPARK", clue: "Fiery flash of ignition", sx: 4, sy: 1, dir: "V", blanks: [0, 2] },
+          { id: "h2", word: "WHALE", clue: "Giant singing ocean mammal", sx: 2, sy: 3, dir: "H", blanks: [0, 2, 4] },
+          { id: "v3", word: "EMBER", clue: "Glowing coal in a dying fire", sx: 6, sy: 3, dir: "V", blanks: [0, 2] }
         ],
         mults: { "2,1": "2W", "4,1": "3L", "4,3": "3W", "6,3": "2W" }
       },
@@ -1952,21 +1964,21 @@
         level: 3, title: "Alchemist's Forge", tier: "TIER II · INTERSECTION NEXUS", w: 8, h: 8,
         words: [
           { id: "h1", word: "QUARTZ", clue: "Piezoelectric silica crystal", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 5] },
-          { id: "v1", word: "QUEST", clue: "Heroic expedition", sx: 1, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "v2", word: "AMBER", clue: "Fossilized golden tree resin", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "v3", word: "ZENITH", clue: "Highest celestial point", sx: 6, sy: 1, dir: "V", blanks: [0, 2, 5] },
-          { id: "h2", word: "TARGET", clue: "Bullseye mark aimed at", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4, 5] }
+          { id: "v1", word: "QUEST", clue: "Heroic expedition", sx: 1, sy: 1, dir: "V", blanks: [0, 4] },
+          { id: "v2", word: "AMBER", clue: "Fossilized golden tree resin", sx: 3, sy: 1, dir: "V", blanks: [0, 4] },
+          { id: "v3", word: "ZENITH", clue: "Highest celestial point", sx: 6, sy: 1, dir: "V", blanks: [0, 4] },
+          { id: "h2", word: "TARGET", clue: "Bullseye mark aimed at", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 5] }
         ],
         mults: { "1,1": "3W", "6,1": "3W", "3,1": "2W", "3,5": "3L" }
       },
       {
         level: 4, title: "Origami Garden", tier: "TIER II · INTERSECTION NEXUS", w: 8, h: 8,
         words: [
-          { id: "h1", word: "LOTUS", clue: "Sacred water blossom", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
-          { id: "v1", word: "PAPER", clue: "Folded Washi sheet craft", sx: 3, sy: 0, dir: "V", blanks: [0, 2, 4] },
-          { id: "h2", word: "CRANE", clue: "Iconic folded origami bird", sx: 1, sy: 3, dir: "H", blanks: [0, 2, 4] },
-          { id: "v2", word: "BAMBOO", clue: "Tall hollow zen garden reed", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 5] },
-          { id: "h3", word: "RIVER", clue: "Flowing mountain stream", sx: 3, sy: 4, dir: "H", blanks: [0, 2, 4] }
+          { id: "h1", word: "LOTUS", clue: "Sacred water blossom", sx: 1, sy: 1, dir: "H", blanks: [2, 4] },
+          { id: "v1", word: "PAPER", clue: "Folded Washi sheet craft", sx: 3, sy: 0, dir: "V", blanks: [1, 3, 4] },
+          { id: "h2", word: "CRANE", clue: "Iconic folded origami bird", sx: 1, sy: 3, dir: "H", blanks: [2, 4] },
+          { id: "v2", word: "BAMBOO", clue: "Tall hollow zen garden reed", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 3] },
+          { id: "h3", word: "RIVER", clue: "Flowing mountain stream", sx: 3, sy: 4, dir: "H", blanks: [0, 2] }
         ],
         mults: { "3,1": "2W", "3,3": "3W", "5,3": "2L", "3,4": "3L" }
       }
@@ -2036,13 +2048,13 @@
         unlockedSkins: state ? state.unlockedSkins : new Set(["washi_classic"]),
         equippedSkinId: state ? state.equippedSkinId : "washi_classic",
         solvedLevels: state ? state.solvedLevels : new Set(),
-        hintsRemaining: 3,
+        hintsRemaining: 5,
         mistakes: 0,
         combo: 0,
         maxCombo: 1,
         mult: 1.0,
         completedWords: new Set(),
-        statusMsg: "Drag letter tiles or use your keyboard (Arrows + A–Z) to fill intersecting words!",
+        statusMsg: "Tap any tile or blank slot for instant auto-fold, or drag & use keyboard (Arrows + A–Z)!",
         statusErr: false
       };
       applyEquippedSkinVariables();
@@ -2083,22 +2095,24 @@
       state.hintCoord = null;
 
       if (tile.char !== cell.expected) {
-        state.combo = 0;
-        state.mult = 1.0;
+        // Forgiving Combo Shield: step down streak by 1 and reveal a helpful letter guide on the slot
+        state.combo = Math.max(0, state.combo - 1);
+        state.mult = state.combo >= 4 ? 3.0 : state.combo === 3 ? 2.5 : state.combo === 2 ? 2.0 : state.combo === 1 ? 1.5 : 1.0;
         state.mistakes++;
+        state.hintCoord = { x, y };
         AudioPlayer.play("thud");
         const boardFrame = document.getElementById("boardFrame");
         boardFrame.classList.remove("shake");
         void boardFrame.offsetWidth;
         boardFrame.classList.add("shake");
         spawnShockwaveRing(x, y, "#d9381e");
-        state.statusMsg = `Invalid intersection! '${tile.char}' conflicts with crossing fold at (${x + 1}, ${y + 1}).`;
+        state.statusMsg = `Tip: Try '${cell.expected}' in fold (${x + 1}, ${y + 1})!`;
         state.statusErr = true;
         render();
         return false;
       }
 
-      // Valid placement!
+      // Valid placement! Every valid tile builds momentum & streak
       state.rack.splice(tileIdx, 1);
       if (cell.placed) state.rack.push(cell.placed);
       cell.placed = tile;
@@ -2120,38 +2134,45 @@
         }
       });
 
+      state.combo += 1 + newlyDone.length;
+      state.maxCombo = Math.max(state.maxCombo, state.combo);
+      state.mult = state.combo >= 6 ? 4.0 : state.combo >= 4 ? 3.0 : state.combo === 3 ? 2.5 : state.combo === 2 ? 2.0 : 1.5;
+
       const allSolved = state.completedWords.size === state.tpl.words.length;
       if (allSolved) {
         AudioPlayer.play("fanfare");
       } else if (newlyDone.length > 0) {
-        AudioPlayer.playFoldCascade(newlyDone[0].word.length, state.combo + newlyDone.length);
+        AudioPlayer.playFoldCascade(newlyDone[0].word.length, state.combo);
       } else {
         AudioPlayer.play("snap");
       }
 
       spawnShockwaveRing(x, y, newlyDone.length > 0 ? "#157f4b" : "#1d5b8f");
 
+      const pill = document.getElementById("comboPill");
+      pill.classList.add("bounce");
+      setTimeout(() => pill.classList.remove("bounce"), 550);
+
       if (newlyDone.length > 0) {
-        state.combo += newlyDone.length;
-        state.maxCombo = Math.max(state.maxCombo, state.combo);
-        state.mult = state.combo >= 4 ? 4.0 : state.combo === 3 ? 3.0 : state.combo === 2 ? 2.0 : 1.5;
-        const pts = Math.round((newlyDone.length * 35 + (newlyDone.length >= 2 ? 50 : 0)) * state.mult);
+        const pts = Math.round((newlyDone.length * 45 + (newlyDone.length >= 2 ? 60 : 0) + tile.pts * 10) * state.mult);
+        const instantCoins = newlyDone.length * 10 + (newlyDone.length >= 2 ? 15 : 0);
+        const hintBonus = state.combo >= 3 ? 1 : 0;
         state.score += pts;
         state.careerScore += pts;
-        const pill = document.getElementById("comboPill");
-        pill.classList.add("bounce");
-        setTimeout(() => pill.classList.remove("bounce"), 550);
-        showPopup(x, y, `+${pts} PTS · ${newlyDone.map(w => w.word).join(" × ")}!`, newlyDone.length >= 2);
-        state.statusMsg = `Trie Verified ✓ Completed ${newlyDone.map(w => w.word).join(" & ")}! Combo ×${state.mult.toFixed(1)}`;
+        state.coins += instantCoins;
+        state.hintsRemaining = Math.min(9, state.hintsRemaining + hintBonus);
+        showPopup(x, y, `+${pts} PTS · +${instantCoins} Coins!`, newlyDone.length >= 2 || state.mult >= 2.5);
+        state.statusMsg = `Fold Complete ✓ ${newlyDone.map(w => w.word).join(" & ")}! +${pts} PTS (+${instantCoins} Coins) · Streak ×${state.mult.toFixed(1)}`;
         state.statusErr = false;
 
         const nextOpenWord = state.tpl.words.find(w => !state.completedWords.has(w.id));
         if (nextOpenWord) state.focusedWordId = nextOpenWord.id;
       } else {
-        state.score += tile.pts;
-        state.careerScore += tile.pts;
-        showPopup(x, y, `+${tile.pts}`, false);
-        state.statusMsg = `Snapped '${tile.char}' into fold (${x + 1}, ${y + 1}).`;
+        const snapPts = Math.round(tile.pts * 10 * state.mult);
+        state.score += snapPts;
+        state.careerScore += snapPts;
+        showPopup(x, y, `+${snapPts} · ×${state.mult.toFixed(1)}`, state.combo >= 3);
+        state.statusMsg = `Snapped '${tile.char}' (+${snapPts} PTS · Streak ×${state.mult.toFixed(1)})`;
         state.statusErr = false;
       }
 
@@ -2488,10 +2509,26 @@
         tileEl.classList.remove("dragging-source");
 
         if (!moved) {
-          state.selectedTileId = state.selectedTileId === tile.id ? null : tile.id;
           state.hoverCoord = null;
           state.hoverTile = null;
-          render();
+          // 1-Tap Quick Snap: Find the matching open blank slot (prioritizing focusedCell, then focusedWord, then any open slot)
+          let targetCell = null;
+          if (state.focusedCell) {
+            const fc = state.cells[state.focusedCell.y] && state.cells[state.focusedCell.y][state.focusedCell.x];
+            if (fc && fc.isBlank && !fc.placed && !fc.locked && fc.expected === tile.char) {
+              targetCell = fc;
+            }
+          }
+          if (!targetCell) {
+            const openMatching = state.cells.flat().filter(c => c.isBlank && !c.placed && !c.locked && c.expected === tile.char);
+            targetCell = openMatching.find(c => c.words.includes(state.focusedWordId)) || openMatching[0];
+          }
+          if (targetCell) {
+            tryDropTile(tile.id, targetCell.x, targetCell.y);
+          } else {
+            state.selectedTileId = state.selectedTileId === tile.id ? null : tile.id;
+            render();
+          }
           return;
         }
 
@@ -2639,11 +2676,14 @@
             if (isKbFocused) blankCls += " kb-focused";
             el.className = blankCls;
             const badge = isHint ? c.expected : (c.mult || "");
-            el.innerHTML = badge ? `<span class="mult-tag">${badge}</span>` : "";
+            const ghostLetter = !isHint && isKbFocused && c.expected ? `<span class="ghost-guide">${c.expected}</span>` : "";
+            el.innerHTML = (badge ? `<span class="mult-tag">${badge}</span>` : "") + ghostLetter;
 
             el.onclick = () => {
               state.focusedCell = { x, y };
-              const selId = state.selectedTileId || (state.rack[0] && state.rack[0].id);
+              const selectedTile = state.rack.find(t => t.id === state.selectedTileId);
+              const matchingTile = state.rack.find(t => t.char === c.expected);
+              const selId = (selectedTile && selectedTile.id) || (matchingTile && matchingTile.id) || (state.rack[0] && state.rack[0].id);
               if (selId) {
                 tryDropTile(selId, x, y);
               } else {
@@ -2737,11 +2777,17 @@
         rackRow.innerHTML = `<div style="color:var(--matcha-jade); font-weight:800; font-size:13px; padding:8px;">✓ All origami folds complete! Level Solved!</div>`;
       } else {
         const rackFrag = document.createDocumentFragment();
+        const focusedBlankExpected = state.focusedCell && state.cells[state.focusedCell.y] && state.cells[state.focusedCell.y][state.focusedCell.x] && state.cells[state.focusedCell.y][state.focusedCell.x].isBlank && !state.cells[state.focusedCell.y][state.focusedCell.x].placed
+          ? state.cells[state.focusedCell.y][state.focusedCell.x].expected
+          : null;
+        let highlightedNextMatch = false;
         state.rack.forEach((t, idx) => {
           const tel = document.createElement("div");
+          const isNextMatch = !highlightedNextMatch && focusedBlankExpected && t.char === focusedBlankExpected;
+          if (isNextMatch) highlightedNextMatch = true;
           tel.className =
             "tile paper-surface" +
-            (state.selectedTileId === t.id ? " selected" : "") +
+            (state.selectedTileId === t.id ? " selected" : isNextMatch ? " next-match" : "") +
             (isShufflingAnim ? " shuffling" : "");
           tel.style.setProperty("--float-delay", `${(idx * 0.28).toFixed(2)}s`);
           const dirSign = idx % 2 === 0 ? 1 : -1;
@@ -2772,17 +2818,20 @@
 
     function triggerSmartHint() {
       if (state.hintsRemaining <= 0) return;
-      const openSlots = state.cells.flat().filter(c => c.isBlank && !c.placed);
+      const openSlots = state.cells.flat().filter(c => c.isBlank && !c.placed && !c.locked);
       if (openSlots.length === 0) return;
       const target = openSlots.find(c => c.words.length >= 2) || openSlots[0];
       const matchTile = state.rack.find(t => t.char === target.expected);
       state.hintsRemaining--;
-      state.hintCoord = { x: target.x, y: target.y };
-      if (matchTile) state.selectedTileId = matchTile.id;
-      AudioPlayer.play("click");
-      state.statusMsg = `Smart Hint: Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
-      state.statusErr = false;
-      render();
+      if (matchTile) {
+        tryDropTile(matchTile.id, target.x, target.y);
+      } else {
+        state.hintCoord = { x: target.x, y: target.y };
+        AudioPlayer.play("click");
+        state.statusMsg = `Smart Hint: Place '${target.expected}' at fold (${target.x + 1}, ${target.y + 1})!`;
+        state.statusErr = false;
+        render();
+      }
     }
 
     function recallUnlockedTiles() {

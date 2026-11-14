@@ -184,7 +184,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
       comboMultiplier = 1.0f,
       movesMade = 0,
       mistakesMade = 0,
-      hintsRemaining = 3,
+      hintsRemaining = 5,
       completedLevels = completedLevels,
       highestUnlockedLevel = highestUnlockedLevel,
       focusedWordId = normalizedTargetWords.firstOrNull()?.id,
@@ -353,19 +353,22 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
             particleCount = 12,
             createdAtMs = nowMs,
           )
+      val expectedHint =
+        targetCell.expectedLetter?.let { " — Tip: Try '$it' in this slot!" }.orEmpty()
       return DropResult(
         updatedState =
           state.copy(
             rackState = state.rackState.copy(draggingTileId = null, selectedTileId = null),
             hoverCoord = null,
             hoverPreview = null,
-            comboStreak = 0,
-            comboMultiplier = 1.0f,
+            highlightedHintCoord = rejectCoord,
+            comboStreak = (state.comboStreak - 1).coerceAtLeast(0),
+            comboMultiplier = comboMultiplierForStreak((state.comboStreak - 1).coerceAtLeast(0)),
             mistakesMade = state.mistakesMade + 1,
             particleBursts = rejectParticles,
             rejectedSlotTimestamps = state.rejectedSlotTimestamps + (rejectCoord to nowMs),
-            boardShakeIntensity = 1.0f,
-            statusMessage = reason,
+            boardShakeIntensity = 0.65f,
+            statusMessage = reason + expectedHint,
             isStatusError = true,
           ),
         outcome = OutcomeType.INVALID_INTERSECTION,
@@ -389,11 +392,11 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           }
       }
 
-    // Check which TargetWords are now newly completed and valid in the Trie
+    // Every valid tile placement advances the streak for an addictive rhythmic flow!
     val newlyCompletedWords = ArrayList<TargetWord>()
     var gainedScore = 0
-    var newComboStreak = state.comboStreak
-    var newComboMultiplier = state.comboMultiplier
+    var newComboStreak = state.comboStreak + 1
+    var newComboMultiplier = comboMultiplierForStreak(newComboStreak)
 
     val updatedTargetWords =
       state.targetWords.map { tw ->
@@ -420,13 +423,13 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         }
       }
 
-    // Dual-axis simultaneous completion bonus (+50 PTS!)
+    // Dual-axis simultaneous completion bonus (+75 PTS!) & juicy placement points
     val isDualIntersectionClear = newlyCompletedWords.size >= 2
     if (isDualIntersectionClear) {
-      gainedScore += 50
+      gainedScore += 75
     } else if (newlyCompletedWords.isEmpty()) {
-      // Small tactile placement score for anchoring a valid letter into a slot
-      gainedScore += tile.baseScore * targetCell.multiplier.letterFactor
+      // Multiplied tactile placement score for anchoring a valid letter into a slot
+      gainedScore += (tile.baseScore * targetCell.multiplier.letterFactor * 10 * newComboMultiplier).roundToInt()
     }
 
     // Lock all cells belonging to completed words and record completion flash timestamps
@@ -555,9 +558,11 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
     // Check if the entire level is now cleared!
     val allWordsCompleted = updatedTargetWords.all { it.isCompleted }
     val newLevelScore = state.levelScore + gainedScore
-    val accuracyBonus = if (allWordsCompleted && state.mistakesMade == 0) 75 else if (allWordsCompleted) 25 else 0
+    val accuracyBonus = if (allWordsCompleted && state.mistakesMade == 0) 100 else if (allWordsCompleted) 40 else 0
     val finalLevelScore = newLevelScore + accuracyBonus
-    val coinsEarned = if (allWordsCompleted) 30 + (accuracyBonus / 3) else 0
+    val instantWordCoins = newlyCompletedWords.size * 10 + (if (isDualIntersectionClear) 15 else 0)
+    val coinsEarned = (if (allWordsCompleted) 35 + (accuracyBonus / 3) else 0) + instantWordCoins
+    val bonusHintRecharge = if (newlyCompletedWords.isNotEmpty() && newComboStreak >= 3) 1 else 0
     val stars =
       when {
         state.mistakesMade == 0 -> 3
@@ -590,11 +595,11 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         allWordsCompleted ->
           "LEVEL ${state.levelTemplate.levelNumber} CLEARED! +$finalLevelScore PTS · Next puzzle in 3s..."
         isDualIntersectionClear ->
-          "DUAL AXIS CLEAR! Completed ${newlyCompletedWords.joinToString(" & ") { it.word }} (+$gainedScore pts)!"
+          "DOUBLE WORD FOLD! Completed ${newlyCompletedWords.joinToString(" & ") { it.word }} (+$gainedScore PTS · ×$newComboMultiplier)!"
         newlyCompletedWords.isNotEmpty() ->
-          "Verified \"${newlyCompletedWords.first().word}\"! Combo ×$newComboMultiplier (+$gainedScore pts)"
+          "GREAT FOLD! Completed \"${newlyCompletedWords.first().word}\"! Streak ×$newComboMultiplier (+$gainedScore PTS)"
         else ->
-          "Placed '${tile.char}' at (${targetX + 1}, ${targetY + 1}). ${updatedTargetWords.count { !it.isCompleted }} words remaining."
+          "PERFECT SNAP! '${tile.char}' (+$gainedScore PTS · Streak ×$newComboMultiplier) — ${updatedTargetWords.count { !it.isCompleted }} words left."
       }
 
     val nextFocusedWord =
@@ -630,6 +635,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         comboStreak = newComboStreak,
         comboMultiplier = newComboMultiplier,
         movesMade = state.movesMade + 1,
+        hintsRemaining = (state.hintsRemaining + bonusHintRecharge).coerceAtMost(9),
         completedLevels =
           if (allWordsCompleted) state.completedLevels + state.levelTemplate.levelNumber
           else state.completedLevels,
@@ -928,11 +934,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 4,
                 startY = 3,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 1, 2), // C at (4,3), R at (4,4), O at (4,5) -> _ _ _ S S
+                missingBlankIndices = listOf(0, 2), // C at (4,3), O at (4,5) -> _ R _ S S
               ),
-              // (3,5)F? No: ORBIT starting at (4,5): (4,5)O (5,5)R (6,5)B (7,5)I — 5 letters needs startX=3 if R is at (4,5)!
-              // Wait: in CROSS at (4,3), (4,4)=R and (4,5)=O! So ORBIT starting at (4,5) has (4,5)=O, (5,5)=R, (6,5)=B, (7,5)=I — that's 4 cols if width=8. Let's make width=9 or use "ORBS" / place ORBIT at (2,4) where (4,4)=R? If ORBIT is at (3,4): (3,4)O (4,4)R (5,4)B (6,4)I (7,4)T!
-              // Wait: at (2,4), SLOPE has E. At (4,5), CROSS has O! So at (4,5) we can place "OCEAN" at (4,5)? Wait: 4,5,6,7 is 4 cells on width=8, or let's make boardWidth=9 so (4,5)O (5,5)R (6,5)B (7,5)I (8,5)T fits cleanly!
               TargetWord(
                 id = "l1_h3",
                 word = "ORBIT",
@@ -940,7 +943,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 4,
                 startY = 5,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(0, 2), // O at (4,5), B at (6,5) -> _ R _ I T
+                missingBlankIndices = listOf(0), // O at (4,5) -> _ R B I T
               ),
             ),
           multipliers =
@@ -951,7 +954,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(5, 1) to SquareMultiplier.TL,
             ),
           compactCode =
-            "9x8|title:Orbital Crossing|H:1,1:PLANET:1,4:Celestial world in solar orbit|V:2,0:SLOPE:1,3:Inclined mountain gradient|H:1,3:SPACE:1,3:The cosmic expanse|V:4,3:CROSS:0,1,2:Intersect from side to side|H:4,5:ORBIT:0,2:Curved path around a star",
+            "9x8|title:Orbital Crossing|H:1,1:PLANET:1,4:Celestial world in solar orbit|V:2,0:SLOPE:1,3:Inclined mountain gradient|H:1,3:SPACE:1,3:The cosmic expanse|V:4,3:CROSS:0,2:Intersect from side to side|H:4,5:ORBIT:0:Curved path around a star",
         ).copy(boardWidth = 9),
 
         // LEVEL 2: 8x8 — "Prism & Quartz"
@@ -963,7 +966,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)P (2,1)R (3,1)I (4,1)S (5,1)M
               TargetWord(
                 id = "l2_h1",
                 word = "PRISM",
@@ -973,7 +975,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 3), // (2,1)R, (4,1)S
               ),
-              // (2,0)C (2,1)R (2,2)O (2,3)W (2,4)N — crosses PRISM at (2,1)=R
               TargetWord(
                 id = "l2_v1",
                 word = "CROWN",
@@ -981,9 +982,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 2,
                 startY = 0,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 2, 4), // (2,1)R, (2,2)O, (2,4)N
+                missingBlankIndices = listOf(1, 3), // (2,1)R, (2,3)W
               ),
-              // (4,1)S (4,2)P (4,3)A (4,4)R (4,5)K — crosses PRISM at (4,1)=S
               TargetWord(
                 id = "l2_v2",
                 word = "SPARK",
@@ -991,14 +991,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 4,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 3), // (4,1)S, (4,4)R
+                missingBlankIndices = listOf(0, 2), // (4,1)S, (4,3)A
               ),
-              // (1,4)H (2,4)N? No: at y=4, (2,4)=N and (4,4)=R.
-              // Instead, let's place H2 at y=6 across (4,5)=K? No, let's extend V2 or place H2 at y=3:
-              // At y=3, (2,3)=W and (4,3)=A! Word with W at index 0 and A at index 2: "WATER" at (2,3)!
-              // (2,3)W (3,3)A? No, index 0 is x=2 (W), index 1 is x=3, index 2 is x=4 (A):
-              // Wait: W _ A _ E -> "WHALE" ((2,3)W, (3,3)H, (4,3)A, (5,3)L, (6,3)E) or "AWAKE" at (1,3) ((1,3)A, (2,3)W, (3,3)A, (4,3)K? No).
-              // "WHALE" at (2,3): (2,3)=W (matches CROWN!), (3,3)=H, (4,3)=A (matches SPARK!), (5,3)=L, (6,3)=E!
               TargetWord(
                 id = "l2_h2",
                 word = "WHALE",
@@ -1006,9 +1000,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 2,
                 startY = 3,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 2, 4), // (3,3)H, (4,3)A, (6,3)E
+                missingBlankIndices = listOf(0, 2, 4), // (2,3)W, (4,3)A, (6,3)E
               ),
-              // Vertical from (6,3)=E: "EMBER" at (6,3): (6,3)E (6,4)M (6,5)B (6,6)E (6,7)R
               TargetWord(
                 id = "l2_v3",
                 word = "EMBER",
@@ -1016,7 +1009,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 6,
                 startY = 3,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (6,3)E, (6,5)B, (6,7)R
+                missingBlankIndices = listOf(0, 2), // (6,3)E, (6,5)B
               ),
             ),
           multipliers =
@@ -1027,7 +1020,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(6, 3) to SquareMultiplier.DW,
             ),
           compactCode =
-            "8x8|title:Prism & Quartz|H:1,1:PRISM:1,3|V:2,0:CROWN:1,2,4|V:4,1:SPARK:0,3|H:2,3:WHALE:1,2,4|V:6,3:EMBER:0,2,4",
+            "8x8|title:Prism & Quartz|H:1,1:PRISM:1,3|V:2,0:CROWN:1,3|V:4,1:SPARK:0,2|H:2,3:WHALE:0,2,4|V:6,3:EMBER:0,2",
         ),
 
         // LEVEL 3: 8x8 — "Citadel Vault"
