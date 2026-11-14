@@ -317,7 +317,7 @@ fun LexiFillBoardCanvas(
     modifier =
       modifier
         .fillMaxWidth()
-        .aspectRatio(aspectRatio)
+        .aspectRatio(aspectRatio, matchHeightConstraintsFirst = true)
         .graphicsLayer { translationX = shakeOffset.value }
         .shadow(elevation = 4.dp, shape = RoundedCornerShape(18.dp))
         .clip(RoundedCornerShape(18.dp))
@@ -412,7 +412,7 @@ fun LexiFillBoardCanvas(
       val gridH = cellSize * puzzleState.boardHeight
       val originX = (size.width - gridW) / 2f
       val originY = (size.height - gridH) / 2f
-      val pad = cellSize * 0.06f
+      val pad = cellSize * 0.085f
       val innerSize = cellSize - pad * 2f
       val cornerRadius = CornerRadius(cellSize * 0.14f, cellSize * 0.14f)
 
@@ -541,21 +541,22 @@ fun LexiFillBoardCanvas(
                 )
 
                 letterPaint.color = WashiCream.toArgb()
-                letterPaint.textSize = innerSize * 0.54f
-                val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
+                letterPaint.textSize = innerSize * 0.50f
+                val textY =
+                  cellCenter.y - innerSize * 0.04f - (letterPaint.descent() + letterPaint.ascent()) / 2f
                 drawContext.canvas.nativeCanvas.drawText(
                   cell.fixedLetter.toString(),
-                  cellCenter.x,
+                  cellCenter.x - innerSize * 0.04f,
                   textY,
                   letterPaint,
                 )
 
                 subPaint.color = WashiMuted.toArgb()
-                subPaint.textSize = innerSize * 0.19f
+                subPaint.textSize = innerSize * 0.17f
                 drawContext.canvas.nativeCanvas.drawText(
                   com.example.domain.model.GameCatalog.letterBaseScore(cell.fixedLetter).toString(),
-                  topLeft.x + innerSize * 0.80f,
-                  topLeft.y + innerSize * 0.88f,
+                  topLeft.x + innerSize * 0.81f,
+                  topLeft.y + innerSize * 0.89f,
                   subPaint,
                 )
               }
@@ -642,21 +643,22 @@ fun LexiFillBoardCanvas(
                 val charColorArgb =
                   if (showLockedGreen) WashiCream.toArgb() else skinTextColorArgb
                 letterPaint.color = charColorArgb
-                letterPaint.textSize = innerSize * 0.55f
-                val textY = cellCenter.y - (letterPaint.descent() + letterPaint.ascent()) / 2f
+                letterPaint.textSize = innerSize * 0.50f
+                val textY =
+                  cellCenter.y - innerSize * 0.04f - (letterPaint.descent() + letterPaint.ascent()) / 2f
                 drawContext.canvas.nativeCanvas.drawText(
                   tile.char.toString(),
-                  cellCenter.x,
+                  cellCenter.x - innerSize * 0.04f,
                   textY,
                   letterPaint,
                 )
 
                 subPaint.color = charColorArgb
-                subPaint.textSize = innerSize * 0.20f
+                subPaint.textSize = innerSize * 0.17f
                 drawContext.canvas.nativeCanvas.drawText(
                   tile.baseScore.toString(),
-                  topLeft.x + innerSize * 0.80f,
-                  topLeft.y + innerSize * 0.88f,
+                  topLeft.x + innerSize * 0.81f,
+                  topLeft.y + innerSize * 0.89f,
                   subPaint,
                 )
               }

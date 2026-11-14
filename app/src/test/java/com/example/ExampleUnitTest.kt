@@ -121,6 +121,35 @@ class ExampleUnitTest {
         }
       }
 
+      // Verify no two words overlap or touch orthogonally unless they share a valid intersection cell
+      for (i in template.targetWords.indices) {
+        for (j in i + 1 until template.targetWords.size) {
+          val w1 = template.targetWords[i]
+          val w2 = template.targetWords[j]
+          val c1 = w1.coordinates().toSet()
+          val c2 = w2.coordinates().toSet()
+          val shared = c1.intersect(c2)
+          if (w1.direction == w2.direction) {
+            assertTrue(
+              "Same-direction words ${w1.word} and ${w2.word} overlap in Level ${template.levelNumber}",
+              shared.isEmpty(),
+            )
+          }
+          // If two words do not intersect, none of their cells may touch orthogonally
+          if (shared.isEmpty()) {
+            for (p1 in c1) {
+              for (p2 in c2) {
+                val manhattan = kotlin.math.abs(p1.x - p2.x) + kotlin.math.abs(p1.y - p2.y)
+                assertTrue(
+                  "Non-intersecting words ${w1.word} and ${w2.word} touch at $p1 / $p2 in Level ${template.levelNumber}",
+                  manhattan > 1,
+                )
+              }
+            }
+          }
+        }
+      }
+
       val state = engine.createPuzzleState(template)
       val openBlanks = state.cells.flatten().filter { it.isBlankTarget }
       assertTrue(
@@ -129,5 +158,31 @@ class ExampleUnitTest {
       )
       assertEquals(openBlanks.size, state.rackState.tiles.size)
     }
+  }
+
+  @Test
+  fun levelLocking_requiresWinningRoundBeforeUnlockingNextLevel() {
+    val viewModel = GameViewModel()
+    assertEquals(1, viewModel.puzzleState.value.highestUnlockedLevel)
+
+    // Cannot skip or load Level 2 before winning Level 1
+    assertFalse(viewModel.loadLevel(2))
+    assertEquals(1, viewModel.puzzleState.value.levelTemplate.levelNumber)
+
+    // Win Level 1 by placing all blank tiles
+    while (!viewModel.puzzleState.value.isLevelCleared) {
+      val s = viewModel.puzzleState.value
+      val openBlank =
+        s.cells.flatten().first { it.isBlankTarget && it.placedTile == null && !it.isLockedCompleted }
+      val matchingTile = s.rackState.tiles.first { it.char == openBlank.expectedLetter }
+      viewModel.onTileDropOnCoord(matchingTile.id, openBlank.coordinate)
+    }
+
+    // Winning Level 1 unlocks Level 2, while Level 3 remains locked
+    assertTrue(viewModel.puzzleState.value.isLevelCleared)
+    assertEquals(2, viewModel.puzzleState.value.highestUnlockedLevel)
+    assertFalse(viewModel.loadLevel(3))
+    assertTrue(viewModel.loadLevel(2))
+    assertEquals(2, viewModel.puzzleState.value.levelTemplate.levelNumber)
   }
 }

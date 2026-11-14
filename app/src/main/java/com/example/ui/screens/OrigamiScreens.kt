@@ -54,10 +54,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -226,8 +226,9 @@ fun LexiFillMainScreen(
           PuzzleVaultScreen(
             puzzleState = puzzleState,
             onSelectLevel = { levelNum ->
-              viewModel.loadLevel(levelNum)
-              currentTab = LexiFillDestination.PUZZLE_GRID
+              if (viewModel.loadLevel(levelNum)) {
+                currentTab = LexiFillDestination.PUZZLE_GRID
+              }
             },
           )
         }
@@ -314,7 +315,6 @@ private fun SkeletonPuzzleArena(
         onSignOut = onSignOut,
         onToggleSoundMute = onToggleSoundMute,
         onResetLevel = onReplayLevel,
-        onSkipToNextLevel = onNextLevel,
       )
 
       // 2. Interactive Intersecting Clues Strip (Tap any clue to highlight its corridor on the board)
@@ -385,7 +385,6 @@ private fun LexiFillTopHud(
   onSignOut: (() -> Unit)?,
   onToggleSoundMute: () -> Unit,
   onResetLevel: () -> Unit,
-  onSkipToNextLevel: () -> Unit,
 ) {
   val animatedScore by
     animateIntAsState(
@@ -559,16 +558,6 @@ private fun LexiFillTopHud(
             imageVector = Icons.Filled.Refresh,
             contentDescription = "Reset current puzzle grid",
             tint = WashiMuted,
-          )
-        }
-        IconButton(
-          onClick = onSkipToNextLevel,
-          modifier = Modifier.size(48.dp).testTag("btn_skip_level"),
-        ) {
-          Icon(
-            imageVector = Icons.Filled.SkipNext,
-            contentDescription = "Skip to next puzzle level",
-            tint = SkyCyan,
           )
         }
       }
@@ -1005,11 +994,17 @@ private fun PuzzleVaultScreen(
 
     items(filteredLevels, key = { it.levelNumber }) { template: LevelTemplate ->
       val isSolved = template.levelNumber in puzzleState.completedLevels
+      val isUnlocked = isSolved || template.levelNumber <= puzzleState.highestUnlockedLevel
       val isCurrent = template.levelNumber == puzzleState.levelTemplate.levelNumber
 
       Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (isCurrent) IndigoElevated else IndigoSurface,
+        color =
+          when {
+            !isUnlocked -> IndigoCard.copy(alpha = 0.65f)
+            isCurrent -> IndigoElevated
+            else -> IndigoSurface
+          },
         modifier =
           Modifier.fillMaxWidth()
             .border(
@@ -1018,23 +1013,24 @@ private fun PuzzleVaultScreen(
                 when {
                   isSolved -> CeladonJade
                   isCurrent -> SkyCyan
+                  isUnlocked -> SkyCyan.copy(alpha = 0.55f)
                   else -> IndigoCard
                 },
               shape = RoundedCornerShape(16.dp),
             )
             .paperGrainOverlay(
-              alpha = 0.044f,
+              alpha = if (isUnlocked) 0.044f else 0.025f,
               fiberCount = 26,
               speckleCount = 40,
               seed = 500 + template.levelNumber,
             )
-            .clickable { onSelectLevel(template.levelNumber) }
+            .clickable(enabled = isUnlocked) { onSelectLevel(template.levelNumber) }
             .testTag("vault_level_${template.levelNumber}"),
       ) {
         Row(
           modifier = Modifier.padding(14.dp),
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween,
+          horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
           Column(modifier = Modifier.weight(1f)) {
             Row(
@@ -1045,12 +1041,17 @@ private fun PuzzleVaultScreen(
                 text = "LEVEL ${template.levelNumber}",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (isSolved) CeladonJade else SkyCyan,
+                color =
+                  when {
+                    isSolved -> CeladonJade
+                    isUnlocked -> SkyCyan
+                    else -> WashiMuted
+                  },
               )
               Text(
                 text = template.tierBadge,
                 fontSize = 10.sp,
-                color = KyotoGold,
+                color = if (isUnlocked) KyotoGold else WashiMuted,
               )
               if (isSolved) {
                 Text(
@@ -1059,17 +1060,28 @@ private fun PuzzleVaultScreen(
                   color = KyotoGold,
                   fontWeight = FontWeight.Bold,
                 )
+              } else if (!isUnlocked) {
+                Text(
+                  text = "LOCKED",
+                  fontSize = 9.5.sp,
+                  color = WashiMuted,
+                  fontWeight = FontWeight.ExtraBold,
+                )
               }
             }
             Text(
               text = template.title,
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = WashiCream,
+              color = if (isUnlocked) WashiCream else WashiMuted,
             )
             Text(
               text =
-                "${template.boardWidth}×${template.boardHeight} Grid · ${template.targetWords.size} Intersecting Words (${template.targetWords.joinToString(", ") { it.word }})",
+                if (isUnlocked) {
+                  "${template.boardWidth}×${template.boardHeight} Grid · ${template.targetWords.size} Intersecting Words (${template.targetWords.joinToString(", ") { it.word }})"
+                } else {
+                  "Win Level ${template.levelNumber - 1} to unlock this ${template.boardWidth}×${template.boardHeight} origami puzzle"
+                },
               style = MaterialTheme.typography.bodySmall,
               color = WashiMuted,
               maxLines = 1,
@@ -1079,16 +1091,32 @@ private fun PuzzleVaultScreen(
 
           Button(
             onClick = { onSelectLevel(template.levelNumber) },
+            enabled = isUnlocked,
             shape = RoundedCornerShape(10.dp),
             colors =
               ButtonDefaults.buttonColors(
                 containerColor = if (isSolved) CeladonJade else SkyCyan,
                 contentColor = IndigoNight,
+                disabledContainerColor = IndigoCard,
+                disabledContentColor = WashiMuted,
               ),
+            modifier = Modifier.testTag("vault_level_btn_${template.levelNumber}"),
           ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = "Play level", modifier = Modifier.size(16.dp))
+            Icon(
+              imageVector = if (isUnlocked) Icons.Filled.PlayArrow else Icons.Filled.Lock,
+              contentDescription = if (isUnlocked) "Play level" else "Locked level",
+              modifier = Modifier.size(16.dp),
+            )
             Spacer(Modifier.width(4.dp))
-            Text(if (isSolved) "Replay" else "Play", fontWeight = FontWeight.Bold)
+            Text(
+              text =
+                when {
+                  isSolved -> "Replay"
+                  isUnlocked -> "Play"
+                  else -> "Locked"
+                },
+              fontWeight = FontWeight.Bold,
+            )
           }
         }
       }

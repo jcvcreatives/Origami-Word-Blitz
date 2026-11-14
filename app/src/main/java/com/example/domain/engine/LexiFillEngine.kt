@@ -1082,7 +1082,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)C (2,1)A (3,1)S (4,1)T (5,1)L (6,1)E
               TargetWord(
                 id = "l3_h1",
                 word = "CASTLE",
@@ -1090,62 +1089,56 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 1,
                 startY = 1,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 3, 5), // (2,1)A, (4,1)T, (6,1)E
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (3,1)S, (5,1)L
               ),
-              // (2,0)V (2,1)A (2,2)U (2,3)L (2,4)T — crosses CASTLE at (2,1)=A
               TargetWord(
                 id = "l3_v1",
-                word = "VAULT",
-                clue = "Arched treasure chamber",
-                startX = 2,
-                startY = 0,
-                direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 2, 4), // (2,1)A, (2,2)U, (2,4)T
-              ),
-              // (4,1)T (4,2)O (4,3)W (4,4)E (4,5)R — crosses CASTLE at (4,1)=T
-              TargetWord(
-                id = "l3_v2",
-                word = "TOWER",
-                clue = "High lookout turret",
-                startX = 4,
+                word = "CHART",
+                clue = "Navigator's map of sea lanes and stars",
+                startX = 1,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 3), // (4,1)T, (4,4)E
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)C, (1,3)A, (1,5)T
               ),
-              // At y=4: (2,4)=T (from VAULT) and (4,4)=E (from TOWER) -> (1,4)S (2,4)T (3,4)O (4,4)N (5,4)E? No, (4,4) is E!
-              // Word with T at x=2 and E at x=4: "TRIBE" ((2,4)T, (3,4)R, (4,4)I? No, x=4 is index 2!).
-              // Index 0 = T (x=2), Index 1 = R (x=3), Index 2 = E (x=4), Index 3 = N (x=5), Index 4 = D (x=6) -> "TREND" or "TREAT" or "TREES"!
-              // Or starting at x=1: Index 1 = T (x=2), Index 3 = E (x=4) -> "STEEL" ((1,4)S, (2,4)T, (3,4)E, (4,4)E, (5,4)L) or "STEED"!
               TargetWord(
-                id = "l3_h2",
-                word = "STEEL",
-                clue = "Tempered alloy forged for armor and blades",
-                startX = 1,
-                startY = 4,
-                direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 3, 4), // (2,4)T, (4,4)E, (5,4)L
+                id = "l3_v2",
+                word = "SIGMA",
+                clue = "Greek summation symbol in mathematics",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)S, (3,3)G, (3,5)A
               ),
-              // Vertical from (6,1)=E (from CASTLE): (6,1)E (6,2)L (6,3)I (6,4)T (6,5)E? Wait: (5,4) is L in STEEL, so x=6 is adjacent to (5,4)L!
-              // Instead, let's drop a vertical from (1,4)=S: (1,3)C? No, (1,4)S (1,5)H (1,6)I (1,7)P -> "SHIP"!
               TargetWord(
                 id = "l3_v3",
-                word = "SHIP",
-                clue = "Ocean-going vessel with tall sails",
-                startX = 1,
-                startY = 4,
+                word = "LEMON",
+                clue = "Sunlit citrus fruit with aromatic zest",
+                startX = 5,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 3), // (1,5)H, (1,7)P
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)L, (5,3)M, (5,5)N
+              ),
+              TargetWord(
+                id = "l3_h2",
+                word = "TRAIN",
+                clue = "Express locomotive on iron rails",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)T, (3,5)A, (5,5)N
               ),
             ),
           multipliers =
             mapOf(
-              Coordinate(2, 1) to SquareMultiplier.DW,
-              Coordinate(4, 1) to SquareMultiplier.TW,
-              Coordinate(2, 4) to SquareMultiplier.TL,
-              Coordinate(4, 4) to SquareMultiplier.DW,
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TW,
+              Coordinate(5, 1) to SquareMultiplier.DL,
+              Coordinate(1, 5) to SquareMultiplier.TL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Citadel Vault|H:1,1:CASTLE:1,3,5|V:2,0:VAULT:1,2,4|V:4,1:TOWER:0,3|H:1,4:STEEL:1,3,4|V:1,4:SHIP:1,3",
+            "8x8|title:Citadel Vault|H:1,1:CASTLE:0,2,4|V:1,1:CHART:0,2,4|V:3,1:SIGMA:0,2,4|V:5,1:LEMON:0,2,4|H:1,5:TRAIN:0,2,4",
         ),
 
         // LEVEL 4: 8x8 — "Cyber Matrix"
@@ -1157,7 +1150,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)M (2,1)A (3,1)T (4,1)R (5,1)I (6,1)X
               TargetWord(
                 id = "l4_h1",
                 word = "MATRIX",
@@ -1167,7 +1159,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 3, 5), // (2,1)A, (4,1)R, (6,1)X
               ),
-              // (2,0)L (2,1)A (2,2)S (2,3)E (2,4)R — crosses MATRIX at (2,1)=A
               TargetWord(
                 id = "l4_v1",
                 word = "LASER",
@@ -1177,7 +1168,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(1, 3, 4), // (2,1)A, (2,3)E, (2,4)R
               ),
-              // (4,0)G (4,1)R (4,2)I (4,3)D — crosses MATRIX at (4,1)=R
               TargetWord(
                 id = "l4_v2",
                 word = "GRID",
@@ -1187,10 +1177,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(1, 3), // (4,1)R, (4,3)D
               ),
-              // At y=3: (2,3)=E (from LASER) and (4,3)=D (from GRID)!
-              // Word with E at x=2 and D at x=4: (2,3)E (3,3)D (4,3)G? No, D is at x=4:
-              // Index 1 = E (x=2), Index 3 = D (x=4) -> (1,3)M (2,3)E (3,3)D (4,3)I (5,3)A? No, index 3 is D:
-              // (1,3)R (2,3)E (3,3)A (4,3)D (5,3)Y -> "READY"!
               TargetWord(
                 id = "l4_h2",
                 word = "READY",
@@ -1200,19 +1186,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 2, 3), // (2,3)E, (3,3)A, (4,3)D
               ),
-              // Vertical from (5,3)=Y? Or Horizontal at y=4? Wait: LASER has (2,4)=R, which is adjacent to READY at y=3.
-              // Instead let's make V1 = "LANCE" at (2,0): (2,0)L (2,1)A (2,2)N (2,3)C (2,4)E (2,5)S?
-              // Wait: in LASER + READY, both (2,3)=E are the shared intersection cell! A vertical word crossing a horizontal word always has cells at y-1 and y+1 along its own column x=2 — that's normal in crosswords!
-              // What if we add a vertical word at x=5 crossing READY at (5,3)=Y?
-              // (5,3)Y (5,4)A (5,5)R (5,6)N -> "YARN" or at x=3 crossing READY at (3,3)=A? No, x=3 is next to x=2 and x=4.
-              // Let's cross READY at (1,3)=R with a vertical word at x=1? No, x=1 is next to x=2.
-              // Let's make H2 = "BLADE" at (1, 3)? Wait: at y=3, (2,3)=E and (4,3)=D:
-              // What 6-letter word has E at x=2 and D at x=4?
-              // (1,3)B (2,3)E (3,3)Y (4,3)O (5,3)N (6,3)D -> D is at x=6!
-              // Or (2,3)E (3,3)X (4,3)O (5,3)D (6,3)U (7,3)S!
-              // With READY at (1,3)..(5,3), let's add H3 at y=6 and V3 at x=6:
-              // In MATRIX, (6,1)=X. What vertical word at x=6 has X at (6,1)?
-              // (6,0)A (6,1)X (6,2)I (6,3)S -> "AXIS"! (Since READY ends at x=5, Wait: (5,3)Y is next to (6,3)S! So let's end AXIS at (6,2): "AXE" at (6,0)A (6,1)X (6,2)E!)
               TargetWord(
                 id = "l4_v3",
                 word = "AXE",
@@ -1232,8 +1205,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(4, 3) to SquareMultiplier.DW,
             ),
           compactCode =
-            "8x6|title:Cyber Matrix|H:1,1:MATRIX:1,3,5|V:2,0:LASER:1,3,4|V:4,0:GRID:1,3|H:1,3:READY:1,2,3|V:6,0:AXE:1,2",
-        ).copy(boardHeight = 6),
+            "8x8|title:Cyber Matrix|H:1,1:MATRIX:1,3,5|V:2,0:LASER:1,3,4|V:4,0:GRID:1,3|H:1,3:READY:1,2,3|V:6,0:AXE:1,2",
+        ),
 
         // LEVEL 5: 8x8 — "Emerald Canopy"
         LevelTemplate(
@@ -1244,7 +1217,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)F (2,1)O (3,1)R (4,1)E (5,1)S (6,1)T
               TargetWord(
                 id = "l5_h1",
                 word = "FOREST",
@@ -1254,27 +1226,24 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 3, 5), // (2,1)O, (4,1)E, (6,1)T
               ),
-              // (2,1)O (2,2)C (2,3)E (2,4)A (2,5)N — crosses FOREST at (2,1)=O
               TargetWord(
                 id = "l5_v1",
-                word = "OCEAN",
-                clue = "Vast saltwater expanse",
+                word = "OPERA",
+                clue = "Grand dramatic work set to orchestral music",
                 startX = 2,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (2,1)O, (2,3)E, (2,5)N
+                missingBlankIndices = listOf(0, 2, 4), // (2,1)O, (2,3)E, (2,5)A
               ),
-              // (4,1)E (4,2)A (4,3)R (4,4)T (4,5)H — crosses FOREST at (4,1)=E
               TargetWord(
                 id = "l5_v2",
-                word = "EARTH",
-                clue = "Our living blue-green world",
+                word = "EQUAL",
+                clue = "Balanced in measure, value, and symmetry",
                 startX = 4,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (4,1)E, (4,3)R, (4,5)H
+                missingBlankIndices = listOf(0, 2, 4), // (4,1)E, (4,3)U, (4,5)L
               ),
-              // (6,1)T (6,2)R (6,3)E (6,4)E (6,5)S — crosses FOREST at (6,1)=T
               TargetWord(
                 id = "l5_v3",
                 word = "TREES",
@@ -1284,23 +1253,14 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(0, 2, 4), // (6,1)T, (6,3)E, (6,5)S
               ),
-              // Look at y=3: (2,3)=E, (4,3)=R, (6,3)=E!
-              // What 6-letter word at (1,3)..(6,3) has E at x=2, R at x=4, E at x=6?
-              // (1,3)S (2,3)E (3,3)V (4,3)E? No, x=4 is R:
-              // How about a 5-letter word from x=2 to x=6: (2,3)E _ (4,3)R _ (6,3)E?
-              // Wait: at y=5, (2,5)=N, (4,5)=H, (6,5)=S -> (2,5)N (3,5)I (4,5)G (5,5)H (6,5)T? If (4,5) is G!
-              // Let's check: if V1 at (2,1) is "ORNATE"? Or let's check y=3 with (2,3)=E and (4,3)=R:
-              // 5-letter word at (1,3)..(5,3) with E at x=2 and R at x=4:
-              // (1,3)P (2,3)E (3,3)A (4,3)R (5,3)L -> "PEARL"! (And then V3 at x=6 starts at y=5 or x=7!)
-              // Let's check: if H2 = "PEARL" at (1,3)..(5,3), it crosses OCEAN at (2,3)=E and EARTH at (4,3)=R!
               TargetWord(
                 id = "l5_h2",
-                word = "PEARL",
-                clue = "Lustrous gem formed inside an oyster",
-                startX = 1,
-                startY = 3,
+                word = "ATLAS",
+                clue = "Bound volume of world and botanical maps",
+                startX = 2,
+                startY = 5,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 2, 3), // (2,3)E, (3,3)A, (4,3)R
+                missingBlankIndices = listOf(0, 2, 4), // (2,5)A, (4,5)L, (6,5)S
               ),
             ),
           multipliers =
@@ -1308,12 +1268,13 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(2, 1) to SquareMultiplier.DW,
               Coordinate(4, 1) to SquareMultiplier.TW,
               Coordinate(6, 1) to SquareMultiplier.DL,
-              Coordinate(2, 3) to SquareMultiplier.TL,
-              Coordinate(4, 3) to SquareMultiplier.DW,
+              Coordinate(2, 5) to SquareMultiplier.TL,
+              Coordinate(4, 5) to SquareMultiplier.DW,
+              Coordinate(6, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x7|title:Emerald Canopy|H:1,1:FOREST:1,3,5|V:2,1:OCEAN:0,2,4|V:4,1:EARTH:0,2,4|V:6,1:TREES:0,2,4|H:1,3:PEARL:1,2,3",
-        ).copy(boardHeight = 7),
+            "8x8|title:Emerald Canopy|H:1,1:FOREST:1,3,5|V:2,1:OPERA:0,2,4|V:4,1:EQUAL:0,2,4|V:6,1:TREES:0,2,4|H:2,5:ATLAS:0,2,4",
+        ),
 
         // LEVEL 6: 8x8 — "Alchemist's Forge"
         LevelTemplate(
@@ -1324,7 +1285,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)Q (2,1)U (3,1)A (4,1)R (5,1)T (6,1)Z
               TargetWord(
                 id = "l6_h1",
                 word = "QUARTZ",
@@ -1334,7 +1294,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(0, 2, 5), // (1,1)Q, (3,1)A, (6,1)Z
               ),
-              // (1,1)Q (1,2)U (1,3)E (1,4)S (1,5)T — crosses QUARTZ at (1,1)=Q
               TargetWord(
                 id = "l6_v1",
                 word = "QUEST",
@@ -1344,7 +1303,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(0, 2, 4), // (1,1)Q, (1,3)E, (1,5)T
               ),
-              // (3,1)A (3,2)M (3,3)B (3,4)E (3,5)R — crosses QUARTZ at (3,1)=A
               TargetWord(
                 id = "l6_v2",
                 word = "AMBER",
@@ -1354,7 +1312,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(0, 2, 4), // (3,1)A, (3,3)B, (3,5)R
               ),
-              // (6,1)Z (6,2)E (6,3)N (6,4)I (6,5)T (6,6)H — crosses QUARTZ at (6,1)=Z
               TargetWord(
                 id = "l6_v3",
                 word = "ZENITH",
@@ -1364,12 +1321,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(0, 2, 5), // (6,1)Z, (6,3)N, (6,6)H
               ),
-              // Look at y=5: (1,5)=T (from QUEST) and (3,5)=R (from AMBER)!
-              // Word at (1,5)..(5,5): (1,5)T (2,5)R (3,5)A? No, (3,5) is R:
-              // (1,5)T (2,5)O (3,5)R (4,5)C (5,5)H -> "TORCH"? Wait: (6,5) is T in ZENITH, so (1,5)..(5,5) would touch (6,5)!
-              // What if the word is 6 letters from x=1 to x=6 where x=1 is T, x=3 is R, and x=6 is T?
-              // (1,5)T (2,5)A (3,5)R (4,5)G (5,5)E (6,5)T -> "TARGET"!!
-              // Look at "TARGET": index 0 (x=1) = 'T' (matches QUEST!), index 2 (x=3) = 'R' (matches AMBER!), index 5 (x=6) = 'T' (matches ZENITH!)!
               TargetWord(
                 id = "l6_h2",
                 word = "TARGET",
@@ -1402,7 +1353,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)G (2,1)A (3,1)L (4,1)A (5,1)X (6,1)Y
               TargetWord(
                 id = "l7_h1",
                 word = "GALAXY",
@@ -1412,7 +1362,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 3, 4), // (2,1)A, (4,1)A, (5,1)X
               ),
-              // (2,1)A (2,2)T (2,3)L (2,4)A (2,5)S — crosses GALAXY at (2,1)=A
               TargetWord(
                 id = "l7_v1",
                 word = "ATLAS",
@@ -1422,7 +1371,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(0, 2, 4), // (2,1)A, (2,3)L, (2,5)S
               ),
-              // (4,1)A (4,2)R (4,3)R (4,4)O (4,5)W — crosses GALAXY at (4,1)=A
               TargetWord(
                 id = "l7_v2",
                 word = "ARROW",
@@ -1432,11 +1380,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.VERTICAL,
                 missingBlankIndices = listOf(0, 2, 4), // (4,1)A, (4,3)R, (4,5)W
               ),
-              // At y=5: (2,5)=S (from ATLAS) and (4,5)=W (from ARROW):
-              // Word at (2,5)..(6,5): (2,5)S (3,5)W? No, W is at x=4:
-              // What if H2 is at y=3 where (2,3)=L (from ATLAS) and (4,3)=R (from ARROW)?
-              // 5-letter word at (1,3)..(5,3) with L at x=2 and R at x=4:
-              // (1,3)F (2,3)L (3,3)A (4,3)R (5,3)E -> "FLARE" (Solar flare)!
               TargetWord(
                 id = "l7_h2",
                 word = "FLARE",
@@ -1446,10 +1389,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 2, 3, 4), // (2,3)L, (3,3)A, (4,3)R, (5,3)E
               ),
-              // And at y=5 where (2,5)=S (from ATLAS), let's run "STORM" at (2,5)?Wait: (4,5) is W in ARROW.
-              // What if V2 at (4,1) is "ARMOR" ((4,1)A, (4,2)R, (4,3)M, (4,4)O, (4,5)R)?
-              // Wait: if V2 is "ARROW", let's keep V2="ARROW" and put a horizontal word at y=5 starting at x=4:
-              // (4,5)W (5,5)O (6,5)R (7,5)L (8,5)D? On 8x8, (4,5)W (5,5)I (6,5)N (7,5)D -> "WIND"!
               TargetWord(
                 id = "l7_h3",
                 word = "WIND",
@@ -1470,8 +1409,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(4, 5) to SquareMultiplier.DW,
             ),
           compactCode =
-            "8x7|title:Nebula Horizon|H:1,1:GALAXY:1,3,4|V:2,1:ATLAS:0,2,4|V:4,1:ARROW:0,2,4|H:1,3:FLARE:1,2,3,4|H:4,5:WIND:0,2,3",
-        ).copy(boardHeight = 7),
+            "8x8|title:Nebula Horizon|H:1,1:GALAXY:1,3,4|V:2,1:ATLAS:0,2,4|V:4,1:ARROW:0,2,4|H:1,3:FLARE:1,2,3,4|H:4,5:WIND:0,2,3",
+        ),
 
         // LEVEL 8: 8x8 — "Shogun's Scroll"
         LevelTemplate(
@@ -1482,7 +1421,6 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           boardHeight = 8,
           targetWords =
             listOf(
-              // (1,1)K (2,1)A (3,1)T (4,1)A (5,1)N (6,1)A
               TargetWord(
                 id = "l8_h1",
                 word = "KATANA",
@@ -1492,56 +1430,41 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(0, 2, 4), // (1,1)K, (3,1)T, (5,1)N
               ),
-              // (3,1)T (3,2)E (3,3)M (3,4)P (3,5)L (3,6)E — crosses KATANA at (3,1)=T
               TargetWord(
                 id = "l8_v1",
-                word = "TEMPLE",
-                clue = "Sacred sanctuary of meditation",
+                word = "KNIFE",
+                clue = "Forged tanto blade carried in a sash",
+                startX = 1,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)K, (1,3)I, (1,5)E
+              ),
+              TargetWord(
+                id = "l8_v2",
+                word = "TOWER",
+                clue = "High castle keep overlooking the moat",
                 startX = 3,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4, 5), // (3,1)T, (3,3)M, (3,5)L, (3,6)E
-              ),
-              // (5,1)N (5,2)O (5,3)B (5,4)L (5,5)E — crosses KATANA at (5,1)=N
-              TargetWord(
-                id = "l8_v2",
-                word = "NOBLE",
-                clue = "Possessing high moral character and honor",
-                startX = 5,
-                startY = 1,
-                direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (5,1)N, (5,3)B, (5,5)E
-              ),
-              // At y=3: (3,3)=M (from TEMPLE) and (5,3)=B (from NOBLE)!
-              // Word at (2,3)..(6,3): (2,3)A (3,3)M (4,3)B? No, B is at x=5:
-              // What if y=5 has (3,5)=L (from TEMPLE) and (5,5)=E (from NOBLE)?
-              // Word with L at x=3 and E at x=5:
-              // (1,5)B (2,5)L? No, L is at x=3:
-              // (2,5)F (3,5)L (4,5)A (5,5)M (6,5)E? E is at x=6 there.
-              // If startX=1: (1,5)P (2,5)A (3,5)L (4,5)A (5,5)C (6,5)E?
-              // If startX=2: (2,5)B (3,5)L (4,5)A (5,5)D (6,5)E?
-              // Wait: we want L at x=3 (index 1 if startX=2) and E at x=5 (index 3 if startX=2):
-              // (2,5)B (3,5)L (4,5)U (5,5)E -> "BLUE" or "CLUE" or "GLUE"!
-              // Or 5 letters starting at x=1: index 2 = L (x=3), index 4 = E (x=5):
-              // (1,5)P (2,5)U (3,5)L (4,5)S (5,5)E -> "PULSE"!
-              // Check "PULSE": (1,5)=P, (2,5)=U, (3,5)=L (matches TEMPLE!), (4,5)=S, (5,5)=E (matches NOBLE!)!
-              TargetWord(
-                id = "l8_h2",
-                word = "PULSE",
-                clue = "Rhythmic beat of life and energy",
-                startX = 1,
-                startY = 5,
-                direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(0, 2, 3, 4), // (1,5)P, (3,5)L, (4,5)S, (5,5)E
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)T, (3,3)W, (3,5)R
               ),
               TargetWord(
                 id = "l8_v3",
-                word = "CAPE",
-                clue = "Sleeveless cloak worn over the shoulders",
-                startX = 1,
-                startY = 3,
+                word = "NORTH",
+                clue = "Compass direction of the polar star",
+                startX = 5,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2), // (1,3)C, (1,5)P
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)N, (5,3)R, (5,5)H
+              ),
+              TargetWord(
+                id = "l8_h2",
+                word = "EARTH",
+                clue = "Solid ground and natural realm",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)E, (3,5)R, (5,5)H
               ),
             ),
           multipliers =
@@ -1549,11 +1472,12 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(1, 1) to SquareMultiplier.TL,
               Coordinate(3, 1) to SquareMultiplier.DW,
               Coordinate(5, 1) to SquareMultiplier.DW,
+              Coordinate(1, 5) to SquareMultiplier.DL,
               Coordinate(3, 5) to SquareMultiplier.TW,
               Coordinate(5, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Shogun's Scroll|H:1,1:KATANA:0,2,4|V:3,1:TEMPLE:0,2,4,5|V:5,1:NOBLE:0,2,4|H:1,5:PULSE:0,2,3,4|V:1,3:CAPE:0,2",
+            "8x8|title:Shogun's Scroll|H:1,1:KATANA:0,2,4|V:1,1:KNIFE:0,2,4|V:3,1:TOWER:0,2,4|V:5,1:NORTH:0,2,4|H:1,5:EARTH:0,2,4",
         ),
 
         // LEVEL 9: 8x8 — "Origami Garden"
@@ -1576,24 +1500,24 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               ),
               TargetWord(
                 id = "l9_v1",
-                word = "START",
-                clue = "Embark on a new journey",
-                startX = 3,
-                startY = 0,
+                word = "LIGHT",
+                clue = "Morning sunbeams warming the paper screen",
+                startX = 1,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 3, 4), // (3,1)T, (3,3)R, (3,4)T
-              ),
-              TargetWord(
-                id = "l9_h2",
-                word = "CRANE",
-                clue = "Iconic folded origami bird of peace",
-                startX = 2,
-                startY = 3,
-                direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(0, 1, 3), // (2,3)C, (3,3)R, (5,3)N
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)L, (1,3)G, (1,5)T
               ),
               TargetWord(
                 id = "l9_v2",
+                word = "TRAIN",
+                clue = "Scenic mountain railway through bamboo groves",
+                startX = 3,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)T, (3,3)A, (3,5)N
+              ),
+              TargetWord(
+                id = "l9_v3",
                 word = "SENSE",
                 clue = "Intuitive perception and awareness",
                 startX = 5,
@@ -1602,25 +1526,26 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 missingBlankIndices = listOf(0, 2, 4), // (5,1)S, (5,3)N, (5,5)E
               ),
               TargetWord(
-                id = "l9_h3",
-                word = "RIVER",
-                clue = "Flowing mountain stream",
-                startX = 2,
+                id = "l9_h2",
+                word = "TENSE",
+                clue = "Folded crisp and taut along the crease",
+                startX = 1,
                 startY = 5,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 3, 4), // (3,5)I, (5,5)E, (6,5)R
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)T, (3,5)N, (5,5)E
               ),
             ),
           multipliers =
             mapOf(
-              Coordinate(3, 1) to SquareMultiplier.DW,
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TW,
               Coordinate(5, 1) to SquareMultiplier.TL,
-              Coordinate(3, 3) to SquareMultiplier.TW,
-              Coordinate(5, 3) to SquareMultiplier.DW,
-              Coordinate(5, 5) to SquareMultiplier.DL,
+              Coordinate(1, 5) to SquareMultiplier.DL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Origami Garden|H:1,1:LOTUS:0,2,4|V:3,0:START:1,3,4|H:2,3:CRANE:0,1,3|V:5,1:SENSE:0,2,4|H:2,5:RIVER:1,3,4",
+            "8x8|title:Origami Garden|H:1,1:LOTUS:0,2,4|V:1,1:LIGHT:0,2,4|V:3,1:TRAIN:0,2,4|V:5,1:SENSE:0,2,4|H:1,5:TENSE:0,2,4",
         ),
 
         // LEVEL 10: 8x8 — "Kyoto Lanterns"
@@ -1652,30 +1577,30 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               ),
               TargetWord(
                 id = "l10_v2",
-                word = "DANCE",
-                clue = "Graceful rhythmic festival movement",
+                word = "DRAMA",
+                clue = "Classical Noh theatre performance",
                 startX = 4,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (4,1)D, (4,3)N, (4,5)E
+                missingBlankIndices = listOf(0, 2, 4), // (4,1)D, (4,3)A, (4,5)A
               ),
               TargetWord(
                 id = "l10_v3",
-                word = "ECHO",
-                clue = "Resounding reflection of sound",
+                word = "EARLY",
+                clue = "Glowing before the first light of dawn",
                 startX = 6,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2), // (6,1)E, (6,3)H
+                missingBlankIndices = listOf(0, 2, 4), // (6,1)E, (6,3)R, (6,5)Y
               ),
               TargetWord(
                 id = "l10_h2",
-                word = "GREEN",
-                clue = "Verdant hue of mossy temple gardens",
-                startX = 1,
+                word = "READY",
+                clue = "Prepared with lit lanterns for the festival",
+                startX = 2,
                 startY = 5,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 3, 4), // (2,5)R, (4,5)E, (5,5)N
+                missingBlankIndices = listOf(0, 2, 4), // (2,5)R, (4,5)A, (6,5)Y
               ),
             ),
           multipliers =
@@ -1685,9 +1610,10 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(6, 1) to SquareMultiplier.DL,
               Coordinate(2, 5) to SquareMultiplier.TL,
               Coordinate(4, 5) to SquareMultiplier.DW,
+              Coordinate(6, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Kyoto Lanterns|H:1,1:BRIDGE:1,3,5|V:2,1:RIVER:0,2,4|V:4,1:DANCE:0,2,4|V:6,1:ECHO:0,2|H:1,5:GREEN:1,3,4",
+            "8x8|title:Kyoto Lanterns|H:1,1:BRIDGE:1,3,5|V:2,1:RIVER:0,2,4|V:4,1:DRAMA:0,2,4|V:6,1:EARLY:0,2,4|H:2,5:READY:0,2,4",
         ),
 
         // LEVEL 11: 8x8 — "Coral Sanctuary"

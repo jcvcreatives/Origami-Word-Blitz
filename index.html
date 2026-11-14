@@ -353,20 +353,24 @@
       width: 100%;
       height: 100%;
       display: grid;
-      gap: 4px;
+      gap: 5px;
       perspective: 750px;
       transform: translateZ(0);
     }
 
     /* Origami Board Cells */
     .cell {
+      min-width: 0;
+      min-height: 0;
+      box-sizing: border-box;
       border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 800;
       font-family: Georgia, "Noto Serif", serif;
-      font-size: clamp(14px, 3.9vw, 20px);
+      font-size: clamp(13px, 3.6vw, 19px);
+      line-height: 1;
       position: relative;
       transform-style: preserve-3d;
       transform-origin: center center;
@@ -1106,9 +1110,18 @@
       padding: 8px 14px;
       font-weight: 800;
       cursor: pointer;
+      flex-shrink: 0;
     }
     .play-btn.solved {
       background: var(--matcha-jade);
+    }
+    .play-btn.locked,
+    .play-btn:disabled {
+      background: var(--kraft-card);
+      color: var(--walnut-muted);
+      border: 1px solid var(--kraft-border);
+      cursor: not-allowed;
+      opacity: 0.78;
     }
     .kit-selector {
       display: grid;
@@ -1460,9 +1473,6 @@
             </button>
             <button class="icon-btn" onclick="resetLevel()" title="Reset Current Grid">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            </button>
-            <button class="icon-btn" onclick="nextLevel()" title="Skip to Next Puzzle" style="color:var(--aizome-indigo);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
             </button>
           </div>
         </div>
@@ -2033,16 +2043,16 @@
       {
         level: 3, title: "Citadel Vault", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
-          { id: "h1", word: "CASTLE", clue: "Fortified medieval stone stronghold", sx: 1, sy: 1, dir: "H", blanks: [1, 3, 5] },
-          { id: "v1", word: "VAULT", clue: "Arched treasure chamber", sx: 2, sy: 0, dir: "V", blanks: [1, 2, 4] },
-          { id: "v2", word: "TOWER", clue: "High lookout turret", sx: 4, sy: 1, dir: "V", blanks: [0, 3] },
-          { id: "h2", word: "STEEL", clue: "Tempered alloy forged for armor", sx: 1, sy: 4, dir: "H", blanks: [1, 3, 4] },
-          { id: "v3", word: "SHIP", clue: "Ocean-going vessel with tall sails", sx: 1, sy: 4, dir: "V", blanks: [1, 3] }
+          { id: "h1", word: "CASTLE", clue: "Fortified medieval stone stronghold", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
+          { id: "v1", word: "CHART", clue: "Navigator's map of sea lanes and stars", sx: 1, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "SIGMA", clue: "Greek summation symbol in mathematics", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "LEMON", clue: "Sunlit citrus fruit with aromatic zest", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "TRAIN", clue: "Express locomotive on iron rails", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "2,1": "2W", "4,1": "3W", "2,4": "3L", "4,4": "2W" }
+        mults: { "1,1": "2W", "3,1": "3W", "5,1": "2L", "1,5": "3L", "3,5": "2W", "5,5": "3L" }
       },
       {
-        level: 4, title: "Cyber Matrix", tier: "TIER I · STARTER SKELETON", w: 8, h: 6,
+        level: 4, title: "Cyber Matrix", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "MATRIX", clue: "Rectangular mathematical array", sx: 1, sy: 1, dir: "H", blanks: [1, 3, 5] },
           { id: "v1", word: "LASER", clue: "Focused coherent beam of light", sx: 2, sy: 0, dir: "V", blanks: [1, 3, 4] },
@@ -2053,15 +2063,15 @@
         mults: { "6,1": "3W", "2,1": "2W", "4,1": "2L", "2,3": "3L", "4,3": "2W" }
       },
       {
-        level: 5, title: "Emerald Canopy", tier: "TIER I · STARTER SKELETON", w: 8, h: 7,
+        level: 5, title: "Emerald Canopy", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "FOREST", clue: "Dense woodland ecosystem", sx: 1, sy: 1, dir: "H", blanks: [1, 3, 5] },
-          { id: "v1", word: "OCEAN", clue: "Vast saltwater expanse", sx: 2, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "v2", word: "EARTH", clue: "Our living blue-green world", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v1", word: "OPERA", clue: "Grand dramatic work set to orchestral music", sx: 2, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "EQUAL", clue: "Balanced in measure, value, and symmetry", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
           { id: "v3", word: "TREES", clue: "Tall perennial woody plants", sx: 6, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "h2", word: "PEARL", clue: "Lustrous gem formed inside an oyster", sx: 1, sy: 3, dir: "H", blanks: [1, 2, 3] }
+          { id: "h2", word: "ATLAS", clue: "Bound volume of world and botanical maps", sx: 2, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "2,1": "2W", "4,1": "3W", "6,1": "2L", "2,3": "3L", "4,3": "2W" }
+        mults: { "2,1": "2W", "4,1": "3W", "6,1": "2L", "2,5": "3L", "4,5": "2W", "6,5": "3L" }
       },
       {
         level: 6, title: "Alchemist's Forge", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
@@ -2075,7 +2085,7 @@
         mults: { "1,1": "3W", "6,1": "3W", "3,1": "2W", "3,5": "3L", "6,5": "2W" }
       },
       {
-        level: 7, title: "Nebula Horizon", tier: "TIER I · STARTER SKELETON", w: 8, h: 7,
+        level: 7, title: "Nebula Horizon", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "GALAXY", clue: "Spiral system of billions of stars", sx: 1, sy: 1, dir: "H", blanks: [1, 3, 4] },
           { id: "v1", word: "ATLAS", clue: "Bound collection of celestial maps", sx: 2, sy: 1, dir: "V", blanks: [0, 2, 4] },
@@ -2089,34 +2099,34 @@
         level: 8, title: "Shogun's Scroll", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "KATANA", clue: "Curved single-edged samurai blade", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
-          { id: "v1", word: "TEMPLE", clue: "Sacred sanctuary of meditation", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4, 5] },
-          { id: "v2", word: "NOBLE", clue: "Possessing high moral honor", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "h2", word: "PULSE", clue: "Rhythmic beat of life and energy", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 3, 4] },
-          { id: "v3", word: "CAPE", clue: "Sleeveless cloak worn over shoulders", sx: 1, sy: 3, dir: "V", blanks: [0, 2] }
+          { id: "v1", word: "KNIFE", clue: "Forged tanto blade carried in a sash", sx: 1, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "TOWER", clue: "High castle keep overlooking the moat", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "NORTH", clue: "Compass direction of the polar star", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "EARTH", clue: "Solid ground and natural realm", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "1,1": "3L", "3,1": "2W", "5,1": "2W", "3,5": "3W", "5,5": "3L" }
+        mults: { "1,1": "3L", "3,1": "2W", "5,1": "2W", "1,5": "2L", "3,5": "3W", "5,5": "3L" }
       },
       {
         level: 9, title: "Origami Garden", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "LOTUS", clue: "Sacred water blossom", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
-          { id: "v1", word: "START", clue: "Embark on a new journey", sx: 3, sy: 0, dir: "V", blanks: [1, 3, 4] },
-          { id: "h2", word: "CRANE", clue: "Iconic folded origami bird", sx: 2, sy: 3, dir: "H", blanks: [0, 1, 3] },
-          { id: "v2", word: "SENSE", clue: "Intuitive perception and awareness", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "h3", word: "RIVER", clue: "Flowing mountain stream", sx: 2, sy: 5, dir: "H", blanks: [1, 3, 4] }
+          { id: "v1", word: "LIGHT", clue: "Morning sunbeams warming the paper screen", sx: 1, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "TRAIN", clue: "Scenic mountain railway through bamboo groves", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "SENSE", clue: "Intuitive perception and awareness", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "TENSE", clue: "Folded crisp and taut along the crease", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "3,1": "2W", "5,1": "3L", "3,3": "3W", "5,3": "2W", "5,5": "2L" }
+        mults: { "1,1": "2W", "3,1": "3W", "5,1": "3L", "1,5": "2L", "3,5": "2W", "5,5": "3L" }
       },
       {
         level: 10, title: "Kyoto Lanterns", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "BRIDGE", clue: "Arched timber crossing over a canal", sx: 1, sy: 1, dir: "H", blanks: [1, 3, 5] },
           { id: "v1", word: "RIVER", clue: "Winding waterway reflecting lanterns", sx: 2, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "v2", word: "DANCE", clue: "Graceful rhythmic festival movement", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "v3", word: "ECHO", clue: "Resounding reflection of sound", sx: 6, sy: 1, dir: "V", blanks: [0, 2] },
-          { id: "h2", word: "GREEN", clue: "Verdant hue of mossy temple gardens", sx: 1, sy: 5, dir: "H", blanks: [1, 3, 4] }
+          { id: "v2", word: "DRAMA", clue: "Classical Noh theatre performance", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "EARLY", clue: "Glowing before the first light of dawn", sx: 6, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "READY", clue: "Prepared with lit lanterns for the festival", sx: 2, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "2,1": "2W", "4,1": "3W", "6,1": "2L", "2,5": "3L", "4,5": "2W" }
+        mults: { "2,1": "2W", "4,1": "3W", "6,1": "2L", "2,5": "3L", "4,5": "2W", "6,5": "3L" }
       },
       {
         level: 11, title: "Coral Sanctuary", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
@@ -2312,7 +2322,8 @@
       "CHESS","RADIO","LANCE","SHORE","SOLAR","STEAM","LIGHT","MOTOR","SWORD","SCALE",
       "DRAMA","ARENA","CLOUD","CHEST","TENSE","FROST","FOCUS","OPERA","STAIR","LEMON",
       "TRAIN","MUSIC","MAGIC","CLEAN","BLADE","BEACH","EVENT","HEART","COMET","CHAIR",
-      "MEDIA","TRUTH","REACH","FLAME","FIELD","ANGEL","EARLY","DELAY"
+      "MEDIA","TRUTH","REACH","FLAME","FIELD","ANGEL","EARLY","DELAY","CHART","SIGMA",
+      "EQUAL","KNIFE","NORTH"
     ];
 
     const LETTER_SCORES = { A:1,E:1,I:1,O:1,U:1,L:1,N:1,S:1,T:1,R:1,D:2,G:2,B:3,C:3,M:3,P:3,F:4,H:4,V:4,W:4,Y:4,K:5,J:8,X:8,Q:10,Z:10 };
@@ -2373,6 +2384,7 @@
         unlockedSkins: state ? state.unlockedSkins : new Set(["washi_classic"]),
         equippedSkinId: state ? state.equippedSkinId : "washi_classic",
         solvedLevels: state ? state.solvedLevels : new Set(),
+        highestUnlockedLevel: state ? state.highestUnlockedLevel : 1,
         hintsRemaining: 3,
         mistakes: 0,
         combo: 0,
@@ -2528,11 +2540,16 @@
 
       if (allSolved) {
         state.solvedLevels.add(state.tpl.level);
+        state.highestUnlockedLevel = Math.min(
+          LEVELS.length,
+          Math.max(state.highestUnlockedLevel || 1, state.tpl.level + 1)
+        );
         const accuracyBonus = state.mistakes === 0 ? 75 : 25;
         const coinsEarned = 35 + newlyDone.length * 10;
         state.score += accuracyBonus;
         state.careerScore += accuracyBonus;
         state.coins += coinsEarned;
+        renderVaultAndStudio();
         setTimeout(() => showLevelClearModal(accuracyBonus, coinsEarned), 520);
       }
       return true;
@@ -2919,8 +2936,8 @@
       }
 
       const grid = document.getElementById("boardGrid");
-      grid.style.gridTemplateColumns = `repeat(${tpl.w}, 1fr)`;
-      grid.style.gridTemplateRows = `repeat(${tpl.h}, 1fr)`;
+      grid.style.gridTemplateColumns = `repeat(${tpl.w}, minmax(0, 1fr))`;
+      grid.style.gridTemplateRows = `repeat(${tpl.h}, minmax(0, 1fr))`;
       const frag = document.createDocumentFragment();
       cellDomGrid = Array.from({ length: tpl.h }, () => Array(tpl.w));
 
@@ -3195,9 +3212,36 @@
     }
 
     function nextLevel() {
+      const nextIdx = (currentLvlIdx + 1) % LEVELS.length;
+      const nextLvlNum = LEVELS[nextIdx].level;
+      const canAdvance =
+        state.solvedLevels.has(state.tpl.level) ||
+        nextLvlNum <= (state.highestUnlockedLevel || 1);
+      if (!canAdvance) {
+        AudioPlayer.play("thud");
+        state.statusMsg = `Level ${nextLvlNum} is locked! Play and win Level ${state.tpl.level} to unlock it.`;
+        state.statusErr = true;
+        render();
+        return;
+      }
       AudioPlayer.play("click");
-      currentLvlIdx++;
+      currentLvlIdx = nextIdx;
       buildLevel(currentLvlIdx);
+    }
+
+    function selectVaultLevel(idx) {
+      const lvl = LEVELS[idx];
+      if (!lvl) return;
+      const unlocked =
+        state.solvedLevels.has(lvl.level) ||
+        lvl.level <= (state.highestUnlockedLevel || 1);
+      if (!unlocked) {
+        AudioPlayer.play("thud");
+        return;
+      }
+      currentLvlIdx = idx;
+      buildLevel(idx);
+      switchTab("skeleton");
     }
 
     function switchTab(tabId) {
@@ -3236,19 +3280,26 @@
             if (lvl.level < minL || lvl.level > maxL) return;
           }
           const solved = state.solvedLevels.has(lvl.level);
+          const unlocked = solved || lvl.level <= (state.highestUnlockedLevel || 1);
           const card = document.createElement("div");
           card.className = "panel-card paper-surface";
+          if (!unlocked) {
+            card.style.opacity = "0.74";
+            card.style.background = "var(--kraft-card)";
+          }
           card.innerHTML = `
             <div class="level-row">
-              <div>
-                <div style="font-size:11px; font-weight:800; color:${solved ? "var(--matcha-jade)" : "var(--aizome-indigo)"};">
-                  LEVEL ${lvl.level} · ${lvl.tier} ${solved ? "★★★" : ""}
+              <div style="min-width:0; flex:1;">
+                <div style="font-size:11px; font-weight:800; color:${solved ? "var(--matcha-jade)" : unlocked ? "var(--aizome-indigo)" : "var(--walnut-muted)"};">
+                  LEVEL ${lvl.level} · ${lvl.tier} ${solved ? "★★★" : !unlocked ? "· LOCKED" : ""}
                 </div>
-                <div style="font-size:15.5px; font-weight:800;">${lvl.title}</div>
-                <div style="font-size:11px; color:var(--walnut-muted);">${lvl.w}×${lvl.h} Grid · ${lvl.words.map(w => w.word).join(", ")}</div>
+                <div style="font-size:15.5px; font-weight:800; color:${unlocked ? "var(--sumi-ink)" : "var(--walnut-muted)"};">${lvl.title}</div>
+                <div style="font-size:11px; color:var(--walnut-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  ${unlocked ? `${lvl.w}×${lvl.h} Grid · ${lvl.words.map(w => w.word).join(", ")}` : `Win Level ${lvl.level - 1} to unlock this ${lvl.w}×${lvl.h} origami puzzle`}
+                </div>
               </div>
-              <button class="play-btn ${solved ? "solved" : ""}" onclick="currentLvlIdx=${idx}; buildLevel(${idx}); switchTab('skeleton');">
-                ${solved ? "Replay" : "Play"}
+              <button class="play-btn ${solved ? "solved" : !unlocked ? "locked" : ""}" ${unlocked ? `onclick="selectVaultLevel(${idx})"` : "disabled"}>
+                ${solved ? "Replay" : unlocked ? "Play" : "🔒 Locked"}
               </button>
             </div>
           `;

@@ -130,22 +130,37 @@ class GameViewModel(
     }
   }
 
-  fun loadLevel(levelNumber: Int) {
+  fun loadLevel(levelNumber: Int): Boolean {
+    val current = _puzzleState.value
+    val isUnlocked =
+      levelNumber <= current.highestUnlockedLevel || levelNumber in current.completedLevels
+    if (!isUnlocked) {
+      soundEngine.onInvalidWord(null)
+      _puzzleState.update { s ->
+        s.copy(
+          statusMessage =
+            "Level $levelNumber is locked! Play and win Level ${s.highestUnlockedLevel} to unlock it.",
+          isStatusError = true,
+          lastSoundTriggered = AudioPlayer.SoundEffect.THUD.id,
+        )
+      }
+      return false
+    }
     autoAdvanceJob?.cancel()
     lastHoverCoord = null
-    val current = _puzzleState.value
     val template = lexiFillEngine.getLevelTemplate(levelNumber)
     _puzzleState.value =
       lexiFillEngine.createPuzzleState(
         template = template,
         totalCampaignScore = current.totalCampaignScore,
         completedLevels = current.completedLevels,
-        highestUnlockedLevel = maxOf(current.highestUnlockedLevel, levelNumber),
+        highestUnlockedLevel = current.highestUnlockedLevel,
         lexiCoins = current.lexiCoins,
         equippedSkinId = current.equippedSkin.id,
         unlockedSkinIds = current.unlockedSkinIds,
         strictTrieValidation = current.strictTrieValidation,
       )
+    return true
   }
 
   fun loadCustomSkeleton(compactCode: String) {
@@ -175,8 +190,26 @@ class GameViewModel(
   }
 
   fun advanceToNextLevel() {
-    val nextNum = _puzzleState.value.levelTemplate.levelNumber + 1
-    loadLevel(nextNum)
+    val current = _puzzleState.value
+    val nextNum =
+      (current.levelTemplate.levelNumber + 1).coerceAtMost(LexiFillEngine.TOTAL_CAMPAIGN_LEVELS)
+    if (
+      current.isLevelCleared ||
+        current.levelTemplate.levelNumber in current.completedLevels ||
+        nextNum <= current.highestUnlockedLevel
+    ) {
+      loadLevel(nextNum)
+    } else {
+      soundEngine.onInvalidWord(null)
+      _puzzleState.update { s ->
+        s.copy(
+          statusMessage =
+            "Complete Level ${s.levelTemplate.levelNumber} first to unlock Level $nextNum!",
+          isStatusError = true,
+          lastSoundTriggered = AudioPlayer.SoundEffect.THUD.id,
+        )
+      }
+    }
   }
 
   fun toggleSoundMute(haptics: HapticFeedback? = null) {
