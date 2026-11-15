@@ -691,7 +691,7 @@ class GameViewModel(
     autoAdvanceJob?.cancel()
     autoAdvanceJob =
       viewModelScope.launch {
-        for (sec in 3 downTo 1) {
+        for (sec in 4 downTo 1) {
           _puzzleState.update { it.copy(autoAdvanceCountdownSec = sec) }
           delay(1000L)
         }

@@ -454,6 +454,35 @@
     .board-frame.shake {
       animation: boardShake 0.22s linear;
     }
+    .board-frame.folding-into-structure {
+      animation: boardSheetStructureFlex 1.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes boardSheetStructureFlex {
+      0% { transform: perspective(750px) rotateX(0deg) rotateY(0deg) scale(1); }
+      38% { transform: perspective(750px) rotateX(11deg) rotateY(-5deg) scale(0.968); }
+      72% { transform: perspective(750px) rotateX(-4deg) rotateY(3deg) scale(1.015); }
+      100% { transform: perspective(750px) rotateX(0deg) rotateY(0deg) scale(1); }
+    }
+    @keyframes cellConvergeIntoPaperStructure {
+      0% {
+        transform: perspective(600px) translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+        opacity: 1;
+      }
+      45% {
+        transform: perspective(600px) translate3d(calc(var(--fold-dx, 0px) * 0.48), calc(var(--fold-dy, 0px) * 0.48), 22px) rotateX(56deg) rotateY(var(--fold-ry, 32deg)) rotateZ(var(--fold-rz, 45deg)) scale(0.76);
+        opacity: 0.94;
+      }
+      100% {
+        transform: perspective(600px) translate3d(var(--fold-dx, 0px), var(--fold-dy, 0px), 0px) rotateX(82deg) rotateY(var(--fold-ry, 45deg)) rotateZ(calc(var(--fold-rz, 45deg) * 1.8)) scale(0.18);
+        opacity: 0;
+      }
+    }
+    .cell.grid-folding-into-structure {
+      pointer-events: none;
+      z-index: 16;
+      will-change: transform, opacity;
+      animation: cellConvergeIntoPaperStructure 0.78s cubic-bezier(0.22, 1, 0.36, 1) var(--grid-fold-delay, 0ms) forwards !important;
+    }
     @keyframes boardShake {
       0%, 100% { transform: translate3d(0, 0, 0); }
       20% { transform: translate3d(-6px, 0, 0); }
@@ -3075,9 +3104,311 @@
         state.careerScore += accuracyBonus;
         state.coins += coinsEarned;
         renderVaultAndStudio();
-        setTimeout(() => showLevelClearModal(accuracyBonus, coinsEarned), 520);
+        setTimeout(() => {
+          triggerFullGridPaperStructureFold(() => {
+            showLevelClearModal(accuracyBonus, coinsEarned);
+          });
+        }, 180);
       }
       return true;
+    }
+
+    let activeGridStructureAnimId = 0;
+
+    /**
+     * Smoothly transitions the entire solved crossword grid into a 3D multi-faceted
+     * Folded Paper Structure (an 8-point Kusudama Origami Star-Lotus crowned with a 3D
+     * Orizuru Paper Crane and embossed with the level's solved letters) upon level completion.
+     */
+    function triggerFullGridPaperStructureFold(onComplete) {
+      const boardFrame = document.getElementById("boardFrame");
+      if (!boardFrame || !state) {
+        if (onComplete) onComplete();
+        return;
+      }
+      const animToken = ++activeGridStructureAnimId;
+      const oldCanvas = document.getElementById("gridPaperStructureCanvas");
+      if (oldCanvas) oldCanvas.remove();
+
+      boardFrame.classList.remove("folding-into-structure");
+      void boardFrame.offsetWidth;
+      boardFrame.classList.add("folding-into-structure");
+
+      const rect = boardFrame.getBoundingClientRect();
+      const w = rect.width || 360;
+      const h = rect.height || 320;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const maxR = Math.max(40, Math.hypot(centerX, centerY));
+
+      const bounds = getActiveBoardBounds(state.tpl);
+      const cellW = (w - 18) / bounds.cols;
+      const cellH = (h - 18) / bounds.rows;
+
+      // 1. Hinge & converge all playable crossword grid cells into the center of the board
+      for (let y = bounds.minY; y <= bounds.maxY; y++) {
+        for (let x = bounds.minX; x <= bounds.maxX; x++) {
+          const c = state.cells[y] && state.cells[y][x];
+          const el = cellDomGrid[y] && cellDomGrid[y][x];
+          if (!c || !c.expected || !el) continue;
+          const cx = 9 + (x - bounds.minX + 0.5) * cellW;
+          const cy = 9 + (y - bounds.minY + 0.5) * cellH;
+          const dx = centerX - cx;
+          const dy = centerY - cy;
+          const distRatio = Math.min(1, Math.hypot(dx, dy) / maxR);
+          const delayMs = Math.round((1 - distRatio) * 140);
+          el.style.setProperty("--fold-dx", `${dx.toFixed(1)}px`);
+          el.style.setProperty("--fold-dy", `${dy.toFixed(1)}px`);
+          el.style.setProperty("--fold-ry", `${x % 2 === 0 ? 38 : -38}deg`);
+          el.style.setProperty("--fold-rz", `${(x + y) % 2 === 0 ? 45 : -45}deg`);
+          el.style.setProperty("--grid-fold-delay", `${delayMs}ms`);
+          el.classList.add("grid-folding-into-structure");
+        }
+      }
+
+      // 2. Create the 3D Folded Paper Structure Canvas over the board
+      const canvas = document.createElement("canvas");
+      canvas.id = "gridPaperStructureCanvas";
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.position = "absolute";
+      canvas.style.inset = "0";
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      canvas.style.pointerEvents = "none";
+      canvas.style.zIndex = "36";
+      boardFrame.appendChild(canvas);
+
+      const solvedChars = state.tpl.words.map(wd => wd.word).join("").split("");
+      if (solvedChars.length === 0) solvedChars.push("O", "R", "I", "G", "A", "M", "I", "✦");
+
+      const ctx = canvas.getContext("2d");
+      const startMs = performance.now();
+      const foldDurationMs = 1150;
+      let modalFired = false;
+
+      function tick(now) {
+        if (animToken !== activeGridStructureAnimId || !document.body.contains(canvas)) return;
+        const elapsed = now - startMs;
+        const gfp = Math.min(1, elapsed / foldDurationMs);
+        const ambientPhase = now * 0.0024;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Radial mountain & valley origami crease lines across the Washi board
+        const creaseAlpha = Math.max(0.18, Math.sin(Math.min(1, gfp * 0.85) * Math.PI) * 0.55);
+        const rayLen = maxR * (0.35 + 0.65 * gfp);
+        for (let rIdx = 0; rIdx < 8; rIdx++) {
+          const ang = (rIdx * Math.PI) / 4;
+          ctx.save();
+          ctx.strokeStyle = rIdx % 2 === 0
+            ? `rgba(184, 115, 20, ${creaseAlpha.toFixed(3)})`
+            : `rgba(27, 107, 69, ${creaseAlpha.toFixed(3)})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(centerX + Math.cos(ang) * rayLen, centerY + Math.sin(ang) * rayLen);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        if (gfp > 0.16) {
+          const structureT = Math.min(1, (gfp - 0.16) / 0.84);
+          drawFoldedGridPaperStructure2D(
+            ctx,
+            centerX,
+            centerY,
+            Math.min(w, h) * 0.43,
+            structureT,
+            ambientPhase,
+            solvedChars,
+            w,
+            h
+          );
+        }
+
+        if (!modalFired && elapsed >= 1120) {
+          modalFired = true;
+          if (onComplete) onComplete();
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function drawFoldedGridPaperStructure2D(
+      ctx,
+      cx,
+      cy,
+      maxRadius,
+      structureProgress,
+      ambientPhase,
+      solvedChars,
+      canvasW,
+      canvasH
+    ) {
+      const t = Math.max(0, Math.min(1, structureProgress));
+      const easeOut = 1 - (1 - t) * (1 - t);
+      const breathScale = 1 + 0.035 * Math.sin(ambientPhase * 2.0) * t;
+      const r = maxRadius * (0.28 + 0.72 * easeOut) * breathScale;
+      const spinDeg = (1 - easeOut) * -68 + Math.sin(ambientPhase) * 4.5;
+
+      // 1. Soft Washi Paper Shadow & Golden Origami Halo beneath the folded paper structure
+      ctx.save();
+      ctx.fillStyle = `rgba(62, 48, 32, ${(0.18 * t).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy + r * 0.08, r * 0.94, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(184, 115, 20, ${(0.16 * t).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 1.04, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = `rgba(184, 115, 20, ${(0.55 * t).toFixed(3)})`;
+      ctx.lineWidth = Math.max(1.5, r * 0.024);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.96, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      const facetPalette = [
+        ["#1b6b45", "#9be0bc"],
+        ["#b87314", "#f6df9e"],
+        ["#1f4e78", "#a8d3f0"],
+        ["#c83720", "#f4a89c"]
+      ];
+
+      // 2. 8-Point 3D Kusudama Origami Star-Lotus Petals (folded from the grid's letter tiles)
+      const petalCount = 8;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((spinDeg * Math.PI) / 180);
+
+      for (let i = 0; i < petalCount; i++) {
+        const petalRad = (i * Math.PI * 2) / petalCount;
+        const [litCol, shadeCol] = facetPalette[i % facetPalette.length];
+        const innerR = r * 0.14;
+        const midR = r * (0.54 + 0.08 * (i % 2));
+        const tipR = r * (0.94 - 0.08 * (i % 2));
+        const wingHalfW = r * 0.25 * easeOut;
+
+        ctx.save();
+        ctx.rotate(petalRad);
+
+        // Sunlit Left Folded Facet
+        ctx.globalAlpha = 0.94 * t;
+        ctx.fillStyle = litCol;
+        ctx.beginPath();
+        ctx.moveTo(0, -innerR);
+        ctx.lineTo(-wingHalfW, -midR);
+        ctx.lineTo(0, -tipR);
+        ctx.closePath();
+        ctx.fill();
+
+        // Shaded Right Folded Facet
+        ctx.globalAlpha = 0.92 * t;
+        ctx.fillStyle = shadeCol;
+        ctx.beginPath();
+        ctx.moveTo(0, -innerR);
+        ctx.lineTo(wingHalfW, -midR);
+        ctx.lineTo(0, -tipR);
+        ctx.closePath();
+        ctx.fill();
+
+        // Crisp White Mountain Crease Ridge
+        ctx.globalAlpha = 0.86 * t;
+        ctx.strokeStyle = "#fffcf5";
+        ctx.lineWidth = Math.max(1, r * 0.018);
+        ctx.beginPath();
+        ctx.moveTo(0, -innerR);
+        ctx.lineTo(0, -tipR * 0.96);
+        ctx.stroke();
+
+        // Valley Fold Cross-Crease
+        ctx.globalAlpha = 0.52 * t;
+        ctx.lineWidth = Math.max(1, r * 0.012);
+        ctx.beginPath();
+        ctx.moveTo(-wingHalfW * 0.88, -midR);
+        ctx.lineTo(wingHalfW * 0.88, -midR);
+        ctx.stroke();
+
+        // Embossed Letter from the solved crossword words on the folded paper facet
+        if (t > 0.45) {
+          const ch = solvedChars[i % solvedChars.length];
+          ctx.globalAlpha = Math.min(0.92, (t - 0.45) / 0.55);
+          ctx.fillStyle = "#fffcf5";
+          ctx.font = `700 ${Math.round(r * 0.15)}px Georgia, serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(ch, 0, -midR);
+        }
+
+        ctx.restore();
+      }
+
+      // 3. Inner 4-Point Folded Washi Paper Rosette
+      const rosetteR = r * 0.44;
+      for (let j = 0; j < 4; j++) {
+        ctx.save();
+        ctx.rotate(((j * 90 + 45) * Math.PI) / 180);
+        ctx.globalAlpha = 0.92 * t;
+        ctx.fillStyle = "#fffcf5";
+        ctx.strokeStyle = "#b87314";
+        ctx.lineWidth = Math.max(1, r * 0.016);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-rosetteR * 0.28, -rosetteR * 0.52);
+        ctx.lineTo(0, -rosetteR);
+        ctx.lineTo(rosetteR * 0.28, -rosetteR * 0.52);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // 4. Centerpiece 3D Unfolding Origami Crane (Orizuru) crowning the folded paper structure!
+      const craneUnfold = Math.max(0, Math.min(1, (t - 0.15) / 0.85));
+      if (craneUnfold > 0.02) {
+        drawUnfoldingOrigamiCrane2D(
+          ctx,
+          cx,
+          cy,
+          r * 0.48,
+          craneUnfold,
+          ambientPhase * 3.0 + t * 12,
+          "#b87314",
+          "#fff3c4",
+          t,
+          -8 + Math.sin(ambientPhase * 2.0) * 5
+        );
+      }
+
+      // 5. Sculptural Seal Banner below the Folded Paper Structure
+      if (t > 0.55) {
+        const pillAlpha = Math.min(1, (t - 0.55) / 0.45);
+        const pillW = Math.min(canvasW * 0.9, r * 1.75);
+        const pillH = Math.max(22, Math.min(32, r * 0.24));
+        const pillY = Math.min(canvasH - pillH * 0.7, cy + r * 0.82);
+
+        ctx.save();
+        ctx.globalAlpha = pillAlpha;
+        ctx.fillStyle = "rgba(251, 247, 239, 0.95)";
+        ctx.strokeStyle = "#b87314";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.roundRect(cx - pillW / 2, pillY - pillH / 2, pillW, pillH, pillH / 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#b87314";
+        ctx.font = `800 ${Math.round(pillH * 0.44)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("✦ ORIGAMI PAPER STRUCTURE FOLDED ✦", cx, pillY);
+        ctx.restore();
+      }
     }
 
     /**
@@ -3503,9 +3834,13 @@
     }
 
     function initBoardDomForLevel() {
+      activeGridStructureAnimId++;
+      const oldStructCanvas = document.getElementById("gridPaperStructureCanvas");
+      if (oldStructCanvas) oldStructCanvas.remove();
       const tpl = state.tpl;
       const bounds = getActiveBoardBounds(tpl);
       const boardFrame = document.getElementById("boardFrame");
+      boardFrame.classList.remove("folding-into-structure");
       boardFrame.style.setProperty("--board-aspect", `${bounds.cols} / ${bounds.rows}`);
       boardFrame.style.setProperty("--board-aspect-num", (bounds.cols / bounds.rows).toFixed(3));
       boardFrame.style.aspectRatio = `${bounds.cols} / ${bounds.rows}`;

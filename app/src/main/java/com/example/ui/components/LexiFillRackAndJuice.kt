@@ -98,6 +98,7 @@ import com.example.domain.model.Tile
 import com.example.domain.model.TileBonusEffect
 import com.example.domain.model.WordDirection
 import com.example.ui.screens.FullScreenOrigamiCraneFlightOverlay
+import com.example.ui.screens.drawUnfoldingOrigamiCrane
 import com.example.ui.theme.CeladonJade
 import com.example.ui.theme.CompletedWordBg
 import com.example.ui.theme.IndigoCard
@@ -975,7 +976,7 @@ fun LevelClearFanfareOverlay(
 ) {
   AnimatedVisibility(
     visible = visible && summary != null,
-    enter = fadeIn(tween(240)) + scaleIn(tween(300, easing = FastOutSlowInEasing)),
+    enter = fadeIn(tween(durationMillis = 420, delayMillis = 820)) + scaleIn(tween(durationMillis = 460, delayMillis = 820, easing = FastOutSlowInEasing)),
     exit = fadeOut(tween(180)),
     modifier = modifier,
   ) {
@@ -985,9 +986,10 @@ fun LevelClearFanfareOverlay(
       infinite.animateFloat(
         initialValue = 0f,
         targetValue = (2f * PI).toFloat(),
-        animationSpec = infiniteRepeatable(tween(4200), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart),
         label = "fanfare_orbit",
       )
+    val emblemCranePath = remember { Path() }
 
     Box(
       modifier =
@@ -1040,18 +1042,26 @@ fun LevelClearFanfareOverlay(
         ) {
           Box(
             modifier =
-              Modifier.size(60.dp)
+              Modifier.size(68.dp)
                 .clip(CircleShape)
                 .background(KyotoGold.copy(alpha = 0.16f))
                 .border(2.dp, KyotoGold, CircleShape),
             contentAlignment = Alignment.Center,
           ) {
-            Icon(
-              imageVector = Icons.Filled.EmojiEvents,
-              contentDescription = "Level cleared trophy",
-              tint = KyotoGold,
-              modifier = Modifier.size(34.dp),
-            )
+            Canvas(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+              drawUnfoldingOrigamiCrane(
+                path = emblemCranePath,
+                center = Offset(size.width / 2f, size.height / 2f),
+                radius = size.minDimension * 0.46f,
+                unfoldProgress = 1f,
+                flapPhase = orbitPhase * 3f,
+                primaryColor = KyotoGold,
+                secondaryColor = CeladonJade,
+                creaseColor = Color.White,
+                alpha = 1f,
+                headingDeg = -6f + kotlin.math.sin(orbitPhase.toDouble()).toFloat() * 5f,
+              )
+            }
           }
 
           Text(

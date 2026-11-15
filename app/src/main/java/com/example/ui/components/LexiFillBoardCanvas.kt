@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import com.example.domain.model.Coordinate
 import com.example.domain.model.PuzzleState
 import com.example.domain.model.SquareMultiplier
+import com.example.ui.screens.drawUnfoldingOrigamiCrane
 import com.example.ui.theme.BlankSlotSocketBg
 import com.example.ui.theme.BlankSlotSocketBorder
 import com.example.ui.theme.CeladonJade
@@ -259,6 +260,22 @@ fun LexiFillBoardCanvas(
 
   val washiShaderTimeSec = if (hasLockedCells) continuousWashiPhase else 0f
 
+  // Smooth Whole-Grid -> Folded Paper Structure Transition upon Level Completion!
+  val gridFoldStructureProgress =
+    remember(puzzleState.levelTemplate.levelNumber) { Animatable(0f) }
+  LaunchedEffect(puzzleState.isLevelCleared, puzzleState.levelTemplate.levelNumber) {
+    if (puzzleState.isLevelCleared) {
+      gridFoldStructureProgress.snapTo(0.01f)
+      gridFoldStructureProgress.animateTo(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1280, easing = FastOutSlowInEasing),
+      )
+    } else {
+      gridFoldStructureProgress.snapTo(0f)
+    }
+  }
+  val gfp = gridFoldStructureProgress.value
+
   // Gentle paper micro-nudge on invalid intersection or dual-axis clear
   val shakeOffset = remember { Animatable(0f) }
   LaunchedEffect(puzzleState.boardShakeIntensity) {
@@ -288,6 +305,7 @@ fun LexiFillBoardCanvas(
   var currentGeometry by remember { mutableStateOf(SkeletonBoardGeometry()) }
   val dogEarPath = remember { Path() }
   val petalPath = remember { Path() }
+  val structurePath = remember { Path() }
 
   val hoveredCorridorCoords =
     remember(puzzleState.hoverCoord, puzzleState.targetWords) {
@@ -316,7 +334,18 @@ fun LexiFillBoardCanvas(
       modifier
         .fillMaxWidth()
         .aspectRatio(aspectRatio, matchHeightConstraintsFirst = true)
-        .graphicsLayer { translationX = shakeOffset.value }
+        .graphicsLayer {
+          translationX = shakeOffset.value
+          if (gfp > 0f) {
+            val flexArc = sin(gfp * PI).toFloat()
+            rotationX = flexArc * 11f
+            rotationY = sin(gfp * PI * 2.0).toFloat() * 5.5f
+            val flexScale = 1f - 0.035f * flexArc
+            scaleX = flexScale
+            scaleY = flexScale
+            cameraDistance = 16f * density
+          }
+        }
         .shadow(elevation = 4.dp, shape = RoundedCornerShape(18.dp))
         .clip(RoundedCornerShape(18.dp))
         .background(
@@ -418,6 +447,30 @@ fun LexiFillBoardCanvas(
       val skinBaseColor = Color(skin.baseColorHex)
       val skinBorderColor = Color(skin.borderColorHex)
       val skinTextColorArgb = Color(skin.textColorHex).toArgb()
+      val boardCenter = Offset(originX + gridW / 2f, originY + gridH / 2f)
+      val maxGridRadius = hypot(gridW / 2f, gridH / 2f).coerceAtLeast(cellSize)
+
+      // When transitioning the solved crossword grid into a folded paper structure,
+      // draw radial mountain & valley origami crease lines across the Washi board sheet!
+      if (gfp > 0f) {
+        val creaseAlpha = (sin((gfp * 0.85f).coerceAtMost(1f) * PI).toFloat() * 0.55f).coerceIn(0f, 0.6f)
+        val rayLen = maxGridRadius * (0.35f + 0.65f * gfp)
+        for (rayIdx in 0 until 8) {
+          val angle = (rayIdx * PI / 4.0)
+          val endPt =
+            Offset(
+              x = boardCenter.x + (cos(angle) * rayLen).toFloat(),
+              y = boardCenter.y + (sin(angle) * rayLen).toFloat(),
+            )
+          drawLine(
+            color = if (rayIdx % 2 == 0) KyotoGold.copy(alpha = creaseAlpha) else CeladonJade.copy(alpha = creaseAlpha),
+            start = boardCenter,
+            end = endPt,
+            strokeWidth = (cellSize * 0.032f).coerceAtLeast(1.5f),
+            cap = StrokeCap.Round,
+          )
+        }
+      }
 
       for (y in 0 until puzzleState.boardHeight) {
         for (x in 0 until puzzleState.boardWidth) {
@@ -425,8 +478,30 @@ fun LexiFillBoardCanvas(
           if (!cell.isPlayable) continue
 
           val coord = Coordinate(x, y)
-          val topLeft = Offset(originX + x * cellSize + pad, originY + y * cellSize + pad)
+          val rawTopLeft = Offset(originX + x * cellSize + pad, originY + y * cellSize + pad)
+          val rawCellCenter = Offset(rawTopLeft.x + innerSize / 2f, rawTopLeft.y + innerSize / 2f)
+
+          // Compute per-cell origami hinge & convergence into the central folded paper structure
+          val dxToCenter = boardCenter.x - rawCellCenter.x
+          val dyToCenter = boardCenter.y - rawCellCenter.y
+          val distRatio = (hypot(dxToCenter, dyToCenter) / maxGridRadius).coerceIn(0f, 1f)
+          val cellStagger = (1f - distRatio) * 0.16f
+          val cellFoldT =
+            if (gfp > 0f) ((gfp - cellStagger) / 0.64f).coerceIn(0f, 1f) else 0f
+          val easeCellFold = cellFoldT * cellFoldT * (3f - 2f * cellFoldT)
+          val cellFadeAlpha = (1f - ((cellFoldT - 0.52f).coerceAtLeast(0f) / 0.48f)).coerceIn(0f, 1f)
+          if (cellFadeAlpha <= 0.02f) continue
+
+          val topLeft =
+            Offset(
+              x = rawTopLeft.x + dxToCenter * easeCellFold * 0.86f,
+              y = rawTopLeft.y + dyToCenter * easeCellFold * 0.86f,
+            )
           val cellCenter = Offset(topLeft.x + innerSize / 2f, topLeft.y + innerSize / 2f)
+          val gridFoldScaleX = (1f - 0.56f * easeCellFold) * cellFadeAlpha.coerceAtLeast(0.25f)
+          val gridFoldScaleY = (1f - 0.30f * sin(easeCellFold * PI).toFloat()) * cellFadeAlpha.coerceAtLeast(0.25f)
+          val gridFoldTiltDeg =
+            easeCellFold * (if ((x + y) % 2 == 0) 45f else -45f)
 
           val isHoveredTarget = puzzleState.hoverCoord == coord
           val isInHoveredCorridor = coord in hoveredCorridorCoords
@@ -442,7 +517,7 @@ fun LexiFillBoardCanvas(
           val (snapScaleX, snapScaleY) = computeSnapSquashStretch(placeElapsed)
 
           // Focused clue corridor or drag corridor highlight on the Washi paper
-          if ((isInHoveredCorridor || isInFocusedWord) && !isHoveredTarget) {
+          if ((isInHoveredCorridor || isInFocusedWord) && !isHoveredTarget && gfp <= 0.05f) {
             val corridorColor =
               if (isInHoveredCorridor) SkyCyan.copy(alpha = 0.14f + 0.08f * reticlePhase)
               else SkyCyan.copy(alpha = 0.09f)
@@ -466,13 +541,13 @@ fun LexiFillBoardCanvas(
                 else FixedClueCellBorder
 
               withTransform({
-                if (foldAnim.isFolding) {
+                if (foldAnim.isFolding || gfp > 0f) {
                   scale(
-                    scaleX = foldAnim.scaleX,
-                    scaleY = foldAnim.scaleY,
+                    scaleX = foldAnim.scaleX * gridFoldScaleX,
+                    scaleY = foldAnim.scaleY * gridFoldScaleY,
                     pivot = cellCenter,
                   )
-                  rotate(degrees = foldAnim.tiltDeg, pivot = cellCenter)
+                  rotate(degrees = foldAnim.tiltDeg + gridFoldTiltDeg, pivot = cellCenter)
                 }
               }) {
                 // Tactile 3D bottom bevel & soft paper elevation
@@ -566,12 +641,12 @@ fun LexiFillBoardCanvas(
               val showLockedGreen = foldAnim.showLockedGreen
               withTransform({
                 scale(
-                  scaleX = snapScaleX * foldAnim.scaleX,
-                  scaleY = snapScaleY * foldAnim.scaleY,
+                  scaleX = snapScaleX * foldAnim.scaleX * gridFoldScaleX,
+                  scaleY = snapScaleY * foldAnim.scaleY * gridFoldScaleY,
                   pivot = cellCenter,
                 )
-                if (foldAnim.isFolding) {
-                  rotate(degrees = foldAnim.tiltDeg, pivot = cellCenter)
+                if (foldAnim.isFolding || gfp > 0f) {
+                  rotate(degrees = foldAnim.tiltDeg + gridFoldTiltDeg, pivot = cellCenter)
                 }
               }) {
                 // Paper shadow
@@ -999,7 +1074,205 @@ fun LexiFillBoardCanvas(
           )
         }
       }
+
+      // Render the 3D Multi-Faceted Folded Paper Structure assembled from the solved crossword grid!
+      if (gfp > 0.18f) {
+        val structureT = ((gfp - 0.18f) / 0.82f).coerceIn(0f, 1f)
+        val solvedChars =
+          puzzleState.targetWords
+            .flatMap { it.word.toList() }
+            .ifEmpty { listOf('O', 'R', 'I', 'G', 'A', 'M', 'I', '✦') }
+        drawFoldedGridPaperStructure(
+          path = structurePath,
+          center = boardCenter,
+          maxRadius = min(gridW, gridH) * 0.44f,
+          structureProgress = structureT,
+          ambientPhase = washiShaderTimeSec,
+          solvedChars = solvedChars,
+          letterPaint = letterPaint,
+          subPaint = subPaint,
+        )
+      }
     }
+  }
+}
+
+/**
+ * Draws the 3D Multi-Faceted Folded Paper Structure (an 8-point Kusudama Origami Star-Lotus
+ * crowned with a soaring 3D Orizuru Paper Crane and embossed with the grid's solved letters)
+ * when the entire crossword grid folds together upon level completion.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFoldedGridPaperStructure(
+  path: Path,
+  center: Offset,
+  maxRadius: Float,
+  structureProgress: Float,
+  ambientPhase: Float,
+  solvedChars: List<Char>,
+  letterPaint: Paint,
+  subPaint: Paint,
+) {
+  val t = structureProgress.coerceIn(0f, 1f)
+  val easeOut = 1f - (1f - t) * (1f - t)
+  val breathScale = 1f + 0.035f * sin(ambientPhase * 2.0).toFloat() * t
+  val r = maxRadius * (0.28f + 0.72f * easeOut) * breathScale
+  val spinDeg = (1f - easeOut) * -68f + sin(ambientPhase.toDouble()).toFloat() * 4.5f
+
+  // 1. Soft Washi Paper Shadow & Golden Origami Halo beneath the folded paper structure
+  drawCircle(
+    color = Color(0xFF3E3020).copy(alpha = 0.18f * t),
+    radius = r * 0.94f,
+    center = Offset(center.x, center.y + r * 0.08f),
+  )
+  drawCircle(
+    color = KyotoGold.copy(alpha = 0.16f * t),
+    radius = r * 1.04f,
+    center = center,
+  )
+  drawCircle(
+    color = KyotoGold.copy(alpha = 0.55f * t),
+    radius = r * 0.96f,
+    center = center,
+    style = Stroke(width = (r * 0.024f).coerceAtLeast(1.5f)),
+  )
+
+  val facetPalette =
+    listOf(
+      CeladonJade to Color(0xFF9BE0BC),
+      KyotoGold to Color(0xFFF6DF9E),
+      SkyCyan to Color(0xFFA8D3F0),
+      VermilionRed to Color(0xFFF4A89C),
+    )
+
+  // 2. 8-Point 3D Kusudama Origami Star-Lotus Petals (folded from the grid's letter tiles)
+  val petalCount = 8
+  withTransform({
+    translate(left = center.x, top = center.y)
+    rotate(degrees = spinDeg, pivot = Offset.Zero)
+  }) {
+    for (i in 0 until petalCount) {
+      val petalDeg = i * (360f / petalCount)
+      val (litCol, shadeCol) = facetPalette[i % facetPalette.size]
+      val innerR = r * 0.14f
+      val midR = r * (0.54f + 0.08f * (i % 2))
+      val tipR = r * (0.94f - 0.08f * (i % 2))
+      val wingHalfW = r * 0.25f * easeOut
+
+      withTransform({
+        rotate(degrees = petalDeg, pivot = Offset.Zero)
+      }) {
+        // Sunlit Left Folded Facet of the Paper Kite Petal
+        path.reset()
+        path.moveTo(0f, -innerR)
+        path.lineTo(-wingHalfW, -midR)
+        path.lineTo(0f, -tipR)
+        path.close()
+        drawPath(path = path, color = litCol.copy(alpha = (0.94f * t).coerceIn(0f, 1f)))
+
+        // Shaded Right Folded Facet of the Paper Kite Petal (creates 3D origami ridge)
+        path.reset()
+        path.moveTo(0f, -innerR)
+        path.lineTo(wingHalfW, -midR)
+        path.lineTo(0f, -tipR)
+        path.close()
+        drawPath(path = path, color = shadeCol.copy(alpha = (0.92f * t).coerceIn(0f, 1f)))
+
+        // Crisp White Mountain Crease Ridge down the center of the petal
+        drawLine(
+          color = Color.White.copy(alpha = 0.85f * t),
+          start = Offset(0f, -innerR),
+          end = Offset(0f, -tipR * 0.96f),
+          strokeWidth = (r * 0.018f).coerceAtLeast(1f),
+          cap = StrokeCap.Round,
+        )
+
+        // Valley Fold Cross-Crease
+        drawLine(
+          color = Color.White.copy(alpha = 0.52f * t),
+          start = Offset(-wingHalfW * 0.88f, -midR),
+          end = Offset(wingHalfW * 0.88f, -midR),
+          strokeWidth = (r * 0.012f).coerceAtLeast(1f),
+          cap = StrokeCap.Round,
+        )
+
+        // Embossed Letter from the solved crossword words on the folded paper facet
+        if (t > 0.45f) {
+          val ch = solvedChars[i % solvedChars.size]
+          letterPaint.color = Color.White.copy(alpha = ((t - 0.45f) / 0.55f).coerceIn(0f, 0.92f)).toArgb()
+          letterPaint.textSize = r * 0.15f
+          val ty = -midR - (letterPaint.descent() + letterPaint.ascent()) / 2f
+          drawContext.canvas.nativeCanvas.drawText(ch.toString(), 0f, ty, letterPaint)
+        }
+      }
+    }
+
+    // 3. Inner 4-Point Folded Washi Paper Rosette
+    val rosetteR = r * 0.44f
+    for (j in 0 until 4) {
+      withTransform({
+        rotate(degrees = j * 90f + 45f, pivot = Offset.Zero)
+      }) {
+        path.reset()
+        path.moveTo(0f, 0f)
+        path.lineTo(-rosetteR * 0.28f, -rosetteR * 0.52f)
+        path.lineTo(0f, -rosetteR)
+        path.lineTo(rosetteR * 0.28f, -rosetteR * 0.52f)
+        path.close()
+        drawPath(path = path, color = Color(0xFFFFFCF5).copy(alpha = 0.92f * t))
+        drawPath(
+          path = path,
+          color = KyotoGold.copy(alpha = 0.75f * t),
+          style = Stroke(width = (r * 0.016f).coerceAtLeast(1f)),
+        )
+      }
+    }
+  }
+
+  // 4. Centerpiece 3D Unfolding Origami Crane (Orizuru) crowning the folded paper structure!
+  val craneUnfold = ((t - 0.15f) / 0.85f).coerceIn(0f, 1f)
+  if (craneUnfold > 0.02f) {
+    drawUnfoldingOrigamiCrane(
+      path = path,
+      center = center,
+      radius = r * 0.48f,
+      unfoldProgress = craneUnfold,
+      flapPhase = ambientPhase * 3.0f + t * 12f,
+      primaryColor = KyotoGold,
+      secondaryColor = Color(0xFFFFF3C4),
+      creaseColor = Color.White,
+      alpha = t,
+      headingDeg = -8f + sin(ambientPhase * 2.0).toFloat() * 5f,
+    )
+  }
+
+  // 5. Sculptural Seal Banner below the Folded Paper Structure
+  if (t > 0.55f) {
+    val pillAlpha = ((t - 0.55f) / 0.45f).coerceIn(0f, 1f)
+    val pillW = (r * 1.75f).coerceAtMost(size.width * 0.90f)
+    val pillH = (r * 0.24f).coerceIn(22f, 34f)
+    val pillY = (center.y + r * 0.82f).coerceAtMost(size.height - pillH * 0.7f)
+    drawRoundRect(
+      color = IndigoSurface.copy(alpha = 0.94f * pillAlpha),
+      topLeft = Offset(center.x - pillW / 2f, pillY - pillH / 2f),
+      size = Size(pillW, pillH),
+      cornerRadius = CornerRadius(pillH / 2f, pillH / 2f),
+    )
+    drawRoundRect(
+      color = KyotoGold.copy(alpha = pillAlpha),
+      topLeft = Offset(center.x - pillW / 2f, pillY - pillH / 2f),
+      size = Size(pillW, pillH),
+      cornerRadius = CornerRadius(pillH / 2f, pillH / 2f),
+      style = Stroke(width = (r * 0.02f).coerceAtLeast(1.5f)),
+    )
+    subPaint.color = KyotoGold.copy(alpha = pillAlpha).toArgb()
+    subPaint.textSize = pillH * 0.46f
+    val textY = pillY - (subPaint.descent() + subPaint.ascent()) / 2f
+    drawContext.canvas.nativeCanvas.drawText(
+      "✦ ORIGAMI PAPER STRUCTURE FOLDED ✦",
+      center.x,
+      textY,
+      subPaint,
+    )
   }
 }
 
