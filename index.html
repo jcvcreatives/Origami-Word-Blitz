@@ -166,10 +166,15 @@
     }
     .hud-sub-row {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
+      row-gap: 3px;
       font-size: 10.5px;
       color: var(--walnut-muted);
+    }
+    #lvlProgress {
+      white-space: nowrap;
     }
     .coins-pill {
       background: rgba(200, 125, 10, 0.14);
@@ -178,6 +183,7 @@
       font-size: 10px;
       padding: 1px 5px;
       border-radius: 5px;
+      white-space: nowrap;
     }
     .combo-pill {
       background: var(--kraft-card);
@@ -309,17 +315,17 @@
       text-overflow: ellipsis;
     }
 
-    /* Handcrafted Washi-Paper Board Container (Adaptively sized to fit mobile viewports) */
+    /* Handcrafted Washi-Paper Board Container (Adaptively sized to fit mobile viewports without clipping) */
     .board-frame {
       position: relative;
       width: 100%;
-      max-width: min(100%, 44dvh);
+      max-width: min(100%, 400px);
       margin: 0 auto;
       background: linear-gradient(175deg, var(--washi-sheet) 0%, #f7f1e4 55%, #efe6d5 100%);
       border: 1.5px solid var(--kraft-border);
       border-radius: 16px;
-      padding: 8px;
-      aspect-ratio: 9 / 8;
+      padding: 10px;
+      aspect-ratio: var(--board-aspect, 6 / 5);
       box-shadow:
         0 4px 12px rgba(74, 56, 35, 0.10),
         inset 0 1.5px 0 rgba(255, 255, 255, 0.90),
@@ -348,10 +354,9 @@
       z-index: 1;
     }
     .board-grid-layer {
-      position: relative;
+      position: absolute;
+      inset: 10px;
       z-index: 2;
-      width: 100%;
-      height: 100%;
       display: grid;
       gap: 5px;
       perspective: 750px;
@@ -360,6 +365,8 @@
 
     /* Origami Board Cells */
     .cell {
+      width: 100%;
+      height: 100%;
       min-width: 0;
       min-height: 0;
       box-sizing: border-box;
@@ -369,7 +376,7 @@
       justify-content: center;
       font-weight: 800;
       font-family: Georgia, "Noto Serif", serif;
-      font-size: clamp(13px, 3.6vw, 19px);
+      font-size: clamp(14px, 4.1vw, 20px);
       line-height: 1;
       position: relative;
       transform-style: preserve-3d;
@@ -382,6 +389,12 @@
         border-color 0.28s ease calc(var(--fold-delay, 0ms) + 195ms),
         border-bottom-color 0.28s ease calc(var(--fold-delay, 0ms) + 195ms),
         box-shadow 0.34s ease var(--fold-delay, 0ms);
+    }
+    .cell-char {
+      display: inline-block;
+      transform: translate(-1.5px, -2px);
+      line-height: 1;
+      pointer-events: none;
     }
     .cell.corridor {
       box-shadow: 0 0 0 2px rgba(29, 91, 143, 0.16);
@@ -651,12 +664,14 @@
     }
     .pts-sub {
       position: absolute;
-      bottom: 1.5px;
+      bottom: 2px;
       right: 3px;
-      font-size: 8px;
+      font-size: 7.5px;
+      line-height: 1;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-weight: 700;
-      opacity: 0.72;
+      font-weight: 800;
+      opacity: 0.68;
+      pointer-events: none;
     }
 
     /* Magnetic Callout Pill above Hovered Slot */
@@ -1431,6 +1446,7 @@
       font-size: 10px;
       font-weight: 800;
       cursor: pointer;
+      white-space: nowrap;
     }
     .account-pill-btn.guest {
       background: var(--kraft-card);
@@ -2019,26 +2035,26 @@
 
     const BASE_LEVELS = [
       {
-        level: 1, title: "Orbital Crossing", tier: "TIER I · STARTER SKELETON", w: 9, h: 8,
+        level: 1, title: "Orbital Crossing", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "PLANET", clue: "Celestial world in solar orbit", sx: 1, sy: 1, dir: "H", blanks: [1, 4] },
-          { id: "v1", word: "SLOPE", clue: "Inclined mountain gradient", sx: 2, sy: 0, dir: "V", blanks: [1, 3] },
-          { id: "h2", word: "SPACE", clue: "The cosmic expanse beyond Earth", sx: 1, sy: 3, dir: "H", blanks: [1, 3] },
-          { id: "v2", word: "CROSS", clue: "Intersect from side to side", sx: 4, sy: 3, dir: "V", blanks: [0, 1, 2] },
-          { id: "h3", word: "ORBIT", clue: "Curved path around a star", sx: 4, sy: 5, dir: "H", blanks: [0, 2, 4] }
+          { id: "v1", word: "LOTUS", clue: "Sacred water blossom folded in origami", sx: 2, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "NOBLE", clue: "Of exalted rank and honorable character", sx: 4, sy: 1, dir: "V", blanks: [2, 4] },
+          { id: "v3", word: "TABLE", clue: "Craftsman's flat wooden work surface", sx: 6, sy: 1, dir: "V", blanks: [4] },
+          { id: "h2", word: "SCENE", clue: "Painted stage vista or dramatic setting", sx: 2, sy: 5, dir: "H", blanks: [0, 1, 2, 4] }
         ],
-        mults: { "2,1": "2W", "4,3": "3W", "4,5": "2L", "5,1": "3L" }
+        mults: { "2,1": "2W", "5,1": "3L", "2,5": "3W", "4,5": "2L", "6,5": "2W" }
       },
       {
         level: 2, title: "Prism & Quartz", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
-          { id: "h1", word: "PRISM", clue: "Crystal that splits white light", sx: 1, sy: 1, dir: "H", blanks: [1, 3] },
-          { id: "v1", word: "CROWN", clue: "Royal golden headpiece", sx: 2, sy: 0, dir: "V", blanks: [1, 2, 3] },
-          { id: "v2", word: "SPARK", clue: "Fiery flash of ignition", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
-          { id: "h2", word: "WHALE", clue: "Giant singing ocean mammal", sx: 2, sy: 3, dir: "H", blanks: [0, 2, 4] },
-          { id: "v3", word: "EMBER", clue: "Glowing coal in a dying fire", sx: 6, sy: 3, dir: "V", blanks: [0, 2, 4] }
+          { id: "h1", word: "PRISM", clue: "Crystal that splits white light into rainbows", sx: 1, sy: 1, dir: "H", blanks: [0, 2, 4] },
+          { id: "v1", word: "PLANT", clue: "Living green botanical sprout", sx: 1, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "IMAGE", clue: "Optical reflection cast through a lens", sx: 3, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "MOUNT", clue: "Soaring alpine mountain peak", sx: 5, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "TREAT", clue: "Delightful reward or celebratory gift", sx: 1, sy: 5, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "2,1": "2W", "4,1": "3L", "4,3": "3W", "6,3": "2W" }
+        mults: { "1,1": "2W", "3,1": "3L", "5,1": "3W", "1,5": "2L", "3,5": "2W", "5,5": "3L" }
       },
       {
         level: 3, title: "Citadel Vault", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
@@ -2055,12 +2071,12 @@
         level: 4, title: "Cyber Matrix", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
         words: [
           { id: "h1", word: "MATRIX", clue: "Rectangular mathematical array", sx: 1, sy: 1, dir: "H", blanks: [1, 3, 5] },
-          { id: "v1", word: "LASER", clue: "Focused coherent beam of light", sx: 2, sy: 0, dir: "V", blanks: [1, 3, 4] },
-          { id: "v2", word: "GRID", clue: "Network of horizontal & vertical lines", sx: 4, sy: 0, dir: "V", blanks: [1, 3] },
-          { id: "h2", word: "READY", clue: "Prepared for immediate execution", sx: 1, sy: 3, dir: "H", blanks: [1, 2, 3] },
-          { id: "v3", word: "AXE", clue: "Cleaving timber tool", sx: 6, sy: 0, dir: "V", blanks: [1, 2] }
+          { id: "v1", word: "ATLAS", clue: "Collection of world and celestial maps", sx: 2, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v2", word: "REACH", clue: "Extend outward across a network", sx: 4, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "v3", word: "XENON", clue: "Noble gas used in high-intensity flash lamps", sx: 6, sy: 1, dir: "V", blanks: [0, 2, 4] },
+          { id: "h2", word: "LEARN", clue: "Acquire knowledge and master a skill", sx: 2, sy: 3, dir: "H", blanks: [0, 2, 4] }
         ],
-        mults: { "6,1": "3W", "2,1": "2W", "4,1": "2L", "2,3": "3L", "4,3": "2W" }
+        mults: { "6,1": "3W", "2,1": "2W", "4,1": "2L", "2,3": "3L", "4,3": "2W", "6,3": "3L" }
       },
       {
         level: 5, title: "Emerald Canopy", tier: "TIER I · STARTER SKELETON", w: 8, h: 8,
@@ -2323,7 +2339,7 @@
       "DRAMA","ARENA","CLOUD","CHEST","TENSE","FROST","FOCUS","OPERA","STAIR","LEMON",
       "TRAIN","MUSIC","MAGIC","CLEAN","BLADE","BEACH","EVENT","HEART","COMET","CHAIR",
       "MEDIA","TRUTH","REACH","FLAME","FIELD","ANGEL","EARLY","DELAY","CHART","SIGMA",
-      "EQUAL","KNIFE","NORTH"
+      "EQUAL","KNIFE","NORTH","TABLE","SCENE","IMAGE","MOUNT","TREAT","XENON","LEARN"
     ];
 
     const LETTER_SCORES = { A:1,E:1,I:1,O:1,U:1,L:1,N:1,S:1,T:1,R:1,D:2,G:2,B:3,C:3,M:3,P:3,F:4,H:4,V:4,W:4,Y:4,K:5,J:8,X:8,Q:10,Z:10 };
@@ -2333,6 +2349,31 @@
     let isShufflingAnim = false;
     let state = null;
     let cellDomGrid = [];
+
+    function getActiveBoardBounds(tpl) {
+      let minX = tpl.w, maxX = 0, minY = tpl.h, maxY = 0;
+      tpl.words.forEach(w => {
+        for (let i = 0; i < w.word.length; i++) {
+          const cx = w.dir === "H" ? w.sx + i : w.sx;
+          const cy = w.dir === "H" ? w.sy : w.sy + i;
+          if (cx < minX) minX = cx;
+          if (cx > maxX) maxX = cx;
+          if (cy < minY) minY = cy;
+          if (cy > maxY) maxY = cy;
+        }
+      });
+      if (minX > maxX || minY > maxY) {
+        return { minX: 0, maxX: tpl.w - 1, minY: 0, maxY: tpl.h - 1, cols: tpl.w, rows: tpl.h };
+      }
+      return {
+        minX,
+        maxX,
+        minY,
+        maxY,
+        cols: maxX - minX + 1,
+        rows: maxY - minY + 1
+      };
+    }
 
     function buildLevel(idx) {
       const tpl = LEVELS[idx % LEVELS.length];
@@ -2592,8 +2633,9 @@
       const isHighMultiplier =
         hasMultiplierCell || newlyDoneWords.length >= 2 || state.mult >= 2.0;
       const ctx = canvas.getContext("2d");
-      const cellW = canvas.width / state.tpl.w;
-      const cellH = canvas.height / state.tpl.h;
+      const bounds = getActiveBoardBounds(state.tpl);
+      const cellW = canvas.width / bounds.cols;
+      const cellH = canvas.height / bounds.rows;
       const cellSize = Math.min(cellW, cellH);
 
       const palette = isHighMultiplier
@@ -2620,8 +2662,8 @@
           ctx.save();
           ctx.fillStyle = `rgba(200, 125, 10, ${glowAlpha.toFixed(3)})`;
           wordCoords.forEach(wc => {
-            const gx = (wc.x + 0.5) * cellW;
-            const gy = (wc.y + 0.5) * cellH;
+            const gx = (wc.x - bounds.minX + 0.5) * cellW;
+            const gy = (wc.y - bounds.minY + 0.5) * cellH;
             ctx.beginPath();
             ctx.arc(gx, gy, cellSize * (0.48 + 0.30 * t), 0, Math.PI * 2);
             ctx.fill();
@@ -2631,8 +2673,8 @@
 
         for (let i = 0; i < count; i++) {
           const src = wordCoords[i % wordCoords.length];
-          const sx = (src.x + 0.5) * cellW;
-          const sy = (src.y + 0.5) * cellH;
+          const sx = (src.x - bounds.minX + 0.5) * cellW;
+          const sy = (src.y - bounds.minY + 0.5) * cellH;
 
           const stagger = (i % wordCoords.length) * 0.045;
           const localT = Math.max(0, Math.min(1, (t - stagger) / Math.max(0.4, 1 - stagger)));
@@ -2690,21 +2732,23 @@
 
     function spawnShockwaveRing(x, y, color) {
       const board = document.getElementById("boardGrid");
+      const bounds = getActiveBoardBounds(state.tpl);
       const ring = document.createElement("div");
       ring.className = "shockwave-ring";
       ring.style.borderColor = color;
-      ring.style.left = `${((x + 0.5) / state.tpl.w) * 100}%`;
-      ring.style.top = `${((y + 0.5) / state.tpl.h) * 100}%`;
+      ring.style.left = `${((x - bounds.minX + 0.5) / bounds.cols) * 100}%`;
+      ring.style.top = `${((y - bounds.minY + 0.5) / bounds.rows) * 100}%`;
       board.appendChild(ring);
       setTimeout(() => ring.remove(), 440);
     }
 
     function showPopup(x, y, text, isDual) {
       const board = document.getElementById("boardGrid");
+      const bounds = getActiveBoardBounds(state.tpl);
       const pop = document.createElement("div");
       pop.className = "floating-popup" + (isDual ? " dual" : "");
-      pop.style.left = `${((x + 0.5) / state.tpl.w) * 100}%`;
-      pop.style.top = `${((y + 0.5) / state.tpl.h) * 100}%`;
+      pop.style.left = `${((x - bounds.minX + 0.5) / bounds.cols) * 100}%`;
+      pop.style.top = `${((y - bounds.minY + 0.5) / bounds.rows) * 100}%`;
       pop.textContent = text;
       board.appendChild(pop);
       setTimeout(() => pop.remove(), 1000);
@@ -2718,8 +2762,9 @@
       const rect = cachedRect || document.getElementById("boardGrid").getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return { coord: null, pullX: 0, pullY: 0 };
 
-      const cellW = rect.width / state.tpl.w;
-      const cellH = rect.height / state.tpl.h;
+      const bounds = getActiveBoardBounds(state.tpl);
+      const cellW = rect.width / bounds.cols;
+      const cellH = rect.height / bounds.rows;
       const maxSnapDist = Math.min(cellW, cellH) * 1.48;
 
       let bestCoord = null;
@@ -2727,12 +2772,12 @@
       let bestCenterX = 0;
       let bestCenterY = 0;
 
-      for (let y = 0; y < state.tpl.h; y++) {
-        for (let x = 0; x < state.tpl.w; x++) {
+      for (let y = bounds.minY; y <= bounds.maxY; y++) {
+        for (let x = bounds.minX; x <= bounds.maxX; x++) {
           const c = state.cells[y][x];
           if (!c.isBlank || c.locked) continue;
-          const cx = rect.left + (x + 0.5) * cellW;
-          const cy = rect.top + (y + 0.5) * cellH;
+          const cx = rect.left + (x - bounds.minX + 0.5) * cellW;
+          const cy = rect.top + (y - bounds.minY + 0.5) * cellH;
           const dist = Math.hypot(clientX - cx, clientY - cy);
           if (dist <= maxSnapDist && dist < bestDist) {
             bestDist = dist;
@@ -2925,6 +2970,7 @@
 
     function renderBoard() {
       const tpl = state.tpl;
+      const bounds = getActiveBoardBounds(tpl);
       const focusedWord = tpl.words.find(w => w.id === state.focusedWordId) || tpl.words[0];
       const focusedCoords = new Set();
       if (focusedWord) {
@@ -2935,16 +2981,20 @@
         }
       }
 
+      const boardFrame = document.getElementById("boardFrame");
+      boardFrame.style.setProperty("--board-aspect", `${bounds.cols} / ${bounds.rows}`);
+      boardFrame.style.aspectRatio = `${bounds.cols} / ${bounds.rows}`;
+
       const grid = document.getElementById("boardGrid");
-      grid.style.gridTemplateColumns = `repeat(${tpl.w}, minmax(0, 1fr))`;
-      grid.style.gridTemplateRows = `repeat(${tpl.h}, minmax(0, 1fr))`;
+      grid.style.gridTemplateColumns = `repeat(${bounds.cols}, minmax(0, 1fr))`;
+      grid.style.gridTemplateRows = `repeat(${bounds.rows}, minmax(0, 1fr))`;
       const frag = document.createDocumentFragment();
       cellDomGrid = Array.from({ length: tpl.h }, () => Array(tpl.w));
 
       const foldingEls = [];
 
-      for (let y = 0; y < tpl.h; y++) {
-        for (let x = 0; x < tpl.w; x++) {
+      for (let y = bounds.minY; y <= bounds.maxY; y++) {
+        for (let x = bounds.minX; x <= bounds.maxX; x++) {
           const c = state.cells[y][x];
           const el = document.createElement("div");
           const isHint = state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y;
@@ -2966,7 +3016,7 @@
               (isFolding ? " paper-fold" : "") +
               (inCorridor ? " corridor" : "") +
               (isKbFocused ? " kb-focused" : "");
-            el.innerHTML = `<div class="dog-ear"></div>${c.fixed}<span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
+            el.innerHTML = `<div class="dog-ear"></div><span class="cell-char">${c.fixed}</span><span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
             el.onclick = () => {
               state.focusedCell = { x, y };
               if (c.words.length > 0) {
@@ -2984,7 +3034,7 @@
               (c.snapped && !isFolding ? " snapped" : "") +
               (inCorridor ? " corridor" : "") +
               (isKbFocused ? " kb-focused" : "");
-            el.innerHTML = `<div class="dog-ear"></div>${c.placed.char}<span class="pts-sub">${c.placed.pts}</span>`;
+            el.innerHTML = `<div class="dog-ear"></div><span class="cell-char">${c.placed.char}</span><span class="pts-sub">${c.placed.pts}</span>`;
             el.onclick = () => {
               state.focusedCell = { x, y };
               if (!c.locked) {

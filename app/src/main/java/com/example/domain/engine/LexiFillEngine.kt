@@ -937,7 +937,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
      */
     val CURATED_LEVELS: List<LevelTemplate> =
       listOf(
-        // LEVEL 1: 8x8 — "Orbital Crossing" (Featured prompt words: P_ANET, C_OSS, S_ACE, S_OPE, O_BIT)
+        // LEVEL 1: 8x8 — "Orbital Crossing"
         LevelTemplate(
           levelNumber = 1,
           title = "Orbital Crossing",
@@ -956,56 +956,58 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 direction = WordDirection.HORIZONTAL,
                 missingBlankIndices = listOf(1, 4), // L at (2,1), E at (5,1) -> P _ A N _ T
               ),
-              // (2,0)S (2,1)L (2,2)O (2,3)P (2,4)E — crosses PLANET at (2,1)=L and SPACE at (2,3)=P
+              // (2,1)L (2,2)O (2,3)T (2,4)U (2,5)S — crosses PLANET at (2,1)=L and SCENE at (2,5)=S
               TargetWord(
                 id = "l1_v1",
-                word = "SLOPE",
-                clue = "Inclined mountain gradient",
+                word = "LOTUS",
+                clue = "Sacred water blossom folded in origami",
                 startX = 2,
-                startY = 0,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 3), // L at (2,1), P at (2,3) -> S _ O _ E
+                missingBlankIndices = listOf(0, 2, 4), // (2,1)L, (2,3)T, (2,5)S
               ),
-              // (1,3)S (2,3)P (3,3)A (4,3)C (5,3)E — crosses SLOPE at (2,3)=P and CROSS at (4,3)=C
-              TargetWord(
-                id = "l1_h2",
-                word = "SPACE",
-                clue = "The cosmic expanse beyond Earth",
-                startX = 1,
-                startY = 3,
-                direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 3), // P at (2,3), C at (4,3) -> S _ A _ E
-              ),
-              // (4,3)C (4,4)R (4,5)O (4,6)S (4,7)S — crosses SPACE at (4,3)=C and ORBIT at (4,5)=O
+              // (4,1)N (4,2)O (4,3)B (4,4)L (4,5)E — crosses PLANET at (4,1)=N (fixed) and SCENE at (4,5)=E
               TargetWord(
                 id = "l1_v2",
-                word = "CROSS",
-                clue = "Intersect from side to side",
+                word = "NOBLE",
+                clue = "Of exalted rank and honorable character",
                 startX = 4,
-                startY = 3,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 1, 2), // C at (4,3), R at (4,4), O at (4,5) -> _ _ _ S S
+                missingBlankIndices = listOf(2, 4), // (4,3)B, (4,5)E
               ),
+              // (6,1)T (6,2)A (6,3)B (6,4)L (6,5)E — crosses PLANET at (6,1)=T (fixed) and SCENE at (6,5)=E
               TargetWord(
-                id = "l1_h3",
-                word = "ORBIT",
-                clue = "Curved path around a star",
-                startX = 4,
+                id = "l1_v3",
+                word = "TABLE",
+                clue = "Craftsman's flat wooden work surface",
+                startX = 6,
+                startY = 1,
+                direction = WordDirection.VERTICAL,
+                missingBlankIndices = listOf(4), // (6,5)E
+              ),
+              // (2,5)S (3,5)C (4,5)E (5,5)N (6,5)E — crosses LOTUS at (2,5)=S, NOBLE at (4,5)=E, TABLE at (6,5)=E
+              TargetWord(
+                id = "l1_h2",
+                word = "SCENE",
+                clue = "Painted stage vista or dramatic setting",
+                startX = 2,
                 startY = 5,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(0, 2, 4), // O at (4,5), B at (6,5), T at (8,5) -> _ R _ I _
+                missingBlankIndices = listOf(0, 1, 2, 4), // (2,5)S, (3,5)C, (4,5)E, (6,5)E
               ),
             ),
           multipliers =
             mapOf(
               Coordinate(2, 1) to SquareMultiplier.DW,
-              Coordinate(4, 3) to SquareMultiplier.TW,
-              Coordinate(4, 5) to SquareMultiplier.DL,
               Coordinate(5, 1) to SquareMultiplier.TL,
+              Coordinate(2, 5) to SquareMultiplier.TW,
+              Coordinate(4, 5) to SquareMultiplier.DL,
+              Coordinate(6, 5) to SquareMultiplier.DW,
             ),
           compactCode =
-            "9x8|title:Orbital Crossing|H:1,1:PLANET:1,4:Celestial world in solar orbit|V:2,0:SLOPE:1,3:Inclined mountain gradient|H:1,3:SPACE:1,3:The cosmic expanse|V:4,3:CROSS:0,1,2:Intersect from side to side|H:4,5:ORBIT:0,2,4:Curved path around a star",
-        ).copy(boardWidth = 9),
+            "8x8|title:Orbital Crossing|H:1,1:PLANET:1,4:Celestial world in solar orbit|V:2,1:LOTUS:0,2,4:Sacred water blossom|V:4,1:NOBLE:2,4:Honorable character|V:6,1:TABLE:4:Flat wooden surface|H:2,5:SCENE:0,1,2,4:Dramatic vista",
+        ),
 
         // LEVEL 2: 8x8 — "Prism & Quartz"
         LevelTemplate(
@@ -1023,54 +1025,56 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
                 startX = 1,
                 startY = 1,
                 direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 3), // (2,1)R, (4,1)S
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)P, (3,1)I, (5,1)M
               ),
               TargetWord(
                 id = "l2_v1",
-                word = "CROWN",
-                clue = "Royal golden headpiece",
-                startX = 2,
-                startY = 0,
+                word = "PLANT",
+                clue = "Living green botanical sprout",
+                startX = 1,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 2, 3), // (2,1)R, (2,2)O, (2,3)W
+                missingBlankIndices = listOf(0, 2, 4), // (1,1)P, (1,3)A, (1,5)T
               ),
               TargetWord(
                 id = "l2_v2",
-                word = "SPARK",
-                clue = "Fiery flash of ignition",
-                startX = 4,
+                word = "IMAGE",
+                clue = "Optical reflection cast through a lens",
+                startX = 3,
                 startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (4,1)S, (4,3)A, (4,5)K
-              ),
-              TargetWord(
-                id = "l2_h2",
-                word = "WHALE",
-                clue = "Giant singing mammal of the deep ocean",
-                startX = 2,
-                startY = 3,
-                direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(0, 2, 4), // (2,3)W, (4,3)A, (6,3)E
+                missingBlankIndices = listOf(0, 2, 4), // (3,1)I, (3,3)A, (3,5)E
               ),
               TargetWord(
                 id = "l2_v3",
-                word = "EMBER",
-                clue = "Glowing coal in a dying fire",
-                startX = 6,
-                startY = 3,
+                word = "MOUNT",
+                clue = "Soaring alpine mountain peak",
+                startX = 5,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(0, 2, 4), // (6,3)E, (6,5)B, (6,7)R
+                missingBlankIndices = listOf(0, 2, 4), // (5,1)M, (5,3)U, (5,5)T
+              ),
+              TargetWord(
+                id = "l2_h2",
+                word = "TREAT",
+                clue = "Delightful reward or celebratory gift",
+                startX = 1,
+                startY = 5,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (1,5)T, (3,5)E, (5,5)T
               ),
             ),
           multipliers =
             mapOf(
-              Coordinate(2, 1) to SquareMultiplier.DW,
-              Coordinate(4, 1) to SquareMultiplier.TL,
-              Coordinate(4, 3) to SquareMultiplier.TW,
-              Coordinate(6, 3) to SquareMultiplier.DW,
+              Coordinate(1, 1) to SquareMultiplier.DW,
+              Coordinate(3, 1) to SquareMultiplier.TL,
+              Coordinate(5, 1) to SquareMultiplier.TW,
+              Coordinate(1, 5) to SquareMultiplier.DL,
+              Coordinate(3, 5) to SquareMultiplier.DW,
+              Coordinate(5, 5) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Prism & Quartz|H:1,1:PRISM:1,3|V:2,0:CROWN:1,2,3|V:4,1:SPARK:0,2,4|H:2,3:WHALE:0,2,4|V:6,3:EMBER:0,2,4",
+            "8x8|title:Prism & Quartz|H:1,1:PRISM:0,2,4|V:1,1:PLANT:0,2,4|V:3,1:IMAGE:0,2,4|V:5,1:MOUNT:0,2,4|H:1,5:TREAT:0,2,4",
         ),
 
         // LEVEL 3: 8x8 — "Citadel Vault"
@@ -1161,39 +1165,39 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               ),
               TargetWord(
                 id = "l4_v1",
-                word = "LASER",
-                clue = "Focused coherent beam of light",
+                word = "ATLAS",
+                clue = "Collection of world and celestial maps",
                 startX = 2,
-                startY = 0,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 3, 4), // (2,1)A, (2,3)E, (2,4)R
+                missingBlankIndices = listOf(0, 2, 4), // (2,1)A, (2,3)L, (2,5)S
               ),
               TargetWord(
                 id = "l4_v2",
-                word = "GRID",
-                clue = "Network of uniformly spaced horizontal and vertical lines",
+                word = "REACH",
+                clue = "Extend outward across a network",
                 startX = 4,
-                startY = 0,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 3), // (4,1)R, (4,3)D
-              ),
-              TargetWord(
-                id = "l4_h2",
-                word = "READY",
-                clue = "Prepared for immediate execution",
-                startX = 1,
-                startY = 3,
-                direction = WordDirection.HORIZONTAL,
-                missingBlankIndices = listOf(1, 2, 3), // (2,3)E, (3,3)A, (4,3)D
+                missingBlankIndices = listOf(0, 2, 4), // (4,1)R, (4,3)A, (4,5)H
               ),
               TargetWord(
                 id = "l4_v3",
-                word = "AXE",
-                clue = "Cleaving timber tool",
+                word = "XENON",
+                clue = "Noble gas used in high-intensity flash lamps",
                 startX = 6,
-                startY = 0,
+                startY = 1,
                 direction = WordDirection.VERTICAL,
-                missingBlankIndices = listOf(1, 2), // (6,1)X, (6,2)E
+                missingBlankIndices = listOf(0, 2, 4), // (6,1)X, (6,3)N, (6,5)N
+              ),
+              TargetWord(
+                id = "l4_h2",
+                word = "LEARN",
+                clue = "Acquire knowledge and master a skill",
+                startX = 2,
+                startY = 3,
+                direction = WordDirection.HORIZONTAL,
+                missingBlankIndices = listOf(0, 2, 4), // (2,3)L, (4,3)A, (6,3)N
               ),
             ),
           multipliers =
@@ -1203,9 +1207,10 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
               Coordinate(4, 1) to SquareMultiplier.DL,
               Coordinate(2, 3) to SquareMultiplier.TL,
               Coordinate(4, 3) to SquareMultiplier.DW,
+              Coordinate(6, 3) to SquareMultiplier.TL,
             ),
           compactCode =
-            "8x8|title:Cyber Matrix|H:1,1:MATRIX:1,3,5|V:2,0:LASER:1,3,4|V:4,0:GRID:1,3|H:1,3:READY:1,2,3|V:6,0:AXE:1,2",
+            "8x8|title:Cyber Matrix|H:1,1:MATRIX:1,3,5|V:2,1:ATLAS:0,2,4|V:4,1:REACH:0,2,4|V:6,1:XENON:0,2,4|H:2,3:LEARN:0,2,4",
         ),
 
         // LEVEL 5: 8x8 — "Emerald Canopy"
