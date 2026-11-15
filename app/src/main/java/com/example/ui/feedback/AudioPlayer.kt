@@ -68,16 +68,52 @@ class AudioPlayer(context: Context? = null) {
     ),
   }
 
+  enum class MusicMood(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val rootHz: Double,
+    val scaleRatios: DoubleArray,
+  ) {
+    KYOTO_RAIN(
+      id = "kyoto_rain",
+      title = "Kyoto Rain & Koto",
+      subtitle = "In-Sen modal Koto & Shakuhachi flute",
+      rootHz = 293.66, // D4
+      scaleRatios = doubleArrayOf(1.0, 1.05946, 1.33484, 1.49831, 1.78180, 2.0),
+    ),
+    ARASHIYAMA_BREEZE(
+      id = "arashiyama_breeze",
+      title = "Arashiyama Bamboo",
+      subtitle = "Hirajoshi pentatonic harp & warm marimba",
+      rootHz = 329.63, // E4
+      scaleRatios = doubleArrayOf(1.0, 1.12246, 1.18921, 1.49831, 1.58740, 2.0),
+    ),
+    UJI_TEA_HOUSE(
+      id = "uji_tea_house",
+      title = "Uji Tea Ceremony",
+      subtitle = "Warm Yo-scale evening chamber music",
+      rootHz = 261.63, // C4
+      scaleRatios = doubleArrayOf(1.0, 1.12246, 1.33484, 1.49831, 1.68179, 2.0),
+    ),
+  }
+
   private val appContext: Context? = context?.applicationContext
   private var soundPool: SoundPool? = null
   private val soundIds = ConcurrentHashMap<String, Int>()
   private val loadedSoundIds = ConcurrentHashMap.newKeySet<Int>()
   private val rawPcmCache = ConcurrentHashMap<String, ShortArray>()
+  private val musicPcmCache = ConcurrentHashMap<String, ShortArray>()
   private val playCounts = ConcurrentHashMap<SoundEffect, Int>()
   private val audioExecutor = Executors.newSingleThreadExecutor()
+  private var musicTrack: AudioTrack? = null
 
   @Volatile var isMuted: Boolean = false
+  @Volatile var isMusicEnabled: Boolean = false
+    private set
   @Volatile var activeKit: AcousticKit = AcousticKit.HINOKI_WASHI
+    private set
+  @Volatile var activeMusicMood: MusicMood = MusicMood.KYOTO_RAIN
     private set
   @Volatile var lastPlayedEffect: SoundEffect? = null
     private set
@@ -131,6 +167,173 @@ class AudioPlayer(context: Context? = null) {
 
   fun selectAcousticKit(kit: AcousticKit) {
     activeKit = kit
+  }
+
+  fun selectMusicMood(mood: MusicMood) {
+    activeMusicMood = mood
+    if (isMusicEnabled && !isMuted) {
+      restartMusicLoop()
+    }
+  }
+
+  fun toggleMusic(): Boolean {
+    isMusicEnabled = !isMusicEnabled
+    if (isMusicEnabled && !isMuted) {
+      restartMusicLoop()
+    } else {
+      stopMusicLoop()
+    }
+    return isMusicEnabled
+  }
+
+  private fun stopMusicLoop() {
+    audioExecutor.execute {
+      try {
+        musicTrack?.stop()
+        musicTrack?.release()
+      } catch (_: Throwable) {}
+      musicTrack = null
+    }
+  }
+
+  private fun restartMusicLoop() {
+    if (appContext == null) return
+    val mood = activeMusicMood
+    audioExecutor.execute {
+      try {
+        musicTrack?.stop()
+        musicTrack?.release()
+      } catch (_: Throwable) {}
+      musicTrack = null
+      if (!isMusicEnabled || isMuted) return@execute
+      try {
+        val pcm = musicPcmCache.getOrPut(mood.id) { synthesizeChamberMusicLoop(mood) }
+        val byteCount = pcm.size * 2
+        val track =
+          AudioTrack(
+            AudioManager.STREAM_MUSIC,
+            SAMPLE_RATE,
+            AudioFormat.CHANNEL_OUT_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            maxOf(
+              byteCount,
+              AudioTrack.getMinBufferSize(
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+              ),
+            ),
+            AudioTrack.MODE_STATIC,
+          )
+        track.write(pcm, 0, pcm.size)
+        track.setLoopPoints(0, pcm.size, -1)
+        track.setVolume(0.36f)
+        track.play()
+        musicTrack = track
+      } catch (_: Throwable) {}
+    }
+  }
+
+  /**
+   *Synthesizes a 9.6-second seamless Kyoto chamber music loop featuring:
+   * - Warm paulownia-body Koto harp phrases with human rubato micro-timing
+   * - Airy Shakuhachi bamboo flute sustained harmonic swells
+   * - Delicate Suikinkutsu garden water-bell overtones
+   */
+  private fun synthesizeChamberMusicLoop(mood: MusicMood): ShortArray {
+    val durationSec = 9.6
+    val totalSamples = (SAMPLE_RATE * durationSec).toInt()
+    val acc = DoubleArray(totalSamples)
+    val root = mood.rootHz
+    val sc = mood.scaleRatios
+
+    data class ChamberNote(
+      val startSec: Double,
+      val durSec: Double,
+      val freqHz: Double,
+      val amp: Double,
+      val isFlute: Boolean = false,
+    )
+
+    // Expressive rubato phrasing (non-grid human timing with breathing spaces)
+    val notes =
+      listOf(
+        // Phrase 1: Warm Koto bass & ascending In-Sen / Hirajoshi motif
+        ChamberNote(0.00, 1.85, root * 0.5, 0.34),
+        ChamberNote(0.34, 1.35, root * sc[0], 0.28),
+        ChamberNote(0.82, 1.40, root * sc[2], 0.30),
+        ChamberNote(1.46, 1.65, root * sc[3], 0.32),
+        ChamberNote(2.18, 1.90, root * sc[1], 0.26),
+        // Breath of Shakuhachi bamboo flute
+        ChamberNote(1.10, 2.90, root * sc[3], 0.16, isFlute = true),
+        // Phrase 2: Delicate answer in upper register with grace-note slide
+        ChamberNote(3.20, 1.95, root * 0.5 * sc[2], 0.30),
+        ChamberNote(3.52, 1.25, root * sc[4], 0.25),
+        ChamberNote(3.64, 1.55, root * sc[5], 0.28),
+        ChamberNote(4.38, 1.60, root * sc[3], 0.26),
+        ChamberNote(5.12, 1.85, root * sc[2], 0.28),
+        // Second Shakuhachi swell
+        ChamberNote(4.60, 2.80, root * sc[2], 0.15, isFlute = true),
+        // Phrase 3: Contemplative cadence resolving softly into loop boundary
+        ChamberNote(6.40, 2.20, root * 0.5 * sc[3], 0.31),
+        ChamberNote(6.78, 1.50, root * sc[3], 0.25),
+        ChamberNote(7.36, 1.55, root * sc[1], 0.24),
+        ChamberNote(8.05, 1.50, root * sc[0], 0.29),
+      )
+
+    for ((idx, n) in notes.withIndex()) {
+      val startIdx = (n.startSec * SAMPLE_RATE).toInt()
+      val len = (n.durSec * SAMPLE_RATE).toInt()
+      var phase = 0.0
+      var lpBody = 0.0
+
+      for (i in 0 until len) {
+        val gIdx = (startIdx + i) % totalSamples
+        val t = i.toDouble() / SAMPLE_RATE
+        val p = i.toDouble() / maxOf(1, len)
+
+        if (n.isFlute) {
+          // Breath-modeled Shakuhachi flute with slow meri/kari pitch bend & airy vibrato
+          val bend = 1.0 - 0.012 * exp(-3.5 * t)
+          val vib = if (t > 0.35) 1.0 + 0.0038 * sin(2.0 * PI * 4.6 * (t - 0.35)) else 1.0
+          phase += (2.0 * PI * n.freqHz * bend * vib) / SAMPLE_RATE
+          val env = sin(PI * p) * sin(PI * p)
+          val breath = warmPaperNoise(i, 900 + idx * 31) * 0.08 * env
+          val rawFlute = (sin(phase) * 0.72 + sin(phase * 2.0) * 0.18 + breath) * env * n.amp
+          lpBody += 0.18 * (rawFlute - lpBody)
+          acc[gIdx] += lpBody
+        } else {
+          // Warm Paulownia-wood Koto pluck with rapid upper-partial damping
+          val pluckBend = 1.0 + 0.011 * exp(-35.0 * t)
+          val vib = if (t > 0.14) 1.0 + 0.0024 * sin(2.0 * PI * 5.1 * (t - 0.14)) else 1.0
+          phase += (2.0 * PI * n.freqHz * pluckBend * vib) / SAMPLE_RATE
+          val attack = (t / 0.006).coerceAtMost(1.0)
+          val env = attack * exp(-3.2 * p) * (1.0 - p * 0.25)
+          val rawKoto =
+            (sin(phase) * 0.68 +
+              sin(phase * 2.0) * exp(-2.6 * p) * 0.22 +
+              sin(phase * 3.0) * exp(-5.8 * p) * 0.08) * env * n.amp
+          // Warm low-pass wood body filter removes any synthetic harshness
+          lpBody += 0.24 * (rawKoto - lpBody)
+          acc[gIdx] += lpBody
+        }
+      }
+    }
+
+    // Add gentle stereo-style diffused wooden room reverb tail across the loop
+    val delaySamples1 = (SAMPLE_RATE * 0.21).toInt()
+    val delaySamples2 = (SAMPLE_RATE * 0.37).toInt()
+    val out = ShortArray(totalSamples)
+    var masterLp = 0.0
+    for (i in 0 until totalSamples) {
+      val d1 = acc[(i - delaySamples1 + totalSamples) % totalSamples] * 0.24
+      val d2 = acc[(i - delaySamples2 + totalSamples) % totalSamples] * 0.14
+      val dryWet = acc[i] + d1 + d2
+      masterLp += 0.32 * (dryWet - masterLp)
+      val soft = warmSaturate(masterLp * 0.95)
+      out[i] = (soft * 21500.0).toInt().coerceIn(-32767, 32767).toShort()
+    }
+    return out
   }
 
   /**
@@ -193,6 +396,11 @@ class AudioPlayer(context: Context? = null) {
 
   fun toggleMute(): Boolean {
     isMuted = !isMuted
+    if (isMuted) {
+      stopMusicLoop()
+    } else if (isMusicEnabled) {
+      restartMusicLoop()
+    }
     return isMuted
   }
 
@@ -205,6 +413,7 @@ class AudioPlayer(context: Context? = null) {
 
   fun release() {
     try {
+      stopMusicLoop()
       soundPool?.release()
       soundPool = null
       audioExecutor.shutdownNow()

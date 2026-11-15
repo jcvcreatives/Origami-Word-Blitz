@@ -347,14 +347,16 @@ fun LiveIntersectionPreviewBanner(
           }
         }
 
-        // Bottom status line
-        Text(
-          text = puzzleState.statusMessage,
-          style = MaterialTheme.typography.bodySmall,
-          color = if (puzzleState.isStatusError) VermilionRed else WashiMuted,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis,
-        )
+        // Only show bottom status line when an action or error message is active
+        if (puzzleState.isStatusError) {
+          Text(
+            text = puzzleState.statusMessage,
+            style = MaterialTheme.typography.bodySmall,
+            color = VermilionRed,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+          )
+        }
       }
     }
   }
@@ -414,57 +416,35 @@ fun LexiFillDraggableRack(
     modifier =
       modifier
         .fillMaxWidth()
-        .shadow(elevation = 3.dp, shape = RoundedCornerShape(18.dp))
+        .shadow(elevation = 3.dp, shape = RoundedCornerShape(16.dp))
         .paperGrainOverlay(alpha = 0.05f, fiberCount = 48, speckleCount = 72, seed = 606)
-        .border(1.2.dp, IndigoElevated, RoundedCornerShape(18.dp))
+        .border(1.2.dp, IndigoElevated, RoundedCornerShape(16.dp))
         .testTag("lexifill_rack_container"),
-    shape = RoundedCornerShape(18.dp),
+    shape = RoundedCornerShape(16.dp),
     color = IndigoSurface,
   ) {
     Column(
-      modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+      verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-      // Top header + Origami Board Legend pills
+      // Minimal Editorial Hinoki Tray Header
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-          Text(
-            text = "ORIGAMI PAPER RACK",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = WashiCream,
-          )
-          Box(
-            modifier =
-              Modifier.clip(RoundedCornerShape(6.dp))
-                .background(SkyCyan.copy(alpha = 0.14f))
-                .padding(horizontal = 6.dp, vertical = 1.dp)
-          ) {
-            Text(
-              text = "${tiles.size} tiles",
-              fontSize = 10.sp,
-              fontWeight = FontWeight.Bold,
-              color = SkyCyan,
-            )
-          }
-        }
-
-        // Compact Multiplier & Nexus Paper Stamp Legend
-        Row(
-          horizontalArrangement = Arrangement.spacedBy(5.dp),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          LegendMiniPill(label = "◆ Crossing", color = KyotoGold)
-          LegendMiniPill(label = "2L/3L", color = SkyCyan)
-          LegendMiniPill(label = "2W/3W", color = VermilionRed)
-        }
+        Text(
+          text = "HINOKI TILE TRAY · ${tiles.size} REMAINING",
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.Bold,
+          color = WashiMuted,
+        )
+        Text(
+          text = equippedSkin.name,
+          fontSize = 10.sp,
+          fontWeight = FontWeight.SemiBold,
+          color = KyotoGold,
+        )
       }
 
       // Recessed Kraft Paper Tile Tray Well

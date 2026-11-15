@@ -52,9 +52,13 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -86,7 +90,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import android.app.Activity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +100,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.domain.engine.LexiFillEngine
 import com.example.domain.model.GameCatalog
@@ -142,10 +151,27 @@ fun LexiFillMainScreen(
 ) {
   val puzzleState by viewModel.puzzleState.collectAsStateWithLifecycle()
   val haptics = LocalHapticFeedback.current
+  val view = LocalView.current
   var currentTab by rememberSaveable { mutableStateOf(LexiFillDestination.PUZZLE_GRID) }
+  var isFullscreenMode by rememberSaveable { mutableStateOf(false) }
+  var isMusicPlaying by remember { mutableStateOf(viewModel.audioPlayer.isMusicEnabled) }
+
+  LaunchedEffect(isFullscreenMode) {
+    val window = (view.context as? Activity)?.window ?: return@LaunchedEffect
+    val controller = WindowCompat.getInsetsController(window, view)
+    controller.systemBarsBehavior =
+      WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    if (isFullscreenMode) {
+      controller.hide(WindowInsetsCompat.Type.systemBars())
+    } else {
+      controller.show(WindowInsetsCompat.Type.systemBars())
+    }
+  }
 
   if (currentTab != LexiFillDestination.PUZZLE_GRID) {
     BackHandler { currentTab = LexiFillDestination.PUZZLE_GRID }
+  } else if (isFullscreenMode) {
+    BackHandler { isFullscreenMode = false }
   }
 
   Scaffold(
@@ -153,38 +179,40 @@ fun LexiFillMainScreen(
     containerColor = IndigoNight,
     contentWindowInsets = WindowInsets.safeDrawing,
     bottomBar = {
-      NavigationBar(
-        containerColor = IndigoSurface,
-        contentColor = WashiCream,
-      ) {
-        NavigationBarItem(
-          selected = currentTab == LexiFillDestination.PUZZLE_GRID,
-          onClick = { currentTab = LexiFillDestination.PUZZLE_GRID },
-          icon = { Icon(Icons.Filled.GridOn, contentDescription = "Skeleton Grid") },
-          label = { Text("Skeleton") },
-          modifier = Modifier.testTag("nav_tab_skeleton"),
-        )
-        NavigationBarItem(
-          selected = currentTab == LexiFillDestination.PUZZLE_VAULT,
-          onClick = { currentTab = LexiFillDestination.PUZZLE_VAULT },
-          icon = { Icon(Icons.Filled.Extension, contentDescription = "Puzzle Vault") },
-          label = { Text("Levels") },
-          modifier = Modifier.testTag("nav_tab_levels"),
-        )
-        NavigationBarItem(
-          selected = currentTab == LexiFillDestination.CUSTOM_STUDIO,
-          onClick = { currentTab = LexiFillDestination.CUSTOM_STUDIO },
-          icon = { Icon(Icons.Filled.Build, contentDescription = "Builder & Skins") },
-          label = { Text("Studio") },
-          modifier = Modifier.testTag("nav_tab_studio"),
-        )
-        NavigationBarItem(
-          selected = currentTab == LexiFillDestination.TRIE_EXPLORER,
-          onClick = { currentTab = LexiFillDestination.TRIE_EXPLORER },
-          icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Trie Solver") },
-          label = { Text("Trie") },
-          modifier = Modifier.testTag("nav_tab_trie"),
-        )
+      if (!isFullscreenMode) {
+        NavigationBar(
+          containerColor = IndigoSurface,
+          contentColor = WashiCream,
+        ) {
+          NavigationBarItem(
+            selected = currentTab == LexiFillDestination.PUZZLE_GRID,
+            onClick = { currentTab = LexiFillDestination.PUZZLE_GRID },
+            icon = { Icon(Icons.Filled.GridOn, contentDescription = "Skeleton Grid") },
+            label = { Text("Skeleton") },
+            modifier = Modifier.testTag("nav_tab_skeleton"),
+          )
+          NavigationBarItem(
+            selected = currentTab == LexiFillDestination.PUZZLE_VAULT,
+            onClick = { currentTab = LexiFillDestination.PUZZLE_VAULT },
+            icon = { Icon(Icons.Filled.Extension, contentDescription = "Puzzle Vault") },
+            label = { Text("Levels") },
+            modifier = Modifier.testTag("nav_tab_levels"),
+          )
+          NavigationBarItem(
+            selected = currentTab == LexiFillDestination.CUSTOM_STUDIO,
+            onClick = { currentTab = LexiFillDestination.CUSTOM_STUDIO },
+            icon = { Icon(Icons.Filled.Build, contentDescription = "Builder & Skins") },
+            label = { Text("Studio") },
+            modifier = Modifier.testTag("nav_tab_studio"),
+          )
+          NavigationBarItem(
+            selected = currentTab == LexiFillDestination.TRIE_EXPLORER,
+            onClick = { currentTab = LexiFillDestination.TRIE_EXPLORER },
+            icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Trie Solver") },
+            label = { Text("Account") },
+            modifier = Modifier.testTag("nav_tab_trie"),
+          )
+        }
       }
     },
   ) { innerPadding ->
@@ -202,6 +230,8 @@ fun LexiFillMainScreen(
             puzzleState = puzzleState,
             userEmail = userEmail,
             isGuestUser = isGuestUser,
+            isFullscreenMode = isFullscreenMode,
+            isMusicPlaying = isMusicPlaying,
             onSignOut = onSignOut,
             onSelectClueWord = { wordId -> viewModel.selectClueWord(wordId, haptics) },
             onBoardCellTapped = { x, y -> viewModel.onBoardCellTapped(x, y, haptics) },
@@ -215,7 +245,16 @@ fun LexiFillMainScreen(
             onRecallUnlocked = { viewModel.recallAllUnlockedTiles(haptics) },
             onReplayLevel = { viewModel.replayCurrentLevel() },
             onNextLevel = { viewModel.advanceToNextLevel() },
-            onToggleSoundMute = { viewModel.toggleSoundMute(haptics) },
+            onToggleSoundMute = {
+              viewModel.toggleSoundMute(haptics)
+              isMusicPlaying = viewModel.audioPlayer.isMusicEnabled && !viewModel.audioPlayer.isMuted
+            },
+            onToggleMusic = {
+              isMusicPlaying = viewModel.audioPlayer.toggleMusic()
+            },
+            onToggleFullscreen = {
+              isFullscreenMode = !isFullscreenMode
+            },
             onShakeConsumed = { viewModel.clearShake() },
             onMoveFocusedCell = { dx, dy -> viewModel.moveFocusedCell(dx, dy, haptics) },
             onTypeLetter = { ch -> viewModel.typeLetterInFocusedCell(ch, haptics) },
@@ -236,6 +275,8 @@ fun LexiFillMainScreen(
           CustomStudioAndSkinsScreen(
             puzzleState = puzzleState,
             audioPlayer = viewModel.audioPlayer,
+            isMusicPlaying = isMusicPlaying,
+            onToggleMusic = { isMusicPlaying = viewModel.audioPlayer.toggleMusic() },
             onLoadCompactCode = { code ->
               viewModel.loadCustomSkeleton(code)
               currentTab = LexiFillDestination.PUZZLE_GRID
@@ -263,6 +304,8 @@ private fun SkeletonPuzzleArena(
   puzzleState: PuzzleState,
   userEmail: String?,
   isGuestUser: Boolean,
+  isFullscreenMode: Boolean,
+  isMusicPlaying: Boolean,
   onSignOut: (() -> Unit)?,
   onSelectClueWord: (String) -> Unit,
   onBoardCellTapped: (Int, Int) -> Unit,
@@ -277,6 +320,8 @@ private fun SkeletonPuzzleArena(
   onReplayLevel: () -> Unit,
   onNextLevel: () -> Unit,
   onToggleSoundMute: () -> Unit,
+  onToggleMusic: () -> Unit,
+  onToggleFullscreen: () -> Unit,
   onShakeConsumed: () -> Unit,
   onMoveFocusedCell: (Int, Int) -> Unit,
   onTypeLetter: (Char) -> Boolean,
@@ -294,8 +339,13 @@ private fun SkeletonPuzzleArena(
   val isDraggingAnyTile = puzzleState.rackState.draggingTileId != null
 
   BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-    val maxBoardHeight = (maxHeight * 0.43f).coerceIn(210.dp, 420.dp)
-    val compactSpacing = if (maxHeight < 700.dp) 6.dp else 8.dp
+    val maxBoardHeight =
+      if (isFullscreenMode) {
+        (maxHeight * 0.54f).coerceIn(240.dp, 520.dp)
+      } else {
+        (maxHeight * 0.45f).coerceIn(210.dp, 430.dp)
+      }
+    val compactSpacing = if (maxHeight < 700.dp || isFullscreenMode) 5.dp else 7.dp
 
     Column(
       modifier =
@@ -303,27 +353,33 @@ private fun SkeletonPuzzleArena(
           .widthIn(max = 600.dp)
           .align(Alignment.TopCenter)
           .verticalScroll(scrollState, enabled = !isDraggingAnyTile)
-          .padding(horizontal = 12.dp, vertical = 6.dp),
+          .padding(horizontal = 10.dp, vertical = 4.dp),
       verticalArrangement = Arrangement.spacedBy(compactSpacing),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-      // 1. Top HUD: Level Title, Animated Score, Combo Streak Badge, Account Pill, Progress Bar
+      // 1. Editorial Kyoto Print HUD with Hanko Seal, Music Toggle & Full Screen Toggle
       LexiFillTopHud(
         puzzleState = puzzleState,
         userEmail = userEmail,
         isGuestUser = isGuestUser,
+        isFullscreenMode = isFullscreenMode,
+        isMusicPlaying = isMusicPlaying,
         onSignOut = onSignOut,
         onToggleSoundMute = onToggleSoundMute,
+        onToggleMusic = onToggleMusic,
+        onToggleFullscreen = onToggleFullscreen,
         onResetLevel = onReplayLevel,
       )
 
-      // 2. Interactive Intersecting Clues Strip (Tap any clue to highlight its corridor on the board)
-      IntersectingCluesStrip(
-        targetWords = puzzleState.targetWords,
-        focusedWordId = puzzleState.focusedWordId,
-        cells = puzzleState.cells,
-        onSelectClueWord = onSelectClueWord,
-      )
+      // 2. Interactive Intersecting Clues Strip (hidden in Full Screen Mode for maximum canvas space)
+      if (!isFullscreenMode) {
+        IntersectingCluesStrip(
+          targetWords = puzzleState.targetWords,
+          focusedWordId = puzzleState.focusedWordId,
+          cells = puzzleState.cells,
+          onSelectClueWord = onSelectClueWord,
+        )
+      }
 
       // 3. 100% Compose Canvas Crossword Skeleton Grid (adaptively sized to fit single screen)
       LexiFillBoardCanvas(
@@ -337,10 +393,10 @@ private fun SkeletonPuzzleArena(
         modifier = Modifier.heightIn(max = maxBoardHeight),
       )
 
-      // 4. Live Dual-Axis Intersection & Active Clue Spotlight Banner
+      // 4. Unified Active Clue & Dual-Axis Intersection Spotlight Bar
       LiveIntersectionPreviewBanner(puzzleState = puzzleState)
 
-      // 5. Spring-Physics Draggable Letter Rack with Multiplier Legend & Recessed Tray Well
+      // 5. Spring-Physics Draggable Letter Rack in a Hinoki Wood Tray
       LexiFillDraggableRack(
         tiles = puzzleState.rackState.tiles,
         selectedTileId = puzzleState.rackState.selectedTileId,
@@ -382,8 +438,12 @@ private fun LexiFillTopHud(
   puzzleState: PuzzleState,
   userEmail: String?,
   isGuestUser: Boolean,
+  isFullscreenMode: Boolean,
+  isMusicPlaying: Boolean,
   onSignOut: (() -> Unit)?,
   onToggleSoundMute: () -> Unit,
+  onToggleMusic: () -> Unit,
+  onToggleFullscreen: () -> Unit,
   onResetLevel: () -> Unit,
 ) {
   val animatedScore by
@@ -413,39 +473,42 @@ private fun LexiFillTopHud(
     )
 
   Surface(
-    shape = RoundedCornerShape(18.dp),
+    shape = RoundedCornerShape(14.dp),
     color = IndigoSurface,
     modifier =
       Modifier.fillMaxWidth()
-        .border(1.dp, IndigoElevated, RoundedCornerShape(18.dp))
+        .border(1.dp, IndigoElevated, RoundedCornerShape(14.dp))
         .paperGrainOverlay(alpha = 0.046f, fiberCount = 36, speckleCount = 54, seed = 202)
         .testTag("lexifill_top_hud"),
   ) {
     Column {
       Row(
-        modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 6.dp),
+        modifier = Modifier.padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
       ) {
+        // Vermilion Hanko Seal Stamp for Level Number
+        Box(
+          modifier =
+            Modifier.clip(RoundedCornerShape(4.dp))
+              .background(VermilionRed)
+              .padding(horizontal = 6.dp, vertical = 3.dp)
+        ) {
+          Text(
+            text = "第${puzzleState.levelTemplate.levelNumber}",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White,
+          )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Column(modifier = Modifier.weight(1f)) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
           ) {
-            Box(
-              modifier =
-                Modifier.clip(RoundedCornerShape(6.dp))
-                  .background(SkyCyan.copy(alpha = 0.18f))
-                  .border(1.dp, SkyCyan.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                  .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-              Text(
-                text = "LVL ${puzzleState.levelTemplate.levelNumber}",
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = SkyCyan,
-              )
-            }
             Text(
               text = puzzleState.levelTemplate.title,
               style = MaterialTheme.typography.titleSmall,
@@ -454,92 +517,61 @@ private fun LexiFillTopHud(
               maxLines = 1,
               overflow = TextOverflow.Ellipsis,
             )
+            if (puzzleState.comboStreak >= 2 || puzzleState.comboMultiplier > 1.0f) {
+              ComboStreakHudBadge(
+                comboStreak = puzzleState.comboStreak,
+                comboMultiplier = puzzleState.comboMultiplier,
+              )
+            }
           }
-          Spacer(modifier = Modifier.height(2.dp))
           Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
           ) {
             Text(
               text =
-                "Words ${puzzleState.completedWordsCount}/${puzzleState.targetWords.size} · Blanks ${puzzleState.filledBlanksCount}/${puzzleState.totalBlanksCount}",
+                "${puzzleState.completedWordsCount}/${puzzleState.targetWords.size} Words · $animatedScore PTS · ${puzzleState.lexiCoins} Coins",
               style = MaterialTheme.typography.bodySmall,
               color = WashiMuted,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
             )
-            Box(
-              modifier =
-                Modifier.clip(RoundedCornerShape(5.dp))
-                  .background(KyotoGold.copy(alpha = 0.14f))
-                  .padding(horizontal = 5.dp, vertical = 1.dp)
-            ) {
+            if (onSignOut != null && !isFullscreenMode) {
+              val shortLabel =
+                userEmail
+                  ?.substringBefore(" (")
+                  ?.substringBefore("@")
+                  ?.take(10)
+                  ?.ifBlank { "Account" } ?: "Account"
               Text(
-                text = "${puzzleState.lexiCoins} Coins",
+                text = if (isGuestUser) "· Guest" else "· $shortLabel",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = KyotoGold,
-              )
-            }
-            if (onSignOut != null) {
-              Box(
+                color = if (isGuestUser) SkyCyan else CeladonJade,
                 modifier =
-                  Modifier.clip(RoundedCornerShape(5.dp))
-                    .background(
-                      if (isGuestUser) IndigoCard
-                      else CeladonJade.copy(alpha = 0.14f)
-                    )
-                    .border(
-                      0.8.dp,
-                      if (isGuestUser) IndigoElevated else CeladonJade.copy(alpha = 0.45f),
-                      RoundedCornerShape(5.dp),
-                    )
-                    .clickable(onClick = onSignOut)
-                    .padding(horizontal = 5.dp, vertical = 1.dp)
-                    .testTag("hud_account_badge")
-              ) {
-                val shortLabel =
-                  userEmail
-                    ?.substringBefore(" (")
-                    ?.substringBefore("@")
-                    ?.take(12)
-                    ?.ifBlank { "Account" } ?: "Account"
-                Text(
-                  text = if (isGuestUser) "Guest · Account" else "● $shortLabel",
-                  fontSize = 9.5.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = if (isGuestUser) WashiMuted else CeladonJade,
-                )
-              }
+                  Modifier.clickable(onClick = onSignOut)
+                    .testTag("hud_account_badge"),
+              )
             }
           }
         }
 
-        // Reactive Combo Streak HUD Badge with Particle Burst & Bounce on 2x/3x/4x
-        ComboStreakHudBadge(
-          comboStreak = puzzleState.comboStreak,
-          comboMultiplier = puzzleState.comboMultiplier,
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Rolling Score Counter Pill
-        Column(horizontalAlignment = Alignment.End) {
-          Text(
-            text = "$animatedScore PTS",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = KyotoGold,
-          )
-          Text(
-            text = "Career ${puzzleState.totalCampaignScore}",
-            style = MaterialTheme.typography.labelSmall,
-            color = WashiMuted,
+        // Kyoto Chamber Music Toggle, Sound Mute, Reset & Full Screen Icon Buttons
+        IconButton(
+          onClick = onToggleMusic,
+          modifier = Modifier.size(40.dp).testTag("btn_toggle_music"),
+        ) {
+          Icon(
+            imageVector = if (isMusicPlaying) Icons.Filled.MusicNote else Icons.Filled.MusicOff,
+            contentDescription =
+              if (isMusicPlaying) "Pause Kyoto chamber music" else "Play Kyoto chamber music",
+            tint = if (isMusicPlaying) KyotoGold else WashiMuted,
+            modifier = Modifier.size(19.dp),
           )
         }
-
-        // Audio Mute/Unmute, Reset & Next puzzle icon buttons (48dp accessibility targets)
         IconButton(
           onClick = onToggleSoundMute,
-          modifier = Modifier.size(48.dp).testTag("btn_toggle_sound"),
+          modifier = Modifier.size(40.dp).testTag("btn_toggle_sound"),
         ) {
           Icon(
             imageVector =
@@ -548,16 +580,31 @@ private fun LexiFillTopHud(
             contentDescription =
               if (puzzleState.isSoundMuted) "Unmute sound effects" else "Mute sound effects",
             tint = if (puzzleState.isSoundMuted) WashiMuted else CeladonJade,
+            modifier = Modifier.size(19.dp),
           )
         }
         IconButton(
           onClick = onResetLevel,
-          modifier = Modifier.size(48.dp).testTag("btn_reset_grid"),
+          modifier = Modifier.size(40.dp).testTag("btn_reset_grid"),
         ) {
           Icon(
             imageVector = Icons.Filled.Refresh,
             contentDescription = "Reset current puzzle grid",
             tint = WashiMuted,
+            modifier = Modifier.size(19.dp),
+          )
+        }
+        IconButton(
+          onClick = onToggleFullscreen,
+          modifier = Modifier.size(40.dp).testTag("btn_toggle_fullscreen"),
+        ) {
+          Icon(
+            imageVector =
+              if (isFullscreenMode) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+            contentDescription =
+              if (isFullscreenMode) "Exit full screen mode" else "Enter full screen mode",
+            tint = if (isFullscreenMode) SkyCyan else WashiCream,
+            modifier = Modifier.size(20.dp),
           )
         }
       }
@@ -566,7 +613,7 @@ private fun LexiFillTopHud(
       Box(
         modifier =
           Modifier.fillMaxWidth()
-            .height(4.dp)
+            .height(3.dp)
             .background(IndigoNight.copy(alpha = 0.85f))
       ) {
         Box(
@@ -575,7 +622,7 @@ private fun LexiFillTopHud(
               .fillMaxHeight()
               .background(
                 Brush.horizontalGradient(
-                  listOf(SkyCyan, CeladonJade, KyotoGold),
+                  listOf(VermilionRed, KyotoGold, CeladonJade),
                 )
               )
         )
@@ -1146,11 +1193,14 @@ private fun VaultStatColumn(label: String, value: String, valueColor: Color) {
 private fun CustomStudioAndSkinsScreen(
   puzzleState: PuzzleState,
   audioPlayer: AudioPlayer,
+  isMusicPlaying: Boolean,
+  onToggleMusic: () -> Unit,
   onLoadCompactCode: (String) -> Unit,
   onUnlockOrEquipSkin: (com.example.domain.model.CosmeticTileSkin) -> Unit,
   onAuditionSoundEffect: (AudioPlayer.SoundEffect) -> Unit,
 ) {
   var selectedKit by remember { mutableStateOf(audioPlayer.activeKit) }
+  var selectedMood by remember { mutableStateOf(audioPlayer.activeMusicMood) }
   var compactInput by
     rememberSaveable(puzzleState.levelTemplate.compactCode) {
       mutableStateOf(
@@ -1178,18 +1228,88 @@ private fun CustomStudioAndSkinsScreen(
           modifier = Modifier.padding(16.dp),
           verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-          Text(
-            text = "Washi & Hinoki Acoustic Workshop",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = WashiCream,
-          )
-          Text(
-            text =
-              "Physical-modeling Japanese paper friction, cedar woodblocks, and plucked Koto harp strings:",
-            style = MaterialTheme.typography.bodySmall,
-            color = WashiMuted,
-          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = "Kyoto Chamber Music & Foley Studio",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = WashiCream,
+              )
+              Text(
+                text =
+                  "Paulownia wood Koto plucks, Shakuhachi bamboo flute breath, and Japanese paper foley:",
+                style = MaterialTheme.typography.bodySmall,
+                color = WashiMuted,
+              )
+            }
+            OutlinedButton(
+              onClick = onToggleMusic,
+              shape = RoundedCornerShape(10.dp),
+              modifier = Modifier.testTag("btn_studio_toggle_music"),
+            ) {
+              Icon(
+                imageVector = if (isMusicPlaying) Icons.Filled.MusicNote else Icons.Filled.MusicOff,
+                contentDescription = "Toggle chamber music",
+                tint = if (isMusicPlaying) KyotoGold else WashiMuted,
+                modifier = Modifier.size(16.dp),
+              )
+              Spacer(Modifier.width(6.dp))
+              Text(
+                text = if (isMusicPlaying) "Music ON" else "Music OFF",
+                fontWeight = FontWeight.ExtraBold,
+                color = if (isMusicPlaying) KyotoGold else WashiMuted,
+              )
+            }
+          }
+
+          // Kyoto Chamber Music Mood Selector
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            for (mood in AudioPlayer.MusicMood.entries) {
+              val isMoodSelected = selectedMood == mood
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (isMoodSelected) KyotoGold.copy(alpha = 0.16f) else IndigoCard,
+                modifier =
+                  Modifier.weight(1f)
+                    .border(
+                      width = if (isMoodSelected) 1.6.dp else 1.dp,
+                      color = if (isMoodSelected) KyotoGold else IndigoElevated,
+                      shape = RoundedCornerShape(10.dp),
+                    )
+                    .clickable {
+                      selectedMood = mood
+                      audioPlayer.selectMusicMood(mood)
+                    }
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .testTag("btn_mood_${mood.id}"),
+              ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                  Text(
+                    text = mood.title,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isMoodSelected) KyotoGold else WashiCream,
+                    maxLines = 1,
+                  )
+                  Text(
+                    text = mood.subtitle,
+                    fontSize = 9.sp,
+                    color = WashiMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                  )
+                }
+              }
+            }
+          }
 
           // Acoustic Material Kit Selector
           Row(
@@ -1494,12 +1614,6 @@ private fun TriePatternSolverScreen(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = if (cloudProfile != null) CeladonJade else SkyCyan,
-              )
-              Text(
-                text = "Firebase Free-Tier Quota Guard: ACTIVE (0 Idle Listeners · 60 FPS RenderThread)",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = CeladonJade,
               )
             }
             Spacer(modifier = Modifier.width(8.dp))

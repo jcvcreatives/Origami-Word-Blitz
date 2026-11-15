@@ -8,34 +8,43 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'%3E%3Crect width='108' height='108' rx='22' fill='%23F3EDE0'/%3E%3Crect x='14' y='14' width='80' height='80' rx='14' fill='%23D4C5AA'/%3E%3Crect x='20' y='20' width='31' height='31' rx='6' fill='%23FFFDF7' stroke='%23B3A082' stroke-width='2'/%3E%3Ctext x='35.5' y='42' font-family='Georgia,serif' font-weight='900' font-size='20' text-anchor='middle' fill='%23231E18'%3EC%3C/text%3E%3Crect x='57' y='20' width='31' height='31' rx='6' fill='%231D5B8F'/%3E%3Cpolygon points='72.5,25 81,35.5 72.5,46' fill='%23FFFDF7'/%3E%3Cpolygon points='72.5,25 64,35.5 72.5,46' fill='%23CFE3F5'/%3E%3Crect x='20' y='57' width='31' height='31' rx='6' fill='%23157F4B'/%3E%3Cpath d='M28 73 L33.5 78.5 L43.5 67.5' fill='none' stroke='%23FFFDF7' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='57' y='57' width='31' height='31' rx='6' fill='%23FFFDF7' stroke='%23B3A082' stroke-width='2'/%3E%3Ctext x='72.5' y='79' font-family='Georgia,serif' font-weight='900' font-size='20' text-anchor='middle' fill='%23231E18'%3EO%3C/text%3E%3Cpolygon points='54,47 61,54 54,61 47,54' fill='%23C87D0A'/%3E%3C/svg%3E" />
   <title>Crossword Origami</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=DM+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      /* Crossword Origami — Handcrafted Washi Paper, Folded Kraft, Sumi Ink & Origami Dye Palette */
-      --washi-desk: #f3ede0;
-      --washi-sheet: #fffcf5;
-      --kraft-card: #e7dec9;
-      --kraft-border: #d0c3a8;
-      --sumi-ink: #231e18;
-      --walnut-muted: #6b5e4c;
+      /* Crossword Origami — Kyoto Woodblock Print, Shikishi Board, Hinoki Cypress & Sumi Ink Palette */
+      --washi-desk: #f2ece1;
+      --washi-sheet: #fbf7ef;
+      --kraft-card: #e6dcc8;
+      --kraft-border: #cbbba0;
+      --kraft-deep: #b09d7e;
+      --sumi-ink: #1e1914;
+      --walnut-muted: #655847;
 
-      --aizome-indigo: #1d5b8f;
-      --matcha-jade: #157f4b;
-      --kyoto-gold: #c87d0a;
-      --torii-vermilion: #d9381e;
+      --aizome-indigo: #1f4e78;
+      --matcha-jade: #1b6b45;
+      --matcha-tint: rgba(27, 107, 69, 0.12);
+      --kyoto-gold: #b87314;
+      --torii-vermilion: #c83720;
 
       /* Crossword Origami Paper Board Cell Tokens */
-      --fixed-cell-bg: #e6dcca;
-      --fixed-cell-border: #b5a489;
-      --blank-slot-bg: #ede6d6;
+      --fixed-cell-bg: #e8dfd0;
+      --fixed-cell-border: #b8a68a;
+      --blank-slot-bg: #ebe3d3;
       --blank-slot-border: #9c8b70;
-      --completed-word-bg: #d9efe2;
-      --completed-word-border: #157f4b;
+      --completed-word-bg: #dcefe3;
+      --completed-word-border: #1b6b45;
 
       /* Multiplier Paper Stamp Colors */
-      --mult-dl-bg: #d0e6f5;
-      --mult-tl-bg: #b3d7f0;
-      --mult-dw-bg: #f7d6e0;
-      --mult-tw-bg: #f5cbcb;
+      --mult-dl-bg: #d4e6f3;
+      --mult-tl-bg: #bcd6eb;
+      --mult-dw-bg: #f4d8df;
+      --mult-tw-bg: #f1cccb;
+
+      --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+      --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
     * {
@@ -51,9 +60,9 @@
     html, body {
       width: 100%;
       min-height: 100dvh;
-      background: radial-gradient(circle at 50% 0%, #faf5ea 0%, var(--washi-desk) 80%);
+      background: radial-gradient(circle at 50% 0%, #f9f4ea 0%, var(--washi-desk) 82%);
       color: var(--sumi-ink);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font-sans);
       overflow-x: hidden;
       overscroll-behavior-y: contain;
     }
@@ -63,7 +72,35 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 8px 10px calc(66px + env(safe-area-inset-bottom, 0px)) 10px;
+      padding: max(6px, env(safe-area-inset-top, 0px)) 10px calc(62px + env(safe-area-inset-bottom, 0px)) 10px;
+    }
+
+    /* Full Screen Mobile Mode (works via Fullscreen API on Android & viewport lock on iOS Safari) */
+    body.fullscreen-mode {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+      padding: max(6px, env(safe-area-inset-top, 6px)) 8px max(6px, env(safe-area-inset-bottom, 6px)) 8px;
+    }
+    body.fullscreen-mode .bottom-nav {
+      display: none !important;
+    }
+    body.fullscreen-mode .clues-strip {
+      display: none !important;
+    }
+    body.fullscreen-mode .app-shell {
+      height: 100%;
+      max-width: 560px;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    body.fullscreen-mode #tab-skeleton.active {
+      height: 100%;
+      justify-content: space-between;
+      gap: 5px;
+    }
+    body.fullscreen-mode .board-frame {
+      max-width: min(100%, calc(53dvh * var(--board-aspect-num, 1.2)));
     }
 
     /* Lightweight Procedural Washi Paper Grain Canvas Overlay (Background & Card Surfaces) */
@@ -75,7 +112,7 @@
       background-image: var(--washi-grain-url, none);
       background-repeat: repeat;
       background-size: 72px 72px;
-      opacity: 0.42;
+      opacity: 0.40;
       z-index: 0;
     }
 
@@ -93,7 +130,7 @@
       background-image: var(--washi-grain-url, none);
       background-repeat: repeat;
       background-size: 72px 72px;
-      opacity: 0.48;
+      opacity: 0.45;
       z-index: 1;
     }
     .paper-surface::after {
@@ -102,7 +139,7 @@
       inset: 0;
       border-radius: inherit;
       pointer-events: none;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0) 55%);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0) 55%);
       z-index: 1;
     }
     .paper-surface > * {
@@ -114,23 +151,23 @@
       position: relative;
       z-index: 2;
       width: 100%;
-      max-width: 540px;
+      max-width: 520px;
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 6px;
     }
 
-    /* Top HUD Card */
+    /* Editorial Kyoto Print HUD Bar */
     .hud-card {
       background: var(--washi-sheet);
-      border: 1.2px solid var(--kraft-border);
-      border-radius: 16px;
-      box-shadow: 0 2px 8px rgba(74, 56, 35, 0.07);
+      border: 1px solid var(--kraft-border);
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(56, 42, 26, 0.06);
       display: flex;
       flex-direction: column;
     }
     .hud-main {
-      padding: 7px 8px 5px 11px;
+      padding: 6px 6px 5px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -143,116 +180,137 @@
     .hud-title-row {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
       margin-bottom: 1px;
     }
+    /* Traditional Vermilion Hanko Stamp Seal for Level Number */
     .lvl-badge {
-      background: rgba(29, 91, 143, 0.15);
-      border: 1px solid rgba(29, 91, 143, 0.48);
-      color: var(--aizome-indigo);
-      font-weight: 800;
-      font-size: 10px;
-      padding: 1.5px 6px;
-      border-radius: 6px;
+      background: var(--torii-vermilion);
+      border: 1px solid #a82813;
+      color: #fffcf5;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 9.5px;
+      letter-spacing: 0.4px;
+      padding: 1.5px 5.5px;
+      border-radius: 4px;
       white-space: nowrap;
+      box-shadow: inset 0 0 0 0.5px rgba(255, 252, 245, 0.35);
     }
     .hud-title {
-      font-size: 14.5px;
-      font-weight: 800;
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
       color: var(--sumi-ink);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.1;
     }
     .hud-sub-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
-      gap: 5px;
-      row-gap: 3px;
+      gap: 6px;
       font-size: 10.5px;
       color: var(--walnut-muted);
+      white-space: nowrap;
+      overflow: hidden;
     }
     #lvlProgress {
+      font-family: var(--font-mono);
+      font-size: 10px;
       white-space: nowrap;
     }
     .coins-pill {
-      background: rgba(200, 125, 10, 0.14);
       color: var(--kyoto-gold);
-      font-weight: 800;
+      font-family: var(--font-mono);
+      font-weight: 600;
       font-size: 10px;
-      padding: 1px 5px;
-      border-radius: 5px;
       white-space: nowrap;
     }
+    .coins-pill::before {
+      content: "· ";
+      color: var(--kraft-deep);
+    }
     .combo-pill {
-      background: var(--kraft-card);
-      border: 1px solid var(--kraft-border);
-      border-radius: 11px;
-      padding: 4px 8px;
-      font-weight: 800;
-      font-size: 12px;
+      background: linear-gradient(90deg, #f7e9c8, #f3d592);
+      border: 1px solid var(--kyoto-gold);
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 10.5px;
       color: var(--sumi-ink);
-      display: flex;
+      display: none;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       white-space: nowrap;
       will-change: transform;
     }
-    .combo-pill.high {
-      background: linear-gradient(90deg, #f7e9c8, #f3d592);
-      border-color: var(--kyoto-gold);
+    .combo-pill.visible {
+      display: inline-flex;
     }
     .combo-pill.bounce {
-      transform: scale(1.30);
+      transform: scale(1.24);
       background: linear-gradient(90deg, var(--torii-vermilion), var(--kyoto-gold));
       color: #fffcf5;
     }
     .score-box {
       text-align: right;
       white-space: nowrap;
+      padding-right: 2px;
     }
     .score-val {
-      font-size: 14.5px;
-      font-weight: 900;
-      color: var(--kyoto-gold);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sumi-ink);
     }
     .score-career {
-      font-size: 9.5px;
+      font-family: var(--font-mono);
+      font-size: 9px;
       color: var(--walnut-muted);
     }
     .hud-actions {
       display: flex;
       align-items: center;
-      gap: 1px;
+      gap: 2px;
     }
     .icon-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 9px;
-      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid transparent;
       background: transparent;
       color: var(--walnut-muted);
-      font-size: 15px;
+      font-size: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .icon-btn.active-toggle {
+      color: var(--kyoto-gold);
+      background: rgba(184, 115, 20, 0.11);
+      border-color: rgba(184, 115, 20, 0.35);
     }
     .icon-btn:active {
-      transform: scale(0.90);
+      transform: scale(0.92);
       background: rgba(0, 0, 0, 0.06);
     }
     .hud-progress-track {
       width: 100%;
-      height: 4px;
-      background: rgba(243, 237, 224, 0.85);
+      height: 2.5px;
+      background: rgba(230, 220, 200, 0.7);
     }
     .hud-progress-fill {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, var(--aizome-indigo), var(--matcha-jade), var(--kyoto-gold));
+      background: linear-gradient(90deg, var(--torii-vermilion), var(--kyoto-gold), var(--matcha-jade));
       transition: width 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
@@ -315,21 +373,22 @@
       text-overflow: ellipsis;
     }
 
-    /* Handcrafted Washi-Paper Board Container (Adaptively sized to fit mobile viewports without clipping) */
+    /* Mounted Shikishi Washi-Paper Board Container (Adaptively sized to fit mobile viewports without clipping or scrolling) */
     .board-frame {
       position: relative;
       width: 100%;
-      max-width: min(100%, 400px);
+      max-width: min(100%, calc(44dvh * var(--board-aspect-num, 1.2)));
       margin: 0 auto;
-      background: linear-gradient(175deg, var(--washi-sheet) 0%, #f7f1e4 55%, #efe6d5 100%);
-      border: 1.5px solid var(--kraft-border);
-      border-radius: 16px;
-      padding: 10px;
+      background: linear-gradient(175deg, #fdfaf2 0%, #f5ede0 58%, #ece1ce 100%);
+      border: 2px solid #b89f7d;
+      outline: 1px solid rgba(30, 25, 20, 0.14);
+      border-radius: 12px;
+      padding: 9px;
       aspect-ratio: var(--board-aspect, 6 / 5);
       box-shadow:
-        0 4px 12px rgba(74, 56, 35, 0.10),
-        inset 0 1.5px 0 rgba(255, 255, 255, 0.90),
-        inset 0 -3px 8px rgba(122, 100, 70, 0.14);
+        0 6px 18px rgba(48, 36, 22, 0.11),
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.92),
+        inset 0 -2px 6px rgba(122, 100, 70, 0.12);
       touch-action: none;
       transform: translateZ(0);
       backface-visibility: hidden;
@@ -355,10 +414,10 @@
     }
     .board-grid-layer {
       position: absolute;
-      inset: 10px;
+      inset: 9px;
       z-index: 2;
       display: grid;
-      gap: 5px;
+      gap: 4.5px;
       perspective: 750px;
       transform: translateZ(0);
     }
@@ -370,13 +429,13 @@
       min-width: 0;
       min-height: 0;
       box-sizing: border-box;
-      border-radius: 9px;
+      border-radius: 7px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-family: Georgia, "Noto Serif", serif;
-      font-size: clamp(14px, 4.1vw, 20px);
+      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: clamp(15px, 4.3vw, 22px);
       line-height: 1;
       position: relative;
       transform-style: preserve-3d;
@@ -392,7 +451,7 @@
     }
     .cell-char {
       display: inline-block;
-      transform: translate(-1.5px, -2px);
+      transform: translate(-1px, -1.5px);
       line-height: 1;
       pointer-events: none;
     }
@@ -738,13 +797,13 @@
     /* Live Intersection Preview & Active Clue Spotlight Banner */
     .status-banner {
       background: var(--washi-sheet);
-      border: 1.2px solid var(--kraft-border);
-      border-radius: 13px;
-      padding: 7px 11px;
-      box-shadow: 0 2px 5px rgba(74, 56, 35, 0.05);
+      border: 1px solid var(--kraft-border);
+      border-radius: 11px;
+      padding: 6px 10px;
+      box-shadow: 0 1px 4px rgba(74, 56, 35, 0.04);
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
     }
     .status-banner.valid-preview {
       background: var(--completed-word-bg);
@@ -768,18 +827,19 @@
       flex: 1;
     }
     .dir-badge {
+      font-family: var(--font-mono);
       font-size: 8.5px;
-      font-weight: 800;
+      font-weight: 600;
       color: var(--aizome-indigo);
-      background: rgba(29, 91, 143, 0.12);
-      border: 1px solid rgba(29, 91, 143, 0.45);
-      padding: 1.5px 5px;
-      border-radius: 5px;
+      background: rgba(31, 78, 120, 0.10);
+      border: 1px solid rgba(31, 78, 120, 0.32);
+      padding: 1px 5px;
+      border-radius: 4px;
       white-space: nowrap;
     }
     .clue-spotlight-text {
       font-size: 11.5px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--sumi-ink);
       white-space: nowrap;
       overflow: hidden;
@@ -787,16 +847,16 @@
     }
     .mini-slots-row {
       display: flex;
-      gap: 2.5px;
+      gap: 2px;
       flex-shrink: 0;
     }
     .mini-slot {
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      width: 17px;
+      height: 17px;
+      border-radius: 3.5px;
+      font-family: var(--font-mono);
       font-size: 9.5px;
-      font-weight: 800;
+      font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -806,20 +866,25 @@
     }
     .mini-slot.open {
       background: var(--washi-desk);
-      border-color: rgba(29, 91, 143, 0.55);
+      border-color: rgba(31, 78, 120, 0.48);
       color: var(--aizome-indigo);
     }
     .mini-slot.placed {
-      background: rgba(200, 125, 10, 0.18);
+      background: rgba(184, 115, 20, 0.16);
       border-color: var(--kyoto-gold);
       color: var(--kyoto-gold);
     }
     .status-subline {
-      font-size: 10.5px;
+      font-size: 10px;
       color: var(--walnut-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: none;
+    }
+    .status-banner.error .status-subline,
+    .status-banner.valid-preview .status-subline {
+      display: block;
     }
     .status-banner.error .status-subline {
       color: var(--torii-vermilion);
@@ -830,80 +895,52 @@
       font-weight: 700;
     }
 
-    /* Origami Washi-Paper Rack Card */
+    /* Hinoki Cypress Wood Tile Rack Card */
     .rack-card {
       background: var(--washi-sheet);
-      border: 1.2px solid var(--kraft-border);
-      border-radius: 16px;
-      padding: 8px 10px;
-      box-shadow: 0 2px 8px rgba(74, 56, 35, 0.07);
+      border: 1px solid var(--kraft-border);
+      border-radius: 13px;
+      padding: 7px 9px;
+      box-shadow: 0 2px 6px rgba(74, 56, 35, 0.06);
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 6px;
     }
     .rack-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-    }
-    .rack-title-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      padding: 0 2px;
     }
     .rack-title {
-      font-size: 10px;
-      font-weight: 800;
-      color: var(--sumi-ink);
-      letter-spacing: 0.3px;
-    }
-    .tile-count-badge {
-      background: rgba(29, 91, 143, 0.14);
-      color: var(--aizome-indigo);
+      font-family: var(--font-mono);
       font-size: 9.5px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 6px;
+      font-weight: 600;
+      color: var(--walnut-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
     }
-    .legend-group {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-    .legend-pill {
-      font-size: 8px;
-      font-weight: 700;
-      padding: 1px 4.5px;
-      border-radius: 5px;
-      border: 1px solid;
-    }
-    .legend-pill.gold {
+    .rack-skin-label {
+      font-size: 9.5px;
+      font-weight: 600;
       color: var(--kyoto-gold);
-      background: rgba(200, 125, 10, 0.12);
-      border-color: rgba(200, 125, 10, 0.45);
-    }
-    .legend-pill.indigo {
-      color: var(--aizome-indigo);
-      background: rgba(29, 91, 143, 0.12);
-      border-color: rgba(29, 91, 143, 0.45);
-    }
-    .legend-pill.vermilion {
-      color: var(--torii-vermilion);
-      background: rgba(217, 56, 30, 0.12);
-      border-color: rgba(217, 56, 30, 0.45);
     }
 
-    /* Recessed Kraft Paper Tile Tray Well */
+    /* Recessed Hinoki Cypress Wood Tile Tray Well */
     .rack-well {
-      background: rgba(231, 222, 201, 0.78);
-      border: 1px solid var(--kraft-border);
-      border-radius: 13px;
-      padding: 8px 6px;
-      min-height: 60px;
+      background: linear-gradient(180deg, #dfcfb6 0%, #e9dec9 100%);
+      border: 1px solid #c2b092;
+      border-top-color: #b09b7a;
+      box-shadow:
+        inset 0 2px 5px rgba(68, 50, 28, 0.14),
+        inset 0 -1px 0 rgba(255, 252, 245, 0.65);
+      border-radius: 10px;
+      padding: 6px 5px;
+      min-height: 54px;
       display: flex;
       flex-wrap: wrap;
-      gap: 7px;
+      gap: 6px;
       align-items: center;
       justify-content: center;
       perspective: 600px;
@@ -1438,20 +1475,21 @@
       background: var(--kraft-border);
     }
     .account-pill-btn {
-      background: rgba(21, 127, 75, 0.14);
-      border: 1px solid rgba(21, 127, 75, 0.40);
+      background: transparent;
+      border: none;
       color: var(--matcha-jade);
-      padding: 1px 7px;
-      border-radius: 6px;
+      padding: 0 2px;
       font-size: 10px;
-      font-weight: 800;
+      font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
     }
+    .account-pill-btn::before {
+      content: "· ";
+      color: var(--kraft-deep);
+    }
     .account-pill-btn.guest {
-      background: var(--kraft-card);
-      border-color: var(--kraft-border);
-      color: var(--walnut-muted);
+      color: var(--aizome-indigo);
     }
   </style>
 </head>
@@ -1463,19 +1501,17 @@
         <div class="hud-main">
           <div class="hud-left">
             <div class="hud-title-row">
-              <span class="lvl-badge" id="lvlBadge">LVL 1</span>
+              <span class="lvl-badge" id="lvlBadge">第1</span>
               <span class="hud-title" id="lvlTitle">Orbital Crossing</span>
+              <div class="combo-pill" id="comboPill">
+                <span id="comboText">×1.0</span>
+              </div>
             </div>
             <div class="hud-sub-row">
-              <span id="lvlProgress">Words 0/5 · Blanks 0/8</span>
+              <span id="lvlProgress">0/5 Words · 0/8 Blanks</span>
               <span class="coins-pill" id="coinsBadge">160 Coins</span>
-              <button class="account-pill-btn guest" id="accountPill" onclick="openLoginPage()" title="Account & Login">Guest · Login</button>
+              <button class="account-pill-btn guest" id="accountPill" onclick="openLoginPage()" title="Account & Login">Guest</button>
             </div>
-          </div>
-
-          <div class="combo-pill" id="comboPill">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-            <span id="comboText">×1.0</span>
           </div>
 
           <div class="score-box">
@@ -1484,11 +1520,17 @@
           </div>
 
           <div class="hud-actions">
-            <button class="icon-btn" id="muteBtn" onclick="toggleSoundMute()" title="Mute/Unmute Audio">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+            <button class="icon-btn" id="musicBtn" onclick="toggleChamberMusic()" title="Toggle Kyoto Chamber Music (Koto & Shakuhachi)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+            </button>
+            <button class="icon-btn" id="muteBtn" onclick="toggleSoundMute()" title="Mute/Unmute Sound Effects">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
             </button>
             <button class="icon-btn" onclick="resetLevel()" title="Reset Current Grid">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            </button>
+            <button class="icon-btn" id="fullscreenBtn" onclick="toggleFullScreen()" title="Full Screen Mobile Mode">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>
             </button>
           </div>
         </div>
@@ -1511,20 +1553,13 @@
           </div>
           <div class="mini-slots-row" id="spotlightMiniSlots"></div>
         </div>
-        <div class="status-subline" id="statusText">Drag letter tiles into open blanks to complete intersecting words!</div>
+        <div class="status-subline" id="statusText"></div>
       </div>
 
       <div class="rack-card paper-surface">
         <div class="rack-header">
-          <div class="rack-title-group">
-            <span class="rack-title">ORIGAMI PAPER RACK</span>
-            <span class="tile-count-badge" id="rackCountBadge">8 tiles</span>
-          </div>
-          <div class="legend-group">
-            <span class="legend-pill gold">◆ Crossing</span>
-            <span class="legend-pill indigo">2L/3L</span>
-            <span class="legend-pill vermilion">2W/3W</span>
-          </div>
+          <span class="rack-title" id="rackCountBadge">HINOKI TILE TRAY · 8 REMAINING</span>
+          <span class="rack-skin-label" id="rackSkinLabel">Washi Ivory</span>
         </div>
 
         <div class="rack-well" id="rackRow"></div>
@@ -1553,10 +1588,10 @@
       <div class="panel-card paper-surface">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h2 style="font-size:19px; font-weight:900;">Crossword Origami Vault (100 Levels)</h2>
-            <p style="font-size:12px; color:var(--aizome-indigo); font-weight:700;">100 Kriss-Kross Origami Puzzles Across 5 Mastery Chapters</p>
+            <h2 style="font-family:var(--font-display); font-size:22px; font-weight:700;">Crossword Origami Vault (100 Levels)</h2>
+            <p style="font-size:11.5px; color:var(--aizome-indigo); font-weight:600;">100 Kriss-Kross Origami Puzzles Across 5 Mastery Chapters</p>
           </div>
-          <span id="vaultProgressBadge" style="font-size:11.5px; font-weight:900; color:var(--matcha-jade); background:var(--matcha-tint); padding:4px 9px; border-radius:999px; border:1px solid rgba(21,127,75,0.35);">0/100 Solved</span>
+          <span id="vaultProgressBadge" style="font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--matcha-jade); background:var(--matcha-tint); padding:4px 9px; border-radius:999px; border:1px solid rgba(21,127,75,0.35);">0/100 Solved</span>
         </div>
         <div class="kit-selector" id="vaultChapterFilter" style="margin-top:6px;">
           <button type="button" class="kit-chip active" data-ch="0" onclick="setVaultChapter(0)">All (100)</button>
@@ -1570,11 +1605,21 @@
       <div id="levelsVaultList" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 
-    <!-- TAB 3: WASHI & HINOKI ACOUSTIC FOLEY WORKSHOP -->
+    <!-- TAB 3: KYOTO CHAMBER MUSIC & WASHI ACOUSTIC WORKSHOP -->
     <div class="tab-panel" id="tab-studio">
       <div class="panel-card paper-surface">
-        <h3 style="font-size:15.5px; font-weight:800;">Washi &amp; Hinoki Acoustic Workshop</h3>
-        <p style="font-size:11.5px; color:var(--walnut-muted);">Physical-modeling Japanese paper friction, cedar woodblocks, and plucked Koto harp strings:</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div>
+            <h3 style="font-family:var(--font-display); font-size:19px; font-weight:700;">Kyoto Chamber Music &amp; Foley Studio</h3>
+            <p style="font-size:11.5px; color:var(--walnut-muted);">Paulownia wood Koto plucks, Shakuhachi bamboo flute breath, and Japanese paper foley:</p>
+          </div>
+          <button type="button" class="play-btn" id="studioMusicBtn" onclick="toggleChamberMusic()" style="background:var(--kyoto-gold);">♪ Music OFF</button>
+        </div>
+        <div class="kit-selector" id="musicMoodSelector">
+          <button type="button" class="kit-chip active" data-mood="kyoto_rain" onclick="selectMusicMood('kyoto_rain')">Kyoto Rain (In-Sen)</button>
+          <button type="button" class="kit-chip" data-mood="arashiyama_breeze" onclick="selectMusicMood('arashiyama_breeze')">Arashiyama (Hirajoshi)</button>
+          <button type="button" class="kit-chip" data-mood="uji_tea_house" onclick="selectMusicMood('uji_tea_house')">Uji Tea House (Yo)</button>
+        </div>
         <div class="kit-selector" id="acousticKitSelector">
           <button type="button" class="kit-chip active" data-kit="hinoki_washi" onclick="selectAcousticKit('hinoki_washi')">Hinoki &amp; Washi</button>
           <button type="button" class="kit-chip" data-kit="kyoto_bamboo" onclick="selectAcousticKit('kyoto_bamboo')">Kyoto Bamboo</button>
@@ -1601,7 +1646,7 @@
       </div>
 
       <div class="panel-card paper-surface">
-        <h3 style="font-size:15.5px; font-weight:800;">Cosmetic Origami Tile Materials</h3>
+        <h3 style="font-family:var(--font-display); font-size:19px; font-weight:700;">Cosmetic Origami Tile Materials</h3>
         <div id="skinsList" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
     </div>
@@ -1613,7 +1658,7 @@
           <div>
             <div id="accountCardTitle" style="font-size:14px; font-weight:800; color:var(--sumi-ink);">Playing as Guest (Local Washi Mode)</div>
             <div id="accountCardSub" style="font-size:11.5px; color:var(--walnut-muted);">Sign in or create an account to save your career progress.</div>
-            <div id="accountFirebaseBadge" style="font-size:11px; font-weight:800; color:var(--aizome-indigo); margin-top:3px;">Firebase Project: gen-lang-client-0130326839 · Free-Tier Quota Guard Active (0 Idle Reads · 60 FPS)</div>
+            <div id="accountFirebaseBadge" style="font-size:11px; font-weight:700; color:var(--aizome-indigo); margin-top:3px;">Cloud Profile Sync Ready</div>
           </div>
           <button class="play-btn" id="accountCardBtn" onclick="handleAccountCardAction()">Account</button>
         </div>
@@ -1760,8 +1805,13 @@
      */
     const AudioPlayer = (() => {
       let ctx = null;
+      let masterBus = null;
       let muted = false;
       let activeKitId = "hinoki_washi";
+      let activeMoodId = "kyoto_rain";
+      let musicEnabled = false;
+      let musicTimer = null;
+      let musicStep = 0;
       const bufferCache = {};
 
       const KITS = {
@@ -1770,10 +1820,77 @@
         sumi_ceramic: { woodBaseHz: 560.0, chimeScaleRatio: 0.8909, paperPresence: 0.72 }
       };
 
+      const MOODS = {
+        kyoto_rain: {
+          // Traditional In-Sen scale (D, Eb, G, A, C)
+          kotoNotes: [146.83, 155.56, 196.00, 220.00, 261.63, 293.66, 311.13, 392.00, 440.00, 523.25],
+          fluteNotes: [293.66, 392.00, 440.00, 311.13],
+          phrases: [
+            [0, 2, 3, 5, 4, 2],
+            [3, 5, 6, 7, 5, 3],
+            [2, 4, 5, 8, 7, 5],
+            [5, 3, 2, 0, 2, 3]
+          ],
+          tempoMs: 680
+        },
+        arashiyama_breeze: {
+          // Traditional Hirajoshi scale (D, E, F, A, Bb)
+          kotoNotes: [146.83, 164.81, 174.61, 220.00, 233.08, 293.66, 329.63, 349.23, 440.00, 466.16],
+          fluteNotes: [329.63, 440.00, 349.23, 293.66],
+          phrases: [
+            [0, 1, 3, 5, 6, 3],
+            [3, 5, 7, 8, 5, 3],
+            [1, 3, 6, 5, 3, 2],
+            [5, 4, 3, 1, 0, 3]
+          ],
+          tempoMs: 620
+        },
+        uji_tea_house: {
+          // Traditional Yo pentatonic scale (D, E, G, A, B)
+          kotoNotes: [146.83, 164.81, 196.00, 220.00, 246.94, 293.66, 329.63, 392.00, 440.00, 493.88],
+          fluteNotes: [293.66, 392.00, 329.63, 440.00],
+          phrases: [
+            [0, 2, 3, 5, 7, 5],
+            [2, 3, 5, 6, 8, 5],
+            [5, 7, 8, 7, 5, 3],
+            [3, 2, 0, 2, 5, 3]
+          ],
+          tempoMs: 640
+        }
+      };
+
       function ensureCtx() {
         if (!ctx) {
           const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) ctx = new AudioCtx();
+          if (AudioCtx) {
+            ctx = new AudioCtx();
+            // Warm paulownia wood body filter + wooden chamber stereo diffusion
+            const bodyFilter = ctx.createBiquadFilter();
+            bodyFilter.type = "lowpass";
+            bodyFilter.frequency.value = 1520;
+            bodyFilter.Q.value = 0.65;
+
+            const delayL = ctx.createDelay(1.0);
+            const delayR = ctx.createDelay(1.0);
+            delayL.delayTime.value = 0.27;
+            delayR.delayTime.value = 0.41;
+
+            const fbGain = ctx.createGain();
+            fbGain.gain.value = 0.24;
+            const wetGain = ctx.createGain();
+            wetGain.gain.value = 0.26;
+
+            bodyFilter.connect(ctx.destination);
+            bodyFilter.connect(delayL);
+            delayL.connect(delayR);
+            delayR.connect(fbGain);
+            fbGain.connect(delayL);
+            delayL.connect(wetGain);
+            delayR.connect(wetGain);
+            wetGain.connect(ctx.destination);
+
+            masterBus = bodyFilter;
+          }
         }
         if (ctx && ctx.state === "suspended") ctx.resume();
         return ctx;
@@ -1788,6 +1905,149 @@
       function warmSaturate(x) {
         const c = Math.max(-2.5, Math.min(2.5, x));
         return (c * (27.0 + c * c)) / (27.0 + 9.0 * c * c);
+      }
+
+      // Synthesize a single warm silk-string Koto pluck buffer with paulownia wood resonance
+      function buildKotoNoteBuffer(audio, freqHz, durSec = 1.65) {
+        const key = `koto_${Math.round(freqHz * 10)}_${Math.round(durSec * 100)}`;
+        if (bufferCache[key]) return bufferCache[key];
+        const sr = audio.sampleRate;
+        const len = Math.floor(sr * durSec);
+        const buf = audio.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        let phase = 0.0;
+        let lp = 0.0;
+        let pickFilter = 0.0;
+
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const p = i / len;
+          const bend = 1.0 + 0.011 * Math.exp(-36.0 * t);
+          const vibrato = t > 0.18 ? 1.0 + 0.0022 * Math.sin(2.0 * Math.PI * 4.5 * (t - 0.18)) : 1.0;
+          phase += (2.0 * Math.PI * (freqHz * bend * vibrato)) / sr;
+
+          const attack = Math.min(1.0, t / 0.0045);
+          const env = attack * Math.exp(-3.1 * p);
+
+          const h1 = Math.sin(phase) * 0.64;
+          const h2 = Math.sin(phase * 2.0) * Math.exp(-2.4 * p) * 0.23;
+          const h3 = Math.sin(phase * 3.0) * Math.exp(-5.0 * p) * 0.09;
+          const sub = Math.sin(phase * 0.5) * Math.exp(-3.6 * p) * 0.14;
+
+          const raw = warmPaperNoise(i, 901);
+          pickFilter += 0.25 * (raw - pickFilter);
+          const tsume = t < 0.009 ? (raw - pickFilter) * Math.exp(-180.0 * t) * 0.14 : 0.0;
+
+          const sample = (h1 + h2 + h3 + sub) * env + tsume;
+          lp += 0.26 * (sample - lp);
+          data[i] = warmSaturate(lp * 1.1) * 0.68;
+        }
+        bufferCache[key] = buf;
+        return buf;
+      }
+
+      // Synthesize a warm, airy Shakuhachi bamboo flute swell buffer
+      function buildShakuhachiBuffer(audio, freqHz, durSec = 2.4) {
+        const key = `flute_${Math.round(freqHz * 10)}`;
+        if (bufferCache[key]) return bufferCache[key];
+        const sr = audio.sampleRate;
+        const len = Math.floor(sr * durSec);
+        const buf = audio.createBuffer(1, len, sr);
+        const data = buf.getChannelData(0);
+        let phase = 0.0;
+        let breathLp = 0.0;
+        let breathBp = 0.0;
+
+        for (let i = 0; i < len; i++) {
+          const t = i / sr;
+          const p = i / len;
+          const swell = Math.sin(Math.PI * p) * Math.sin(Math.PI * Math.min(1.0, p * 1.3));
+          const meriBend = 1.0 - 0.014 * Math.exp(-4.5 * t);
+          const vib = t > 0.45 ? 1.0 + 0.0034 * Math.sin(2.0 * Math.PI * 4.6 * (t - 0.45)) : 1.0;
+          phase += (2.0 * Math.PI * (freqHz * meriBend * vib)) / sr;
+
+          const tone = Math.sin(phase) * 0.68 + Math.sin(phase * 2.0) * 0.18 * (0.6 + 0.4 * swell);
+          const raw = warmPaperNoise(i, 743);
+          breathLp += 0.14 * (raw - breathLp);
+          breathBp += 0.08 * ((raw - breathLp) - breathBp);
+
+          data[i] = warmSaturate((tone + breathBp * 0.22) * swell * 0.42);
+        }
+        bufferCache[key] = buf;
+        return buf;
+      }
+
+      function scheduleNextChamberStep() {
+        if (!musicEnabled || muted) return;
+        const audio = ensureCtx();
+        if (!audio) return;
+
+        const mood = MOODS[activeMoodId] || MOODS.kyoto_rain;
+        const phraseIdx = Math.floor(musicStep / 6) % mood.phrases.length;
+        const noteInPhrase = musicStep % 6;
+        const scaleIdx = mood.phrases[phraseIdx][noteInPhrase];
+        const freq = mood.kotoNotes[scaleIdx % mood.kotoNotes.length];
+
+        // Play primary Koto pluck through the warm paulownia wood bus
+        const kotoBuf = buildKotoNoteBuffer(audio, freq, 1.75);
+        const src = audio.createBufferSource();
+        src.buffer = kotoBuf;
+        const gain = audio.createGain();
+        // Gentle human dynamics across the phrase
+        const dynamicGain = noteInPhrase === 0 ? 0.34 : noteInPhrase === 3 ? 0.30 : 0.22;
+        gain.gain.value = dynamicGain;
+        src.connect(gain);
+        gain.connect(masterBus || audio.destination);
+        src.start(audio.currentTime);
+
+        // On beat 0 of every phrase, pluck a warm bass Koto fifth/octave
+        if (noteInPhrase === 0) {
+          const bassBuf = buildKotoNoteBuffer(audio, mood.kotoNotes[0] * 0.5, 2.5);
+          const bassSrc = audio.createBufferSource();
+          bassSrc.buffer = bassBuf;
+          const bassGain = audio.createGain();
+          bassGain.gain.value = 0.26;
+          bassSrc.connect(bassGain);
+          bassGain.connect(masterBus || audio.destination);
+          bassSrc.start(audio.currentTime + 0.03);
+        }
+
+        // On beat 2 of every other phrase, breathe a soft Shakuhachi bamboo flute note
+        if (noteInPhrase === 2 && phraseIdx % 2 === 0) {
+          const fluteHz = mood.fluteNotes[(phraseIdx >> 1) % mood.fluteNotes.length];
+          const fluteBuf = buildShakuhachiBuffer(audio, fluteHz, 2.3);
+          const fSrc = audio.createBufferSource();
+          fSrc.buffer = fluteBuf;
+          const fGain = audio.createGain();
+          fGain.gain.value = 0.24;
+          fSrc.connect(fGain);
+          fGain.connect(masterBus || audio.destination);
+          fSrc.start(audio.currentTime + 0.08);
+        }
+
+        musicStep++;
+        // Human rubato breathing: pause slightly longer at the end of a 6-note phrase
+        const rubatoMultiplier =
+          noteInPhrase === 5 ? 1.55 :
+          noteInPhrase === 2 ? 1.18 :
+          0.92 + 0.14 * Math.sin(musicStep * 0.7);
+        const nextDelayMs = Math.round(mood.tempoMs * rubatoMultiplier);
+        musicTimer = setTimeout(scheduleNextChamberStep, nextDelayMs);
+      }
+
+      function startChamberLoop() {
+        if (musicTimer) clearTimeout(musicTimer);
+        musicTimer = null;
+        if (musicEnabled && !muted) {
+          scheduleNextChamberStep();
+        }
+      }
+
+      function stopChamberLoop() {
+        if (musicTimer) {
+          clearTimeout(musicTimer);
+          musicTimer = null;
+        }
       }
 
       function buildClickBuffer(audio, kit) {
@@ -1817,7 +2077,7 @@
           const attack = Math.min(1.0, t / 0.0018);
           const woodWave = (m1 + m2 + m3 + m4) * attack * 0.78;
 
-          data[i] = warmSaturate((woodWave + paperBrush) * 1.15) * 0.72;
+          data[i] = warmSaturate((woodWave + paperBrush) * 1.15) * 0.66;
         }
         return buf;
       }
@@ -1867,7 +2127,7 @@
             ) * env2 * 0.68;
           }
 
-          data[i] = warmSaturate((paperCrease + chime) * 1.15) * 0.82;
+          data[i] = warmSaturate((paperCrease + chime) * 1.15) * 0.78;
         }
         return buf;
       }
@@ -1907,30 +2167,28 @@
           const slideEnv = Math.sin(Math.PI * p) * Math.exp(-3.4 * p);
           const paperSlide = (raw - slideFilter) * slideEnv * 0.22 * kit.paperPresence;
 
-          data[i] = warmSaturate((knock1 + knock2 + paperSlide) * 1.25) * 0.80;
+          data[i] = warmSaturate((knock1 + knock2 + paperSlide) * 1.25) * 0.76;
         }
         return buf;
       }
 
       function buildFanfareBuffer(audio, kit) {
         const sr = audio.sampleRate;
-        const durationSec = 0.78;
+        const durationSec = 0.82;
         const len = Math.floor(sr * durationSec);
         const buf = audio.createBuffer(1, len, sr);
         const data = buf.getChannelData(0);
         const s = kit.chimeScaleRatio;
 
         const voices = [
-          { start: 0.000, dur: 0.42, freq: 293.66 * s, amp: 0.34 },
-          { start: 0.075, dur: 0.40, freq: 329.63 * s, amp: 0.32 },
-          { start: 0.150, dur: 0.42, freq: 440.00 * s, amp: 0.35 },
-          { start: 0.225, dur: 0.42, freq: 493.88 * s, amp: 0.35 },
-          { start: 0.300, dur: 0.46, freq: 587.33 * s, amp: 0.40 },
-          { start: 0.385, dur: 0.395, freq: 440.00 * s, amp: 0.26 },
-          { start: 0.385, dur: 0.395, freq: 587.33 * s, amp: 0.32 },
-          { start: 0.385, dur: 0.395, freq: 739.99 * s, amp: 0.30 },
-          { start: 0.385, dur: 0.395, freq: 880.00 * s, amp: 0.42 },
-          { start: 0.395, dur: 0.385, freq: 1174.66 * s, amp: 0.22 }
+          { start: 0.000, dur: 0.44, freq: 293.66 * s, amp: 0.34 },
+          { start: 0.082, dur: 0.42, freq: 329.63 * s, amp: 0.32 },
+          { start: 0.168, dur: 0.44, freq: 440.00 * s, amp: 0.35 },
+          { start: 0.250, dur: 0.44, freq: 493.88 * s, amp: 0.35 },
+          { start: 0.335, dur: 0.48, freq: 587.33 * s, amp: 0.40 },
+          { start: 0.415, dur: 0.40, freq: 440.00 * s, amp: 0.26 },
+          { start: 0.415, dur: 0.40, freq: 587.33 * s, amp: 0.32 },
+          { start: 0.415, dur: 0.40, freq: 880.00 * s, amp: 0.38 }
         ];
 
         for (let vIdx = 0; vIdx < voices.length; vIdx++) {
@@ -1945,31 +2203,29 @@
             if (gIdx >= len) break;
             const localT = i / sr;
             const localP = i / Math.max(1, noteSamples);
-            const pluckBend = 1.0 + 0.018 * Math.exp(-45.0 * localT);
-            const vibrato = localT > 0.09 ? 1.0 + 0.0032 * Math.sin(2.0 * Math.PI * 5.4 * (localT - 0.09)) : 1.0;
+            const pluckBend = 1.0 + 0.015 * Math.exp(-42.0 * localT);
+            const vibrato = localT > 0.09 ? 1.0 + 0.003 * Math.sin(2.0 * Math.PI * 5.0 * (localT - 0.09)) : 1.0;
             const instFreq = v.freq * pluckBend * vibrato;
             phase += (2.0 * Math.PI * instFreq) / sr;
 
-            const attack = Math.min(1.0, localT / 0.0022);
-            const env = attack * Math.exp(-3.6 * localP);
+            const attack = Math.min(1.0, localT / 0.003);
+            const env = attack * Math.exp(-3.4 * localP);
 
-            const h1 = Math.sin(phase) * 0.56;
-            const h2 = Math.sin(phase * 2.0) * Math.exp(-2.8 * localP) * 0.25;
-            const h3 = Math.sin(phase * 3.0) * Math.exp(-5.2 * localP) * 0.12;
-            const h4 = Math.sin(phase * 4.0) * Math.exp(-8.5 * localP) * 0.05;
-            const bell = Math.sin(phase * 2.756) * Math.exp(-9.5 * localP) * 0.04;
+            const h1 = Math.sin(phase) * 0.60;
+            const h2 = Math.sin(phase * 2.0) * Math.exp(-2.8 * localP) * 0.24;
+            const h3 = Math.sin(phase * 3.0) * Math.exp(-5.2 * localP) * 0.10;
 
             const raw = warmPaperNoise(i, 300 + vIdx * 19);
-            pickFilter += 0.35 * (raw - pickFilter);
-            const pickScrape = localT < 0.011 ? (raw - pickFilter) * Math.exp(-180.0 * localT) * 0.28 * kit.paperPresence : 0.0;
+            pickFilter += 0.30 * (raw - pickFilter);
+            const pickScrape = localT < 0.010 ? (raw - pickFilter) * Math.exp(-180.0 * localT) * 0.22 * kit.paperPresence : 0.0;
 
-            data[gIdx] += ((h1 + h2 + h3 + h4 + bell) * env + pickScrape) * v.amp;
+            data[gIdx] += ((h1 + h2 + h3) * env + pickScrape) * v.amp;
           }
         }
 
         for (let i = 0; i < len; i++) {
           const fadeOut = i > len - 600 ? (len - i) / 600.0 : 1.0;
-          data[i] = warmSaturate(data[i] * fadeOut * 1.12) * 0.86;
+          data[i] = warmSaturate(data[i] * fadeOut * 1.1) * 0.82;
         }
         return buf;
       }
@@ -1989,7 +2245,36 @@
 
       return {
         isMuted: () => muted,
-        setMuted: (m) => { muted = !!m; },
+        setMuted: (m) => {
+          muted = !!m;
+          if (muted) stopChamberLoop();
+          else if (musicEnabled) startChamberLoop();
+        },
+        isMusicPlaying: () => musicEnabled && !muted,
+        toggleMusic: () => {
+          musicEnabled = !musicEnabled;
+          if (musicEnabled) {
+            muted = false;
+            ensureCtx();
+            startChamberLoop();
+          } else {
+            stopChamberLoop();
+          }
+          return musicEnabled;
+        },
+        getMusicMood: () => activeMoodId,
+        setMusicMood: (moodId) => {
+          if (MOODS[moodId]) {
+            activeMoodId = moodId;
+            musicStep = 0;
+            if (!musicEnabled) {
+              musicEnabled = true;
+              muted = false;
+            }
+            ensureCtx();
+            startChamberLoop();
+          }
+        },
         getKit: () => activeKitId,
         setKit: (kitId) => {
           if (KITS[kitId]) activeKitId = kitId;
@@ -2002,22 +2287,85 @@
           if (!buf) return;
           const src = audio.createBufferSource();
           src.buffer = buf;
-          src.playbackRate.value = Math.max(0.8, Math.min(1.42, playbackRate));
-          src.connect(audio.destination);
+          src.playbackRate.value = Math.max(0.84, Math.min(1.28, playbackRate));
+          src.connect(masterBus || audio.destination);
           src.start(audio.currentTime + Math.max(0, delaySec));
         },
         playFoldCascade: (wordLength = 5, combo = 1) => {
           if (muted) return;
-          const steps = Math.min(6, Math.max(2, wordLength));
-          const pentatonicRatios = [1.0, 1.122, 1.26, 1.498, 1.682, 2.0];
-          const baseBoost = 1.0 + Math.min(0.18, (combo - 1) * 0.05);
-          for (let i = 0; i < steps; i++) {
-            const rate = pentatonicRatios[i % pentatonicRatios.length] * baseBoost;
-            AudioPlayer.play(i === steps - 1 ? "snap" : "click", rate, i * 0.052);
-          }
+          const audio = ensureCtx();
+          if (!audio) return;
+          // Play a warm, human-strummed 3-note Koto chord in the active Japanese pentatonic mode
+          const mood = MOODS[activeMoodId] || MOODS.kyoto_rain;
+          const baseIdx = Math.min(4, Math.max(0, combo - 1));
+          const chordIndices = [baseIdx, baseIdx + 2, baseIdx + 4];
+          chordIndices.forEach((idx, i) => {
+            const hz = mood.kotoNotes[idx % mood.kotoNotes.length];
+            const kotoBuf = buildKotoNoteBuffer(audio, hz, 1.35);
+            const src = audio.createBufferSource();
+            src.buffer = kotoBuf;
+            const g = audio.createGain();
+            g.gain.value = 0.28;
+            src.connect(g);
+            g.connect(masterBus || audio.destination);
+            src.start(audio.currentTime + i * 0.068);
+          });
         }
       };
     })();
+
+    function syncMusicButtonsUI() {
+      const playing = AudioPlayer.isMusicPlaying();
+      const hudBtn = document.getElementById("musicBtn");
+      if (hudBtn) {
+        hudBtn.classList.toggle("active-toggle", playing);
+      }
+      const studioBtn = document.getElementById("studioMusicBtn");
+      if (studioBtn) {
+        studioBtn.textContent = playing ? "♪ Music ON" : "♪ Music OFF";
+        studioBtn.style.background = playing ? "var(--matcha-jade)" : "var(--kyoto-gold)";
+      }
+    }
+
+    function toggleChamberMusic() {
+      AudioPlayer.toggleMusic();
+      syncMusicButtonsUI();
+    }
+
+    function selectMusicMood(moodId) {
+      AudioPlayer.setMusicMood(moodId);
+      document.querySelectorAll("#musicMoodSelector .kit-chip").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-mood") === moodId);
+      });
+      syncMusicButtonsUI();
+    }
+
+    function toggleFullScreen() {
+      AudioPlayer.play("click");
+      const docEl = document.documentElement;
+      const isNativeFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      const isBodyFs = document.body.classList.contains("fullscreen-mode");
+      const nextFs = !isBodyFs;
+
+      document.body.classList.toggle("fullscreen-mode", nextFs);
+      const fsBtn = document.getElementById("fullscreenBtn");
+      if (fsBtn) {
+        fsBtn.classList.toggle("active-toggle", nextFs);
+        fsBtn.innerHTML = nextFs
+          ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"></path><path d="M21 8h-3a2 2 0 0 1-2-2V3"></path><path d="M3 16h3a2 2 0 0 1 2 2v3"></path><path d="M16 21v-3a2 2 0 0 1 2-2h3"></path></svg>`
+          : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>`;
+      }
+
+      try {
+        if (nextFs && !isNativeFs) {
+          if (docEl.requestFullscreen) docEl.requestFullscreen().catch(() => {});
+          else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+        } else if (!nextFs && isNativeFs) {
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+      } catch (e) {}
+    }
 
     function selectAcousticKit(kitId) {
       AudioPlayer.setKit(kitId);
@@ -2983,6 +3331,7 @@
 
       const boardFrame = document.getElementById("boardFrame");
       boardFrame.style.setProperty("--board-aspect", `${bounds.cols} / ${bounds.rows}`);
+      boardFrame.style.setProperty("--board-aspect-num", (bounds.cols / bounds.rows).toFixed(3));
       boardFrame.style.aspectRatio = `${bounds.cols} / ${bounds.rows}`;
 
       const grid = document.getElementById("boardGrid");
@@ -3093,18 +3442,18 @@
 
     function render() {
       const tpl = state.tpl;
-      document.getElementById("lvlBadge").textContent = `LVL ${tpl.level}`;
+      document.getElementById("lvlBadge").textContent = `第${tpl.level}`;
       document.getElementById("lvlTitle").textContent = tpl.title;
       const totalBlanks = state.cells.flat().filter(c => c.isBlank).length;
       const filledBlanks = state.cells.flat().filter(c => c.isBlank && c.placed).length;
-      document.getElementById("lvlProgress").textContent = `Words ${state.completedWords.size}/${tpl.words.length} · Blanks ${filledBlanks}/${totalBlanks}`;
+      document.getElementById("lvlProgress").textContent = `${state.completedWords.size}/${tpl.words.length} Words · ${filledBlanks}/${totalBlanks} Blanks`;
       document.getElementById("coinsBadge").textContent = `${state.coins} Coins`;
 
       const progressPct = totalBlanks > 0 ? Math.round((filledBlanks / totalBlanks) * 100) : 0;
       document.getElementById("hudProgressBar").style.width = `${progressPct}%`;
 
       const comboPill = document.getElementById("comboPill");
-      comboPill.className = "combo-pill" + (state.mult >= 2.0 ? " high" : "");
+      comboPill.className = "combo-pill" + (state.mult > 1.0 ? " visible" : "");
       document.getElementById("comboText").textContent = `×${state.mult.toFixed(1)}`;
       document.getElementById("scoreVal").textContent = `${state.score} PTS`;
       document.getElementById("totalScoreVal").textContent = `Career ${state.careerScore}`;
@@ -3146,7 +3495,10 @@
       renderBoard();
 
       // Rack Header & Buttons
-      document.getElementById("rackCountBadge").textContent = `${state.rack.length} tiles`;
+      document.getElementById("rackCountBadge").textContent = `HINOKI TILE TRAY · ${state.rack.length} REMAINING`;
+      const activeSkin = SKINS.find(s => s.id === state.equippedSkinId) || SKINS[0];
+      const skinLabelEl = document.getElementById("rackSkinLabel");
+      if (skinLabelEl && activeSkin) skinLabelEl.textContent = activeSkin.name;
       document.getElementById("hintBtnText").textContent = `Smart Hint (${state.hintsRemaining})`;
       document.getElementById("hintBtn").disabled = state.hintsRemaining <= 0 || state.rack.length === 0;
       const hasUnlockedPlaced = state.cells.flat().some(c => c.isBlank && c.placed && !c.locked);
@@ -3228,8 +3580,9 @@
       const nextMuted = !AudioPlayer.isMuted();
       AudioPlayer.setMuted(nextMuted);
       document.getElementById("muteBtn").innerHTML = nextMuted
-        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`
-        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>`;
+        ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`
+        : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>`;
+      syncMusicButtonsUI();
       if (!nextMuted) AudioPlayer.play("click");
     }
 
@@ -3680,22 +4033,22 @@
         const label = authUser.displayName || (authUser.email && authUser.email.split("@")[0]) || "Account";
         const uid = authUser.firebaseUid || ("usr_" + label.toLowerCase());
         pill.className = "account-pill-btn";
-        pill.textContent = `● ${label}`;
+        pill.textContent = label;
         if (titleEl) titleEl.textContent = `Signed in: ${label} (${authUser.email || "Origami Account"})`;
         if (subEl) subEl.textContent = `Career Score: ${state.careerScore} PTS · Origami Coins: ${state.coins} Coins`;
         if (fbBadge) {
           fbBadge.style.color = "var(--matcha-jade)";
-          fbBadge.textContent = `Synced to Firebase Firestore ✓ (users/${uid})`;
+          fbBadge.textContent = `Synced to Cloud Profile ✓ (users/${uid})`;
         }
         if (btnEl) btnEl.textContent = "Sign Out";
       } else {
         pill.className = "account-pill-btn guest";
-        pill.textContent = "Guest · Account";
+        pill.textContent = "Guest";
         if (titleEl) titleEl.textContent = "Playing as Guest (Local Washi Mode)";
         if (subEl) subEl.textContent = "Create an account (or optionally link Gmail) to save your career progress.";
         if (fbBadge) {
           fbBadge.style.color = "var(--aizome-indigo)";
-          fbBadge.textContent = "Firebase Project: gen-lang-client-0130326839 · Ready to Register";
+          fbBadge.textContent = "Cloud Profile Sync Ready";
         }
         if (btnEl) btnEl.textContent = "Create Account";
       }
