@@ -97,6 +97,7 @@ import com.example.domain.model.PuzzleState
 import com.example.domain.model.Tile
 import com.example.domain.model.TileBonusEffect
 import com.example.domain.model.WordDirection
+import com.example.ui.screens.FullScreenOrigamiCraneFlightOverlay
 import com.example.ui.theme.CeladonJade
 import com.example.ui.theme.CompletedWordBg
 import com.example.ui.theme.IndigoCard
@@ -398,6 +399,20 @@ fun LexiFillDraggableRack(
       label = "shuffle_btn_spin",
     )
 
+  // Shared single-clock phase for subtle continuous idle paper float across all rack tiles
+  val rackInfinite = rememberInfiniteTransition(label = "rack_idle_float_clock")
+  val idleFloatPhase by
+    rackInfinite.animateFloat(
+      initialValue = 0f,
+      targetValue = (2.0 * PI).toFloat(),
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(durationMillis = 3200, easing = LinearEasing),
+          repeatMode = RepeatMode.Restart,
+        ),
+      label = "rack_idle_float_phase",
+    )
+
   Surface(
     modifier =
       modifier
@@ -473,6 +488,7 @@ fun LexiFillDraggableRack(
                 SpringDraggableRackTile(
                   tile = tile,
                   tileIndex = index,
+                  idleFloatPhase = idleFloatPhase,
                   shuffleGeneration = shuffleGeneration,
                   isSelected = tile.id == selectedTileId,
                   skin = equippedSkin,
@@ -583,6 +599,7 @@ private fun LegendMiniPill(label: String, color: Color) {
 private fun SpringDraggableRackTile(
   tile: Tile,
   tileIndex: Int,
+  idleFloatPhase: Float,
   shuffleGeneration: Int,
   isSelected: Boolean,
   skin: CosmeticTileSkin,
@@ -753,13 +770,20 @@ private fun SpringDraggableRackTile(
         Modifier.graphicsLayer {
             val combinedScale = scaleState.value * shufflePopScale.value
             val selectedLiftY = if (isSelected && !isDragging) -8f else 0f
+            val waveArg = (idleFloatPhase + tileIndex * 0.85f).toDouble()
+            val idleBobY = if (!isDragging && !isSelected) (sin(waveArg) * 3.2f).toFloat() else 0f
+            val idleRockZ = if (!isDragging && !isSelected) (cos(waveArg) * 1.35f).toFloat() else 0f
             translationX = dragOffset.value.x + magneticPullOffset.value.x + shuffleOffset.value.x
             translationY =
-              dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y + selectedLiftY
+              dragOffset.value.y +
+                magneticPullOffset.value.y +
+                shuffleOffset.value.y +
+                selectedLiftY +
+                idleBobY
             scaleX = combinedScale
             scaleY = combinedScale
             rotationZ =
-              if (isDragging) tiltZ.value else shuffleTiltZ.value
+              if (isDragging) tiltZ.value else (shuffleTiltZ.value + idleRockZ)
             rotationX = if (isDragging) (-dragVelocity.y * 0.25f).coerceIn(-10f, 10f) else 0f
             rotationY =
               if (isDragging) (dragVelocity.x * 0.25f).coerceIn(-10f, 10f) + shuffleFlipY.value
@@ -1137,6 +1161,14 @@ fun LevelClearFanfareOverlay(
             }
           }
         }
+      }
+
+      if (summary.completedChapterId != null) {
+        FullScreenOrigamiCraneFlightOverlay(
+          chapterId = summary.completedChapterId,
+          triggerCount = 1,
+          modifier = Modifier.fillMaxSize(),
+        )
       }
     }
   }

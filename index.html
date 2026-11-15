@@ -354,7 +354,8 @@
     .clue-chip.folding-out {
       pointer-events: none;
       overflow: hidden;
-      animation: clueOrigamiFoldOut 0.44s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      min-width: 0 !important;
+      animation: clueOrigamiFoldOut 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
     }
     .clue-chip.folded-hidden {
       display: none !important;
@@ -365,22 +366,19 @@
         background: var(--completed-word-bg);
         border-color: var(--matcha-jade);
         opacity: 1;
-        min-width: 158px;
-        max-width: 240px;
       }
-      45% {
-        transform: perspective(520px) rotateX(-76deg) scaleY(0.25);
-        background: var(--completed-word-bg);
+      48% {
+        transform: perspective(520px) rotateX(-78deg) scaleY(0.22);
+        background: #c8ebd6;
         border-color: var(--matcha-jade);
-        opacity: 0.85;
-        min-width: 110px;
-        max-width: 140px;
+        opacity: 0.90;
       }
       100% {
         transform: perspective(520px) rotateX(-90deg) scaleY(0);
         opacity: 0;
-        min-width: 0px;
-        max-width: 0px;
+        width: 0px !important;
+        min-width: 0px !important;
+        max-width: 0px !important;
         padding-left: 0px;
         padding-right: 0px;
         padding-top: 0px;
@@ -499,7 +497,6 @@
       position: relative;
       transform-origin: center center;
       backface-visibility: hidden;
-      contain: layout style paint;
     }
     .cell-char {
       display: inline-block;
@@ -660,7 +657,7 @@
       overflow: hidden;
     }
 
-    /* 4. Completed & Locked Word Cell (Folded Sage Matcha Paper + Static Washi Grain Texture) */
+    /* 4. Completed & Locked Word Cell (Folded Sage Matcha Paper + Animated Washi Grain Shader) */
     .cell.locked {
       background: linear-gradient(180deg, #e2f5ea 0%, #d1ebd9 100%);
       border: 1.6px solid var(--completed-word-border);
@@ -671,13 +668,20 @@
     .cell.locked::before {
       content: "";
       position: absolute;
-      inset: 0;
+      inset: -16px;
       pointer-events: none;
       background-image: var(--locked-washi-shader-url, var(--washi-grain-url, none));
       background-size: 64px 64px;
       background-repeat: repeat;
-      opacity: 0.72;
+      opacity: 0.76;
       z-index: 1;
+      will-change: transform;
+      animation: washiGrainShimmer 5.6s linear infinite;
+    }
+    @keyframes washiGrainShimmer {
+      0% { transform: translate3d(0px, 0px, 0); }
+      50% { transform: translate3d(8px, -6px, 0); }
+      100% { transform: translate3d(16px, 0px, 0); }
     }
     .cell.locked .dog-ear {
       background: rgba(21, 127, 75, 0.28);
@@ -686,11 +690,12 @@
 
     .cell.snapped {
       will-change: transform;
-      animation: tileSnapSquash 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: tileSnapSquash 0.30s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
     @keyframes tileSnapSquash {
-      0% { transform: scale3d(1.18, 1.18, 1); }
-      40% { transform: scale3d(1.06, 0.92, 1); }
+      0% { transform: scale3d(1.24, 1.24, 1); }
+      40% { transform: scale3d(1.10, 0.88, 1); }
+      72% { transform: scale3d(0.96, 1.05, 1); }
       100% { transform: scale3d(1, 1, 1); }
     }
 
@@ -698,7 +703,7 @@
     .cell.paper-fold {
       z-index: 8;
       will-change: transform;
-      animation: origamiPaperFold 0.44s cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0ms) both;
+      animation: origamiPaperFold 0.52s cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0ms) both;
     }
     .cell.paper-fold::after {
       content: "";
@@ -706,30 +711,35 @@
       left: 6%;
       right: 6%;
       top: 50%;
-      height: 1.5px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.92), rgba(21, 127, 75, 0.48), rgba(255, 255, 255, 0));
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.96), rgba(21, 127, 75, 0.58), rgba(255, 255, 255, 0));
       transform: translateY(-50%) scaleX(0.2);
       opacity: 0;
       pointer-events: none;
-      animation: origamiCreaseHighlight 0.44s ease-out var(--fold-delay, 0ms) both;
+      z-index: 4;
+      animation: origamiCreaseHighlight 0.52s ease-out var(--fold-delay, 0ms) both;
     }
     @keyframes origamiPaperFold {
       0% {
-        transform: perspective(550px) rotateX(0deg) scale3d(1, 1, 1);
+        transform: perspective(520px) rotateX(0deg) scale3d(1, 1, 1);
+        background: linear-gradient(180deg, #f2ead9 0%, #e4d8c3 100%);
       }
       42% {
-        transform: perspective(550px) rotateX(68deg) scale3d(0.94, 0.28, 1);
+        transform: perspective(520px) rotateX(74deg) scale3d(0.92, 0.22, 1);
+        background: linear-gradient(180deg, #cbead6 0%, #b5e0c5 100%);
       }
       76% {
-        transform: perspective(550px) rotateX(-6deg) scale3d(1.03, 1.03, 1);
+        transform: perspective(520px) rotateX(-8deg) scale3d(1.05, 1.05, 1);
+        background: linear-gradient(180deg, #e2f5ea 0%, #d1ebd9 100%);
       }
       100% {
-        transform: perspective(550px) rotateX(0deg) scale3d(1, 1, 1);
+        transform: perspective(520px) rotateX(0deg) scale3d(1, 1, 1);
+        background: linear-gradient(180deg, #e2f5ea 0%, #d1ebd9 100%);
       }
     }
     @keyframes origamiCreaseHighlight {
       0%, 15% { opacity: 0; transform: translateY(-50%) scaleX(0.25); }
-      42% { opacity: 0.95; transform: translateY(-50%) scaleX(1); }
+      42% { opacity: 0.98; transform: translateY(-50%) scaleX(1); }
       85%, 100% { opacity: 0; transform: translateY(-50%) scaleX(0.6); }
     }
 
@@ -1008,14 +1018,20 @@
       box-shadow: 0 2px 4px rgba(74, 56, 35, 0.14);
       backface-visibility: hidden;
       transform: translate3d(0, 0, 0);
-      transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.12s ease;
+      will-change: transform;
+      transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.14s ease, box-shadow 0.14s ease;
+    }
+    .tile:not(.selected):not(.shuffling):not(.dragging-source) {
+      animation: idlePaperFloat 3.2s ease-in-out infinite;
+      animation-delay: calc(var(--tile-idx, 0) * -0.38s);
     }
     .tile.shuffling {
-      animation: origamiShuffleFlip 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+      animation: origamiShuffleFlip 0.40s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
       animation-delay: var(--shuf-delay, 0ms) !important;
     }
     .tile.selected {
-      transform: translate3d(0, -5px, 0) scale(1.09);
+      animation: none !important;
+      transform: translate3d(0, -6px, 0) scale(1.10);
       border: 2.2px solid var(--kyoto-gold);
       box-shadow: 0 5px 10px rgba(200, 125, 10, 0.24);
     }
@@ -2954,10 +2970,12 @@
       state.rack.splice(tileIdx, 1);
       if (cell.placed) state.rack.push(cell.placed);
       cell.placed = tile;
-      cell.snapped = true;
+      const nowPerf = performance.now();
+      cell.snappedUntil = nowPerf + 320;
       state.selectedTileId = null;
 
       let newlyDone = [];
+      let maxFoldDelay = 0;
       state.tpl.words.forEach(w => {
         if (!state.completedWords.has(w.id) && wordPattern(w) === w.word) {
           state.completedWords.add(w.id);
@@ -2965,12 +2983,17 @@
           for (let i = 0; i < w.word.length; i++) {
             const cx = w.dir === "H" ? w.sx + i : w.sx;
             const cy = w.dir === "H" ? w.sy : w.sy + i;
+            const delayMs = i * 55;
+            if (delayMs > maxFoldDelay) maxFoldDelay = delayMs;
             state.cells[cy][cx].locked = true;
-            state.cells[cy][cx].flash = true;
-            state.cells[cy][cx].foldDelay = i * 55;
+            state.cells[cy][cx].foldDelay = delayMs;
+            state.cells[cy][cx].foldUntil = nowPerf + 560 + delayMs;
           }
         }
       });
+      setTimeout(() => {
+        if (state) renderBoard();
+      }, newlyDone.length > 0 ? 580 + maxFoldDelay : 340);
 
       state.combo += 1 + newlyDone.length;
       state.maxCombo = Math.max(state.maxCombo, state.combo);
@@ -3434,10 +3457,12 @@
     }
 
     let clueDomMap = new Map();
+    let rackDomMap = new Map();
 
     function initClueStripDomForLevel() {
       const strip = document.getElementById("cluesStrip");
       clueDomMap = new Map();
+      rackDomMap = new Map();
       const frag = document.createDocumentFragment();
       state.tpl.words.forEach(w => {
         const chip = document.createElement("div");
@@ -3553,6 +3578,7 @@
         }
       }
 
+      const nowPerf = performance.now();
       for (let y = bounds.minY; y <= bounds.maxY; y++) {
         for (let x = bounds.minX; x <= bounds.maxX; x++) {
           const c = state.cells[y][x];
@@ -3561,7 +3587,8 @@
           const isHint = Boolean(state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y);
           const inCorridor = focusedCoords.has(`${x},${y}`);
           const isKbFocused = Boolean(state.focusedCell && state.focusedCell.x === x && state.focusedCell.y === y);
-          const isFolding = Boolean(c.flash && c.locked);
+          const isFolding = Boolean(c.locked && c.foldUntil && nowPerf < c.foldUntil);
+          const isSnapped = Boolean(!isFolding && c.snappedUntil && nowPerf < c.snappedUntil);
 
           let nextCls = "";
           let nextContentKey = "";
@@ -3583,7 +3610,7 @@
               "cell placed" +
               (c.locked ? " locked" : "") +
               (isFolding ? " paper-fold" : "") +
-              (c.snapped && !isFolding ? " snapped" : "") +
+              (isSnapped ? " snapped" : "") +
               (inCorridor ? " corridor" : "") +
               (isKbFocused ? " kb-focused" : "");
             nextContentKey = `P:${c.placed.char}:${c.placed.pts}`;
@@ -3615,10 +3642,6 @@
             el.innerHTML = nextHtml;
             c._contentKey = nextContentKey;
           }
-
-          c.flash = false;
-          c.foldDelay = 0;
-          c.snapped = false;
         }
       }
       updateSpotlightBanner();
@@ -3658,14 +3681,22 @@
         if (done) {
           if (!state.foldedOutWords.has(w.id)) {
             state.foldedOutWords.add(w.id);
+            const measuredW = chip.offsetWidth || 175;
+            chip.style.width = `${measuredW}px`;
+            chip.style.maxWidth = `${measuredW}px`;
+            chip.style.minWidth = "0px";
+            void chip.offsetWidth;
             chip.className = "clue-chip done folding-out";
             setTimeout(() => {
               if (state && state.completedWords.has(w.id)) {
                 chip.classList.add("folded-hidden");
               }
-            }, 440);
+            }, 490);
           }
         } else {
+          chip.style.width = "";
+          chip.style.maxWidth = "";
+          chip.style.minWidth = "";
           chip.className = "clue-chip" + (focused ? " focused" : "");
         }
       });
@@ -3687,31 +3718,48 @@
       const hasUnlockedPlaced = state.cells.flat().some(c => c.isBlank && c.placed && !c.locked);
       document.getElementById("recallBtn").style.display = hasUnlockedPlaced ? "flex" : "none";
 
-      // Rack Tiles (Clean GPU-composited tiles without heavy pseudo-element filters)
+      // Persistent DOM Rack Tiles (Preserves CSS Transitions, Idle Paper Float & 3D Shuffle Flip!)
       const rackRow = document.getElementById("rackRow");
       if (state.rack.length === 0) {
+        rackDomMap.clear();
         rackRow.innerHTML = `<div style="color:var(--matcha-jade); font-weight:800; font-size:13px; padding:8px;">✓ All origami folds complete! Level Solved!</div>`;
       } else {
-        const rackFrag = document.createDocumentFragment();
+        if (rackRow.firstElementChild && !rackRow.firstElementChild.classList.contains("tile")) {
+          rackRow.innerHTML = "";
+        }
+        const activeIds = new Set(state.rack.map(t => t.id));
+        for (const [tid, domEl] of rackDomMap.entries()) {
+          if (!activeIds.has(tid)) {
+            domEl.remove();
+            rackDomMap.delete(tid);
+          }
+        }
         state.rack.forEach((t, idx) => {
-          const tel = document.createElement("div");
-          tel.dataset.tileId = t.id;
-          tel.className =
-            "tile" +
-            (state.selectedTileId === t.id ? " selected" : "") +
-            (isShufflingAnim ? " shuffling" : "");
+          let tel = rackDomMap.get(t.id);
+          if (!tel) {
+            tel = document.createElement("div");
+            tel.dataset.tileId = t.id;
+            tel.className = "tile";
+            tel.innerHTML = `<div class="dog-ear"></div>${t.char}<span class="pts-sub">${t.pts}</span>`;
+            tel.onpointerdown = e => startTilePointerDrag(e, t, tel);
+            rackDomMap.set(t.id, tel);
+          }
+          tel.style.setProperty("--tile-idx", idx);
+          tel.classList.toggle("selected", state.selectedTileId === t.id);
           if (isShufflingAnim) {
             const dirSign = idx % 2 === 0 ? 1 : -1;
             tel.style.setProperty("--shuf-x", `${dirSign * (14 + (idx % 3) * 7)}px`);
             tel.style.setProperty("--shuf-y", `${-16 - (idx % 4) * 5}px`);
             tel.style.setProperty("--shuf-rot", `${dirSign * 15}deg`);
             tel.style.setProperty("--shuf-delay", `${(idx % 8) * 22}ms`);
+            tel.classList.remove("shuffling");
+            void tel.offsetWidth;
+            tel.classList.add("shuffling");
           }
-          tel.innerHTML = `<div class="dog-ear"></div>${t.char}<span class="pts-sub">${t.pts}</span>`;
-          tel.onpointerdown = e => startTilePointerDrag(e, t, tel);
-          rackFrag.appendChild(tel);
+          if (rackRow.children[idx] !== tel) {
+            rackRow.insertBefore(tel, rackRow.children[idx] || null);
+          }
         });
-        rackRow.replaceChildren(rackFrag);
       }
     }
 
@@ -3725,7 +3773,8 @@
       render();
       setTimeout(() => {
         isShufflingAnim = false;
-      }, 400);
+        document.querySelectorAll("#rackRow .tile.shuffling").forEach(el => el.classList.remove("shuffling"));
+      }, 460);
     }
 
     function triggerSmartHint() {
@@ -3794,7 +3843,300 @@
       return getSolvedCountInChapter(chId) >= 20;
     }
 
-    function triggerChapterHeaderFoldAnimation(chId) {
+    /**
+     * Multi-Faceted Japanese Paper-Origami Crane (Orizuru) 2D Canvas Renderer.
+     * Unfolds step-by-step from a creased square/diamond petal base (`unfoldT = 0`) into a 3D
+     * soaring crane (`unfoldT = 1`) with articulated wing-flapping (`flapPhase`), slender neck &
+     * reverse-folded beak head, elevated tail spire, and gilded mountain/valley crease highlights.
+     */
+    function drawUnfoldingOrigamiCrane2D(
+      ctx,
+      cx,
+      cy,
+      r,
+      unfoldT,
+      flapPhase,
+      primaryCol,
+      secondaryCol,
+      alpha,
+      headingDeg
+    ) {
+      const u = Math.max(0, Math.min(1, unfoldT));
+      const petalStage = Math.max(0, Math.min(1, u / 0.35));
+      const neckTailUnfold = Math.max(0, Math.min(1, (u - 0.22) / 0.55));
+      const wingUnfold = Math.max(0, Math.min(1, (u - 0.36) / 0.64));
+      const flapLift = Math.sin(flapPhase) * wingUnfold;
+      const a = Math.max(0, Math.min(1, alpha));
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((headingDeg * Math.PI) / 180);
+
+      // 1. Far Wing (Back Wing) — unfolds outward & flaps with 2-tone underside depth
+      if (wingUnfold > 0.02) {
+        const farWingTipX = -r * (0.18 + 0.52 * wingUnfold);
+        const farWingTipY = -r * (0.32 + 0.78 * wingUnfold - 0.36 * flapLift);
+        ctx.globalAlpha = a * 0.86;
+        ctx.fillStyle = secondaryCol;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.24, -r * 0.04);
+        ctx.lineTo(farWingTipX, farWingTipY);
+        ctx.lineTo(r * 0.26, -r * 0.06);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 2. Slender Forward Neck & Reverse-Folded Head Beak
+      if (neckTailUnfold > 0.02) {
+        const neckTipX = -r * (0.28 + 0.64 * neckTailUnfold);
+        const neckTipY = -r * (0.12 + 0.68 * neckTailUnfold);
+        ctx.globalAlpha = a * 0.95;
+        ctx.fillStyle = primaryCol;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.14, r * 0.16);
+        ctx.lineTo(neckTipX, neckTipY);
+        ctx.lineTo(-r * 0.32, -r * 0.02);
+        ctx.closePath();
+        ctx.fill();
+
+        const beakExtend = Math.max(0, Math.min(1, (u - 0.52) / 0.48));
+        if (beakExtend > 0.02) {
+          const beakTipX = neckTipX - r * (0.34 * beakExtend);
+          const beakTipY = neckTipY + r * (0.16 * beakExtend);
+          ctx.globalAlpha = a;
+          ctx.fillStyle = secondaryCol;
+          ctx.beginPath();
+          ctx.moveTo(neckTipX, neckTipY);
+          ctx.lineTo(beakTipX, beakTipY);
+          ctx.lineTo(neckTipX + r * 0.12, neckTipY + r * 0.14);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // 3. Elevated Tail Spire
+      if (neckTailUnfold > 0.02) {
+        const tailTipX = r * (0.28 + 0.68 * neckTailUnfold);
+        const tailTipY = -r * (0.14 + 0.66 * neckTailUnfold);
+        ctx.globalAlpha = a * 0.92;
+        ctx.fillStyle = secondaryCol;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.14, r * 0.16);
+        ctx.lineTo(tailTipX, tailTipY);
+        ctx.lineTo(r * 0.32, -r * 0.02);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 4. Central Origami Diamond Body / Dorsal Pyramid
+      const cornerPinch = 1 - 0.45 * petalStage;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = primaryCol;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.36);
+      ctx.lineTo(-r * 0.46 * cornerPinch, r * 0.04);
+      ctx.lineTo(0, r * 0.36 * cornerPinch);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.globalAlpha = a * 0.9;
+      ctx.fillStyle = secondaryCol;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.36);
+      ctx.lineTo(r * 0.46 * cornerPinch, r * 0.04);
+      ctx.lineTo(0, r * 0.36 * cornerPinch);
+      ctx.closePath();
+      ctx.fill();
+
+      // 5. Near Wing (Foreground Articulated Wing — sweeps down and up with wing-beat flap)
+      if (wingUnfold > 0.02) {
+        const nearWingTipX = r * (0.1 * wingUnfold);
+        const nearWingTipY = -r * (0.28 + 0.84 * wingUnfold * (0.55 + 0.45 * flapLift));
+        ctx.globalAlpha = a;
+        ctx.fillStyle = primaryCol;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.32, r * 0.04);
+        ctx.lineTo(nearWingTipX, nearWingTipY);
+        ctx.lineTo(r * 0.32, r * 0.04);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 6. Crisp White/Gold Mountain & Valley Crease Highlights
+      ctx.globalAlpha = a * 0.82;
+      ctx.strokeStyle = "#fffcf5";
+      ctx.lineWidth = Math.max(1, r * 0.075);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.32, r * 0.04);
+      ctx.lineTo(r * 0.32, r * 0.04);
+      ctx.moveTo(0, -r * 0.36);
+      ctx.lineTo(0, r * 0.32 * cornerPinch);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    /**
+     * Full-Screen Paper-Origami Crane Unfolding & Flight Particle Effect Overlay.
+     * Unfolds a centerpiece golden Orizuru crane surrounded by a shimmering paper-crease halo,
+     * accompanied by a flock of 18 articulated paper-origami cranes unfolding mid-air and soaring
+     * across the screen with trailing gold-leaf sparks.
+     */
+    let activeFullScreenCraneCanvas = null;
+    function spawnFullScreenOrigamiCraneFlight(chId) {
+      if (activeFullScreenCraneCanvas) {
+        activeFullScreenCraneCanvas.remove();
+        activeFullScreenCraneCanvas = null;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = window.innerWidth || 420;
+      canvas.height = window.innerHeight || 780;
+      canvas.style.position = "fixed";
+      canvas.style.inset = "0";
+      canvas.style.width = "100vw";
+      canvas.style.height = "100vh";
+      canvas.style.pointerEvents = "none";
+      canvas.style.zIndex = "260";
+      document.body.appendChild(canvas);
+      activeFullScreenCraneCanvas = canvas;
+
+      const ctx = canvas.getContext("2d");
+      const palette = [
+        ["#b87314", "#f3d592"],
+        ["#1b6b45", "#8cd4ae"],
+        ["#1f4e78", "#9ac8ea"],
+        ["#c83720", "#f29b8e"],
+        ["#8b3a62", "#f5b8c8"]
+      ];
+      const craneCount = 18;
+      const startMs = performance.now();
+      const durationMs = 2400;
+
+      function tick(now) {
+        if (activeFullScreenCraneCanvas !== canvas) return;
+        const elapsed = now - startMs;
+        if (elapsed >= durationMs) {
+          canvas.remove();
+          if (activeFullScreenCraneCanvas === canvas) activeFullScreenCraneCanvas = null;
+          return;
+        }
+        const p = elapsed / durationMs;
+        const w = canvas.width;
+        const h = canvas.height;
+        const envelopeAlpha = Math.max(0, Math.min(1, Math.sin(p * Math.PI)));
+        ctx.clearRect(0, 0, w, h);
+
+        // 1. Centerpiece Grand Golden Origami Crane Unfolding & Ascending
+        const heroUnfold = Math.min(1, p / 0.52);
+        const heroAscendY = h * (0.44 - 0.22 * (Math.max(0, p - 0.35) / 0.65));
+        const heroX = w * 0.5;
+        const heroRadius = Math.max(32, Math.min(62, Math.min(w, h) * 0.11));
+
+        ctx.save();
+        ctx.fillStyle = `rgba(184, 115, 20, ${(envelopeAlpha * 0.18).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(heroX, heroAscendY, heroRadius * (1.25 + 0.35 * Math.sin(p * Math.PI * 2)), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(184, 115, 20, ${(envelopeAlpha * 0.48).toFixed(3)})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(heroX, heroAscendY, heroRadius * (1.1 + 0.25 * p), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        drawUnfoldingOrigamiCrane2D(
+          ctx,
+          heroX,
+          heroAscendY,
+          heroRadius,
+          heroUnfold,
+          p * 18,
+          "#b87314",
+          "#f6df9e",
+          envelopeAlpha * 0.96,
+          -8 + Math.sin(p * Math.PI * 3) * 6
+        );
+
+        // 2. Flock of 18 Articulated Paper-Origami Crane Particles Unfolding Across the Screen
+        for (let i = 0; i < craneCount; i++) {
+          const stagger = (i % 6) * 0.055;
+          const localT = Math.max(0, Math.min(1, (p - stagger) / Math.max(0.45, 1 - stagger)));
+          if (localT <= 0) continue;
+
+          const localAlpha = Math.max(0, Math.min(1, Math.sin(localT * Math.PI)));
+          const laneX = ((i * 0.17 + 0.08) % 0.88) + 0.06;
+          const startX = w * laneX + (i % 2 === 0 ? -w * 0.16 : w * 0.16) * (1 - localT);
+          const startY = h * (0.82 - (i % 5) * 0.09);
+          const endY = h * (0.1 + (i % 4) * 0.07);
+
+          const swoopX = Math.sin(localT * Math.PI * 2.2 + i * 0.9) * (w * 0.085);
+          const cx = startX + swoopX;
+          const cy = startY + (endY - startY) * localT;
+          const craneSize = 15 + (i % 4) * 4.5;
+          const craneUnfold = Math.min(1, localT / 0.42);
+          const flapAngle = localT * 22 + i * 1.4;
+          const bankAngle = (i % 2 === 0 ? -14 : 14) + Math.cos(localT * Math.PI * 2.2 + i) * 12;
+          const [col1, col2] = palette[i % palette.length];
+
+          drawUnfoldingOrigamiCrane2D(
+            ctx,
+            cx,
+            cy,
+            craneSize,
+            craneUnfold,
+            flapAngle,
+            col1,
+            col2,
+            localAlpha * 0.92,
+            bankAngle
+          );
+
+          // Trailing Gold-Leaf Washi Paper-Fold Spark behind each soaring crane
+          const trailX = cx - swoopX * 0.22;
+          const trailY = cy + craneSize * 0.95;
+          const sparkSize = craneSize * 0.26 * (1 - localT * 0.3);
+          ctx.save();
+          ctx.translate(trailX, trailY);
+          ctx.rotate(((localT * 260 + i * 45) * Math.PI) / 180);
+          ctx.globalAlpha = localAlpha * 0.72;
+          ctx.fillStyle = "#b87314";
+          ctx.beginPath();
+          ctx.moveTo(0, -sparkSize);
+          ctx.lineTo(sparkSize * 0.8, 0);
+          ctx.lineTo(0, sparkSize);
+          ctx.lineTo(-sparkSize * 0.8, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function renderChapterCrestCrane(crestCanvas, chId, completed, unfoldStage, flapPhase, headingDeg) {
+      if (!crestCanvas) return;
+      const meta = CHAPTER_META[chId] || CHAPTER_META[1];
+      const ctx = crestCanvas.getContext("2d");
+      ctx.clearRect(0, 0, crestCanvas.width, crestCanvas.height);
+      drawUnfoldingOrigamiCrane2D(
+        ctx,
+        crestCanvas.width / 2,
+        crestCanvas.height / 2,
+        crestCanvas.width * 0.42,
+        unfoldStage,
+        flapPhase,
+        completed ? "#b87314" : meta.color,
+        completed ? "#f3d592" : "#1b6b45",
+        1,
+        headingDeg
+      );
+    }
+
+    function triggerChapterHeaderFoldAnimation(chId, launchFullScreen = true) {
+      if (launchFullScreen) {
+        spawnFullScreenOrigamiCraneFlight(chId);
+      }
       const headerEl = document.getElementById(`chapterHeader_${chId}`);
       if (!headerEl) return;
       headerEl.classList.remove("folding-active");
@@ -3803,8 +4145,8 @@
 
       const rect = headerEl.getBoundingClientRect();
       const canvas = document.createElement("canvas");
-      canvas.width = rect.width || 380;
-      canvas.height = rect.height || 74;
+      canvas.width = rect.width > 20 ? rect.width : 380;
+      canvas.height = rect.height > 20 ? rect.height : 74;
       canvas.style.position = "absolute";
       canvas.style.inset = "0";
       canvas.style.width = "100%";
@@ -3813,35 +4155,45 @@
       canvas.style.zIndex = "15";
       headerEl.appendChild(canvas);
 
-      const crestSvg = headerEl.querySelector(".chapter-crest-svg");
+      const crestCanvas = headerEl.querySelector(".chapter-crest-canvas");
+      const completed = isChapterCompleted(chId);
       const ctx = canvas.getContext("2d");
-      const palette = ["#b87314", "#1b6b45", "#c83720", "#1f4e78", "#d65a7a"];
-      const count = 26;
+      const palette = [
+        ["#b87314", "#f3d592"],
+        ["#1b6b45", "#8cd4ae"],
+        ["#1f4e78", "#9ac8ea"],
+        ["#c83720", "#f29b8e"],
+        ["#8b3a62", "#f5b8c8"]
+      ];
+      const count = 14;
       const startMs = performance.now();
-      const durationMs = 1150;
+      const durationMs = 1550;
 
       function tick(now) {
         const elapsed = now - startMs;
         if (elapsed >= durationMs) {
           canvas.remove();
           headerEl.classList.remove("folding-active");
-          if (crestSvg) crestSvg.style.transform = "";
+          renderChapterCrestCrane(crestCanvas, chId, completed, 1.0, 0.6, -6);
           return;
         }
         const t = elapsed / durationMs;
         const fadeAlpha = Math.sin(t * Math.PI);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (crestSvg) {
-          const foldDeg = Math.sin(t * Math.PI) * 58;
-          const spinDeg = t * 180;
-          crestSvg.style.transform = `perspective(240px) rotateX(${foldDeg.toFixed(1)}deg) rotateZ(${spinDeg.toFixed(1)}deg)`;
-        }
+        renderChapterCrestCrane(
+          crestCanvas,
+          chId,
+          completed,
+          Math.max(0.12, Math.min(1, t / 0.55)),
+          t * 22,
+          Math.sin(t * Math.PI) * -12
+        );
 
         // Diagonal Paper-Folding Crease Wave across Chapter Header
         const sweepX = canvas.width * t;
         ctx.save();
-        ctx.strokeStyle = `rgba(184, 115, 20, ${((1 - t) * 0.72).toFixed(2)})`;
+        ctx.strokeStyle = `rgba(184, 115, 20, ${((1 - t) * 0.76).toFixed(2)})`;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(Math.max(0, sweepX - 28), 0);
@@ -3849,29 +4201,28 @@
         ctx.stroke();
         ctx.restore();
 
-        // Origami Paper Triangle/Diamond Particles bursting across the Chapter Header
+        // Unfolding Paper-Origami Crane Particles soaring across the Chapter Header
         for (let i = 0; i < count; i++) {
-          const ox = canvas.width * (0.12 + 0.76 * ((i % 7) / 6));
-          const oy = canvas.height * 0.5;
-          const angle = (2 * Math.PI * i) / count + i * 0.37;
-          const dist = canvas.height * (0.32 + 0.75 * ((i % 3) * 0.35)) * t;
-          const px = ox + Math.cos(angle) * dist;
-          const py = oy + Math.sin(angle) * dist * 0.65 - canvas.height * 0.25 * t;
-          const pSize = (4.5 + (i % 3) * 1.8) * (1 - t * 0.28);
+          const ox = canvas.width * (0.08 + 0.84 * ((i % 7) / 6));
+          const oy = canvas.height * (0.72 - (i % 3) * 0.14);
+          const gx = ox + (i % 2 === 0 ? 1 : -1) * canvas.width * 0.16 * t;
+          const gy = oy - canvas.height * 0.55 * t + Math.sin(t * Math.PI * 2 + i) * 6;
+          const craneRadius = 9.5 + (i % 3) * 2.5;
+          const craneUnfold = Math.min(1, t / 0.45);
+          const [col1, col2] = palette[i % palette.length];
 
-          ctx.save();
-          ctx.translate(px, py);
-          ctx.rotate(((i * 47 + t * 220) * Math.PI) / 180);
-          ctx.globalAlpha = Math.max(0, Math.min(0.9, fadeAlpha * 0.88));
-          ctx.fillStyle = palette[i % palette.length];
-          ctx.beginPath();
-          ctx.moveTo(0, -pSize);
-          ctx.lineTo(pSize * 0.85, 0);
-          ctx.lineTo(0, pSize);
-          ctx.lineTo(-pSize * 0.85, 0);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
+          drawUnfoldingOrigamiCrane2D(
+            ctx,
+            gx,
+            gy,
+            craneRadius,
+            craneUnfold,
+            t * 22 + i * 1.3,
+            col1,
+            col2,
+            fadeAlpha * 0.92,
+            (i % 2 === 0 ? -12 : 12) + Math.cos(t * Math.PI * 2 + i) * 10
+          );
         }
         requestAnimationFrame(tick);
       }
@@ -3889,18 +4240,11 @@
       card.className = "chapter-header-card paper-surface" + (completed ? " completed" : "");
       card.innerHTML = `
         <div class="chapter-fold-crest">
-          <svg class="chapter-crest-svg" width="32" height="32" viewBox="0 0 36 36">
-            <polygon points="18,18 4,4 18,3" fill="${completed ? "#b87314" : meta.color}" />
-            <polygon points="18,18 18,3 32,4" fill="#1b6b45" />
-            <polygon points="18,18 32,32 18,33" fill="#1f4e78" />
-            <polygon points="18,18 18,33 4,32" fill="#c83720" />
-            <line x1="3" y1="18" x2="33" y2="18" stroke="#fffcf5" stroke-width="1.4" />
-            <line x1="18" y1="3" x2="18" y2="33" stroke="#fffcf5" stroke-width="1.4" />
-          </svg>
+          <canvas class="chapter-crest-canvas" width="40" height="40" style="width:36px; height:36px;"></canvas>
         </div>
         <div style="flex:1; min-width:0;">
           <div style="font-size:13.5px; font-weight:800; color:var(--sumi-ink);">
-            ${meta.title} ${completed ? '<span style="color:var(--kyoto-gold); font-size:10px;">✦ MASTERED</span>' : ""}
+            ${meta.title} ${completed ? '<span style="color:var(--kyoto-gold); font-size:10px;">✦ CRANE MASTERED</span>' : ""}
           </div>
           <div style="font-size:11px; color:${completed ? "var(--matcha-jade)" : "var(--walnut-muted)"}; margin-bottom:4px;">
             ${meta.sub} · ${solvedCount}/20 Solved
@@ -3909,14 +4253,45 @@
             <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, var(--aizome-indigo), var(--matcha-jade), var(--kyoto-gold));"></div>
           </div>
         </div>
-        <button class="chapter-fold-btn" onclick="triggerChapterHeaderFoldAnimation(${chId})">
-          ${completed ? "✦ Replay Fold" : "✦ Fold Seal"}
+        <button class="chapter-fold-btn" onclick="triggerChapterHeaderFoldAnimation(${chId}, true)">
+          ${completed ? "✦ Crane Flight" : "✦ Fold Seal"}
         </button>
       `;
+      const crestCanvas = card.querySelector(".chapter-crest-canvas");
+      crestCanvas.dataset.chId = String(chId);
+      const initialUnfold = completed ? 1.0 : Math.max(0.65, 0.65 + (solvedCount / 20) * 0.35);
+      renderChapterCrestCrane(crestCanvas, chId, completed, initialUnfold, 0.6, -6);
       if (completed) {
-        setTimeout(() => triggerChapterHeaderFoldAnimation(chId), 120);
+        setTimeout(() => triggerChapterHeaderFoldAnimation(chId, false), 140);
       }
       return card;
+    }
+
+    let chapterCrestIdleLoopRunning = false;
+    function startChapterCrestIdleLoop() {
+      if (chapterCrestIdleLoopRunning) return;
+      chapterCrestIdleLoopRunning = true;
+      function idleTick(now) {
+        const levelsTab = document.getElementById("tab-levels");
+        if (!levelsTab || !levelsTab.classList.contains("active")) {
+          chapterCrestIdleLoopRunning = false;
+          return;
+        }
+        const canvases = levelsTab.querySelectorAll(".chapter-crest-canvas");
+        canvases.forEach(c => {
+          const parentHeader = c.closest(".chapter-header-card");
+          if (parentHeader && parentHeader.classList.contains("folding-active")) return;
+          const chId = Number(c.dataset.chId) || 1;
+          const solvedCount = getSolvedCountInChapter(chId);
+          const completed = solvedCount >= 20;
+          const unfoldStage = completed ? 1.0 : Math.max(0.68, 0.68 + (solvedCount / 20) * 0.32);
+          const phase = now * 0.0026 + chId * 0.9;
+          const heading = -6 + Math.sin(phase) * 3.5;
+          renderChapterCrestCrane(c, chId, completed, unfoldStage, phase, heading);
+        });
+        requestAnimationFrame(idleTick);
+      }
+      requestAnimationFrame(idleTick);
     }
 
     function showLevelClearModal(accuracyBonus, coinsEarned) {
@@ -3925,7 +4300,7 @@
       document.getElementById("fanfareSubtitle").textContent = `Level ${state.tpl.level} · ${state.tpl.title}`;
       document.getElementById("fanfareStars").textContent = state.mistakes === 0 ? "★★★" : state.mistakes <= 2 ? "★★☆" : "★☆☆";
       document.getElementById("fanfareBreakdown").innerHTML = `
-        ${chapterMastered ? `<div style="background:rgba(184,115,20,0.16); border:1.5px solid var(--kyoto-gold); border-radius:10px; padding:6px 10px; margin-bottom:4px; font-weight:800; color:var(--kyoto-gold);">✦ CHAPTER ${chId} MASTERED! Golden Origami Seal Unfolded! ✦</div>` : ""}
+        ${chapterMastered ? `<div style="background:rgba(184,115,20,0.16); border:1.5px solid var(--kyoto-gold); border-radius:10px; padding:6px 10px; margin-bottom:4px; font-weight:800; color:var(--kyoto-gold);">✦ CHAPTER ${chId} MASTERED! Golden Origami Crane Unfolded! ✦</div>` : ""}
         <div class="stat-line"><span>Intersecting Words Solved</span><span>${state.tpl.words.length}</span></div>
         <div class="stat-line"><span>Max Combo Streak</span><span>×${state.maxCombo}</span></div>
         <div class="stat-line"><span>Accuracy Bonus</span><span>+${accuracyBonus} PTS</span></div>
@@ -3933,6 +4308,9 @@
         <div class="stat-line total"><span>Total Level Score</span><span>${state.score} PTS</span></div>
       `;
       document.getElementById("fanfareModal").classList.add("visible");
+      if (chapterMastered) {
+        spawnFullScreenOrigamiCraneFlight(chId);
+      }
     }
 
     function closeFanfareAndReplay() {
@@ -3990,6 +4368,11 @@
         document.getElementById(`nav-${id}`).classList.toggle("active", id === tabId);
       });
       if (tabId === "levels" || tabId === "studio") renderVaultAndStudio();
+      if (tabId === "levels") {
+        startChapterCrestIdleLoop();
+        const targetCh = activeVaultChapter > 0 ? activeVaultChapter : 1;
+        setTimeout(() => triggerChapterHeaderFoldAnimation(targetCh, false), 90);
+      }
       if (tabId === "trie") updateTrieMatches();
     }
 

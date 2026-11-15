@@ -695,14 +695,14 @@ private fun IntersectingCluesStrip(
       key(tw.id) {
         val foldAngleX by
           animateFloatAsState(
-            targetValue = if (tw.isCompleted) -82f else 0f,
-            animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            targetValue = if (tw.isCompleted) -86f else 0f,
+            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
             label = "clue_fold_angle_${tw.id}",
           )
         val foldScaleY by
           animateFloatAsState(
-            targetValue = if (tw.isCompleted) 0.18f else 1f,
-            animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            targetValue = if (tw.isCompleted) 0.14f else 1f,
+            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
             label = "clue_fold_scale_${tw.id}",
           )
 
@@ -714,26 +714,22 @@ private fun IntersectingCluesStrip(
               scaleIn(initialScale = 0.85f, animationSpec = tween(240)),
           exit =
             shrinkHorizontally(
-              animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+              animationSpec = tween(durationMillis = 440, delayMillis = 60, easing = FastOutSlowInEasing),
               shrinkTowards = Alignment.Start,
             ) +
-              scaleOut(
-                targetScale = 0.25f,
-                transformOrigin = TransformOrigin(0.5f, 0f),
-                animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
-              ) +
-              fadeOut(tween(durationMillis = 320)),
+              fadeOut(tween(durationMillis = 380, delayMillis = 60)),
         ) {
           val isFocused = tw.id == focusedWordId
+          val isFoldingNow = foldAngleX < -2f || tw.isCompleted
           val bg =
             when {
-              tw.isCompleted -> CompletedWordBg
+              isFoldingNow -> CompletedWordBg
               isFocused -> Color(0xFFDFECF6)
               else -> IndigoSurface
             }
           val border =
             when {
-              tw.isCompleted -> CeladonJade
+              isFoldingNow -> CeladonJade
               isFocused -> SkyCyan
               else -> IndigoElevated
             }
@@ -746,6 +742,7 @@ private fun IntersectingCluesStrip(
               Modifier.graphicsLayer {
                   rotationX = foldAngleX
                   scaleY = foldScaleY
+                  transformOrigin = TransformOrigin(0.5f, 0f)
                   cameraDistance = 12f * density
                 }
                 .border(
@@ -1008,12 +1005,21 @@ private fun PuzzleVaultScreen(
       5 to "Ch. V (81–100)",
     )
 
-  LazyColumn(
-    modifier = Modifier.fillMaxSize().widthIn(max = 600.dp).padding(16.dp),
-    verticalArrangement = Arrangement.spacedBy(12.dp),
-    contentPadding = PaddingValues(bottom = 24.dp),
-  ) {
-    item {
+  // Track full-screen unfolding origami crane flight when a chapter is mastered or replayed
+  var fullScreenCraneChapter by remember {
+    mutableIntStateOf((1..5).firstOrNull { puzzleState.isChapterCompleted(it) } ?: 0)
+  }
+  var fullScreenCraneTrigger by remember {
+    mutableIntStateOf(if ((1..5).any { puzzleState.isChapterCompleted(it) }) 1 else 0)
+  }
+
+  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    LazyColumn(
+      modifier = Modifier.fillMaxSize().widthIn(max = 600.dp).padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+      contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+      item {
       Text(
         text = "Crossword Skeleton Vault (100 Levels)",
         style = MaterialTheme.typography.headlineSmall,
@@ -1118,6 +1124,10 @@ private fun PuzzleVaultScreen(
           chapterId = selectedChapter,
           solvedCount = puzzleState.solvedCountInChapter(selectedChapter),
           isChapterCompleted = puzzleState.isChapterCompleted(selectedChapter),
+          onTriggerScreenCraneFlight = { chId ->
+            fullScreenCraneChapter = chId
+            fullScreenCraneTrigger++
+          },
         )
       }
     }
@@ -1129,6 +1139,10 @@ private fun PuzzleVaultScreen(
           chapterId = chIdForLevel,
           solvedCount = puzzleState.solvedCountInChapter(chIdForLevel),
           isChapterCompleted = puzzleState.isChapterCompleted(chIdForLevel),
+          onTriggerScreenCraneFlight = { chId ->
+            fullScreenCraneChapter = chId
+            fullScreenCraneTrigger++
+          },
           modifier = Modifier.padding(bottom = 10.dp),
         )
       }
@@ -1261,18 +1275,287 @@ private fun PuzzleVaultScreen(
       }
     }
   }
+
+    // Full-Screen Paper-Origami Crane Unfolding & Flight Particle Effect when a Chapter is Mastered!
+    FullScreenOrigamiCraneFlightOverlay(
+      chapterId = fullScreenCraneChapter,
+      triggerCount = fullScreenCraneTrigger,
+    )
+  }
 }
 
 /**
- * Chapter Header Card with an interactive & automatic Paper-Folding Animation + Particle Burst
- * over the chapter header when all 20 levels in the chapter are completed (or when the user
- * taps the "✦ Fold Seal" preview button).
+ * Draws a multi-faceted Japanese Paper-Origami Crane (Orizuru) that unfolds smoothly from a
+ * creased square/diamond petal base (`unfoldProgress = 0f`) into a 3D soaring crane
+ * (`unfoldProgress = 1f`) with articulated wing-flapping (`flapPhase`), slender neck & reverse-fold
+ * beak head, elevated tail spire, and gilded mountain/valley crease lines.
+ */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawUnfoldingOrigamiCrane(
+  path: Path,
+  center: Offset,
+  radius: Float,
+  unfoldProgress: Float,
+  flapPhase: Float,
+  primaryColor: Color,
+  secondaryColor: Color,
+  creaseColor: Color,
+  alpha: Float = 1f,
+  headingDeg: Float = 0f,
+) {
+  val r = radius
+  val u = unfoldProgress.coerceIn(0f, 1f)
+  val petalStage = (u / 0.35f).coerceIn(0f, 1f)
+  val neckTailUnfold = ((u - 0.22f) / 0.55f).coerceIn(0f, 1f)
+  val wingUnfold = ((u - 0.36f) / 0.64f).coerceIn(0f, 1f)
+  val flapLift = kotlin.math.sin(flapPhase.toDouble()).toFloat() * wingUnfold
+  val a = alpha.coerceIn(0f, 1f)
+
+  withTransform({
+    translate(left = center.x, top = center.y)
+    rotate(degrees = headingDeg, pivot = Offset.Zero)
+  }) {
+    // 1. Far Wing (Back Wing) — unfolds outward & flaps with 2-tone underside depth
+    if (wingUnfold > 0.02f) {
+      val farWingTipX = -r * (0.18f + 0.52f * wingUnfold)
+      val farWingTipY = -r * (0.32f + 0.78f * wingUnfold - 0.36f * flapLift)
+      path.reset()
+      path.moveTo(-r * 0.24f, -r * 0.04f)
+      path.lineTo(farWingTipX, farWingTipY)
+      path.lineTo(r * 0.26f, -r * 0.06f)
+      path.close()
+      drawPath(path = path, color = secondaryColor.copy(alpha = (a * 0.86f).coerceIn(0f, 1f)))
+    }
+
+    // 2. Slender Forward Neck & Reverse-Folded Head Beak (Left/Front side of crane)
+    if (neckTailUnfold > 0.02f) {
+      val neckTipX = -r * (0.28f + 0.64f * neckTailUnfold)
+      val neckTipY = -r * (0.12f + 0.68f * neckTailUnfold)
+      path.reset()
+      path.moveTo(-r * 0.14f, r * 0.16f)
+      path.lineTo(neckTipX, neckTipY)
+      path.lineTo(-r * 0.32f, -r * 0.02f)
+      path.close()
+      drawPath(path = path, color = primaryColor.copy(alpha = (a * 0.95f).coerceIn(0f, 1f)))
+
+      // Reverse-folded crane head & pointed beak tip
+      val beakExtend = ((u - 0.52f) / 0.48f).coerceIn(0f, 1f)
+      if (beakExtend > 0.02f) {
+        val beakTipX = neckTipX - r * (0.34f * beakExtend)
+        val beakTipY = neckTipY + r * (0.16f * beakExtend)
+        path.reset()
+        path.moveTo(neckTipX, neckTipY)
+        path.lineTo(beakTipX, beakTipY)
+        path.lineTo(neckTipX + r * 0.12f, neckTipY + r * 0.14f)
+        path.close()
+        drawPath(path = path, color = secondaryColor.copy(alpha = a))
+      }
+    }
+
+    // 3. Elevated Tail Spire (Right/Rear side of crane)
+    if (neckTailUnfold > 0.02f) {
+      val tailTipX = r * (0.28f + 0.68f * neckTailUnfold)
+      val tailTipY = -r * (0.14f + 0.66f * neckTailUnfold)
+      path.reset()
+      path.moveTo(r * 0.14f, r * 0.16f)
+      path.lineTo(tailTipX, tailTipY)
+      path.lineTo(r * 0.32f, -r * 0.02f)
+      path.close()
+      drawPath(path = path, color = secondaryColor.copy(alpha = (a * 0.92f).coerceIn(0f, 1f)))
+    }
+
+    // 4. Central Origami Diamond Body / Dorsal Pyramid (folds from square into diamond torso)
+    val cornerPinch = 1f - 0.45f * petalStage
+    // Left torso facet
+    path.reset()
+    path.moveTo(0f, -r * 0.36f)
+    path.lineTo(-r * 0.46f * cornerPinch, r * 0.04f)
+    path.lineTo(0f, r * 0.36f * cornerPinch)
+    path.close()
+    drawPath(path = path, color = primaryColor.copy(alpha = a))
+
+    // Right torso facet
+    path.reset()
+    path.moveTo(0f, -r * 0.36f)
+    path.lineTo(r * 0.46f * cornerPinch, r * 0.04f)
+    path.lineTo(0f, r * 0.36f * cornerPinch)
+    path.close()
+    drawPath(path = path, color = secondaryColor.copy(alpha = (a * 0.90f).coerceIn(0f, 1f)))
+
+    // 5. Near Wing (Foreground Articulated Wing — sweeps down and up with wing-beat flap)
+    if (wingUnfold > 0.02f) {
+      val nearWingTipX = r * (0.10f * wingUnfold)
+      val nearWingTipY = -r * (0.28f + 0.84f * wingUnfold * (0.55f + 0.45f * flapLift))
+      path.reset()
+      path.moveTo(-r * 0.32f, r * 0.04f)
+      path.lineTo(nearWingTipX, nearWingTipY)
+      path.lineTo(r * 0.32f, r * 0.04f)
+      path.close()
+      drawPath(path = path, color = primaryColor.copy(alpha = a))
+    }
+
+    // 6. Crisp Gilded Mountain & Valley Origami Crease Highlights
+    val creaseAlpha = (a * 0.82f).coerceIn(0f, 1f)
+    val strokeW = (r * 0.075f).coerceAtLeast(1f)
+    drawLine(
+      color = creaseColor.copy(alpha = creaseAlpha),
+      start = Offset(-r * 0.32f, r * 0.04f),
+      end = Offset(r * 0.32f, r * 0.04f),
+      strokeWidth = strokeW,
+    )
+    drawLine(
+      color = creaseColor.copy(alpha = creaseAlpha),
+      start = Offset(0f, -r * 0.36f),
+      end = Offset(0f, r * 0.32f * cornerPinch),
+      strokeWidth = strokeW,
+    )
+  }
+}
+
+/**
+ * Full-Screen Paper-Origami Crane Unfolding & Flight Particle Effect Overlay.
+ * Displays a centerpiece golden Orizuru unfolding from a Washi square alongside a flock of
+ * 18 articulated paper-origami cranes that unfold mid-air and soar across the entire screen.
+ */
+@Composable
+fun FullScreenOrigamiCraneFlightOverlay(
+  chapterId: Int,
+  triggerCount: Int,
+  modifier: Modifier = Modifier,
+) {
+  val flightProgress = remember { Animatable(0f) }
+  val cranePath = remember { Path() }
+  val sparkPath = remember { Path() }
+
+  LaunchedEffect(chapterId, triggerCount) {
+    if (chapterId > 0 && triggerCount > 0) {
+      flightProgress.snapTo(0.01f)
+      flightProgress.animateTo(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
+      )
+      flightProgress.snapTo(0f)
+    }
+  }
+
+  val p = flightProgress.value
+  if (p <= 0f || p >= 1f) return
+
+  Canvas(
+    modifier =
+      modifier
+        .fillMaxSize()
+        .testTag("fullscreen_origami_crane_flight_canvas")
+  ) {
+    val w = size.width
+    val h = size.height
+    val envelopeAlpha = sin(p * PI).toFloat().coerceIn(0f, 1f)
+    val palette =
+      listOf(
+        KyotoGold to Color(0xFFF3D592),
+        CeladonJade to Color(0xFF8CD4AE),
+        SkyCyan to Color(0xFF9AC8EA),
+        VermilionRed to Color(0xFFF29B8E),
+        Color(0xFFD65A7A) to Color(0xFFF5B8C8),
+      )
+
+    // 1. Centerpiece Grand Golden Origami Crane Unfolding & Ascending
+    val heroUnfold = (p / 0.52f).coerceIn(0f, 1f)
+    val heroAscendY = h * (0.44f - 0.22f * ((p - 0.35f).coerceAtLeast(0f) / 0.65f))
+    val heroCenter = Offset(w * 0.5f, heroAscendY)
+    val heroRadius = (w.coerceAtMost(h) * 0.11f).coerceIn(32.dp.toPx(), 64.dp.toPx())
+
+    // Shimmering Origami Paper-Crease Halo behind the Hero Crane
+    drawCircle(
+      color = KyotoGold.copy(alpha = envelopeAlpha * 0.18f),
+      radius = heroRadius * (1.25f + 0.35f * sin(p * PI * 2).toFloat()),
+      center = heroCenter,
+    )
+    drawCircle(
+      color = KyotoGold.copy(alpha = envelopeAlpha * 0.45f),
+      radius = heroRadius * (1.1f + 0.25f * p),
+      center = heroCenter,
+      style = Stroke(width = 1.8.dp.toPx()),
+    )
+
+    drawUnfoldingOrigamiCrane(
+      path = cranePath,
+      center = heroCenter,
+      radius = heroRadius,
+      unfoldProgress = heroUnfold,
+      flapPhase = p * 18f,
+      primaryColor = KyotoGold,
+      secondaryColor = Color(0xFFF6DF9E),
+      creaseColor = Color.White,
+      alpha = (envelopeAlpha * 0.96f).coerceIn(0f, 1f),
+      headingDeg = -8f + sin(p * PI * 3).toFloat() * 6f,
+    )
+
+    // 2. Flock of 18 Articulated Paper-Origami Crane Particles Unfolding Across the Screen!
+    val craneCount = 18
+    for (i in 0 until craneCount) {
+      val stagger = (i % 6) * 0.055f
+      val localT = ((p - stagger) / (1f - stagger).coerceAtLeast(0.45f)).coerceIn(0f, 1f)
+      if (localT <= 0f) continue
+
+      val localAlpha = sin(localT * PI).toFloat().coerceIn(0f, 1f)
+      val laneX = ((i * 0.17f + 0.08f) % 0.88f) + 0.06f
+      val startX = w * laneX + (if (i % 2 == 0) -w * 0.16f else w * 0.16f) * (1f - localT)
+      val startY = h * (0.82f - (i % 5) * 0.09f)
+      val endY = h * (0.10f + (i % 4) * 0.07f)
+
+      val swoopX = sin(localT * PI * 2.2 + i * 0.9).toFloat() * (w * 0.085f)
+      val cx = startX + swoopX
+      val cy = startY + (endY - startY) * localT
+      val craneSize = (15f + (i % 4) * 4.5f).dp.toPx()
+      val craneUnfold = (localT / 0.42f).coerceIn(0f, 1f)
+      val flapAngle = localT * 22f + i * 1.4f
+      val bankAngle = (if (i % 2 == 0) -14f else 14f) + cos(localT * PI * 2.2 + i).toFloat() * 12f
+      val (colPrimary, colSecondary) = palette[i % palette.size]
+
+      drawUnfoldingOrigamiCrane(
+        path = cranePath,
+        center = Offset(cx, cy),
+        radius = craneSize,
+        unfoldProgress = craneUnfold,
+        flapPhase = flapAngle,
+        primaryColor = colPrimary,
+        secondaryColor = colSecondary,
+        creaseColor = Color.White,
+        alpha = localAlpha * 0.92f,
+        headingDeg = bankAngle,
+      )
+
+      // Trailing Gold-Leaf Washi Paper-Fold Spark behind each soaring crane
+      val trailX = cx - swoopX * 0.22f
+      val trailY = cy + craneSize * 0.95f
+      val sparkSize = craneSize * 0.26f * (1f - localT * 0.3f)
+      withTransform({
+        translate(left = trailX, top = trailY)
+        rotate(degrees = (localT * 260f + i * 45f) % 360f, pivot = Offset.Zero)
+      }) {
+        sparkPath.reset()
+        sparkPath.moveTo(0f, -sparkSize)
+        sparkPath.lineTo(sparkSize * 0.8f, 0f)
+        sparkPath.lineTo(0f, sparkSize)
+        sparkPath.lineTo(-sparkSize * 0.8f, 0f)
+        sparkPath.close()
+        drawPath(path = sparkPath, color = KyotoGold.copy(alpha = localAlpha * 0.72f))
+      }
+    }
+  }
+}
+
+/**
+ * Chapter Header Card with an interactive & automatic Paper-Origami Crane Unfolding Animation +
+ * Crane Particle Flight over the chapter header (and across the screen) when all 20 levels in
+ * the chapter are completed (or when the user taps the "✦ Crane Flight" button).
  */
 @Composable
 private fun ChapterMasteryHeaderCard(
   chapterId: Int,
   solvedCount: Int,
   isChapterCompleted: Boolean,
+  onTriggerScreenCraneFlight: (Int) -> Unit = {},
   modifier: Modifier = Modifier,
 ) {
   val chapterInfo =
@@ -1290,30 +1573,43 @@ private fun ChapterMasteryHeaderCard(
   val foldProgress = remember { Animatable(if (isChapterCompleted) 1f else 0f) }
   val particleBurstProgress = remember { Animatable(0f) }
   var manualTriggerCount by remember { mutableIntStateOf(0) }
-  val foldFacetPath = remember { Path() }
+  val craneFacetPath = remember { Path() }
   val particlePath = remember { Path() }
 
-  LaunchedEffect(isChapterCompleted, manualTriggerCount) {
-    if (isChapterCompleted || manualTriggerCount > 0) {
+  LaunchedEffect(chapterId, isChapterCompleted, manualTriggerCount) {
+    if (isChapterCompleted || manualTriggerCount > 0 || chapterId == 1) {
       foldProgress.snapTo(0f)
       particleBurstProgress.snapTo(0.01f)
       kotlinx.coroutines.coroutineScope {
         launch {
           foldProgress.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 1050, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
           )
         }
         launch {
           particleBurstProgress.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 1350, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 1650, easing = FastOutSlowInEasing),
           )
           particleBurstProgress.snapTo(0f)
         }
       }
     }
   }
+
+  val craneIdleTransition = rememberInfiniteTransition(label = "chapter_crane_idle_$chapterId")
+  val idleWingFlap by
+    craneIdleTransition.animateFloat(
+      initialValue = 0f,
+      targetValue = (2.0 * PI).toFloat(),
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(durationMillis = 2600, easing = LinearEasing),
+          repeatMode = RepeatMode.Restart,
+        ),
+      label = "chapter_crane_wing_flap",
+    )
 
   val fp = foldProgress.value
   val bp = particleBurstProgress.value
@@ -1348,7 +1644,7 @@ private fun ChapterMasteryHeaderCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        // Origami Paper-Folding Crest Canvas over the left of the Chapter Header
+        // Unfolding Origami Crane Crest Canvas on the left of the Chapter Header
         Box(
           modifier =
             Modifier.size(48.dp)
@@ -1357,65 +1653,32 @@ private fun ChapterMasteryHeaderCard(
               .border(1.dp, if (isChapterCompleted) KyotoGold else IndigoElevated, RoundedCornerShape(12.dp)),
           contentAlignment = Alignment.Center,
         ) {
-          Canvas(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+          Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
             val cx = size.width / 2f
             val cy = size.height / 2f
-            val r = size.minDimension * 0.46f
-            val foldStage = fp.coerceIn(0f, 1f)
+            val r = size.minDimension * 0.45f
+            val unfoldStage =
+              when {
+                isAnimatingFold -> fp.coerceIn(0.08f, 1f)
+                isChapterCompleted -> 1f
+                else -> (0.52f + (solvedCount / 20f) * 0.48f).coerceIn(0.52f, 1f)
+              }
+            val flapAngle = if (isAnimatingFold) bp * 22f else idleWingFlap
 
-            // Base Washi Square that folds its 4 corners inward along diagonal mountain/valley creases
-            val cornerPull = 1f - 0.42f * sin(foldStage * PI).toFloat()
-            val crestSpin = foldStage * 45f
-
-            withTransform({
-              rotate(degrees = crestSpin, pivot = Offset(cx, cy))
-            }) {
-              // Top-Left Origami Facet
-              foldFacetPath.reset()
-              foldFacetPath.moveTo(cx, cy)
-              foldFacetPath.lineTo(cx - r * cornerPull, cy - r * cornerPull)
-              foldFacetPath.lineTo(cx, cy - r)
-              foldFacetPath.close()
-              drawPath(foldFacetPath, color = if (isChapterCompleted) KyotoGold else chapterInfo.third)
-
-              // Top-Right Origami Facet
-              foldFacetPath.reset()
-              foldFacetPath.moveTo(cx, cy)
-              foldFacetPath.lineTo(cx, cy - r)
-              foldFacetPath.lineTo(cx + r * cornerPull, cy - r * cornerPull)
-              foldFacetPath.close()
-              drawPath(foldFacetPath, color = CeladonJade.copy(alpha = 0.85f))
-
-              // Bottom-Right Origami Facet
-              foldFacetPath.reset()
-              foldFacetPath.moveTo(cx, cy)
-              foldFacetPath.lineTo(cx + r * cornerPull, cy + r * cornerPull)
-              foldFacetPath.lineTo(cx, cy + r)
-              foldFacetPath.close()
-              drawPath(foldFacetPath, color = SkyCyan.copy(alpha = 0.85f))
-
-              // Bottom-Left Origami Facet
-              foldFacetPath.reset()
-              foldFacetPath.moveTo(cx, cy)
-              foldFacetPath.lineTo(cx, cy + r)
-              foldFacetPath.lineTo(cx - r * cornerPull, cy + r * cornerPull)
-              foldFacetPath.close()
-              drawPath(foldFacetPath, color = VermilionRed.copy(alpha = 0.80f))
-
-              // Crisp white origami crease lines
-              drawLine(
-                color = Color.White.copy(alpha = 0.85f),
-                start = Offset(cx - r, cy),
-                end = Offset(cx + r, cy),
-                strokeWidth = 1.4.dp.toPx(),
-              )
-              drawLine(
-                color = Color.White.copy(alpha = 0.85f),
-                start = Offset(cx, cy - r),
-                end = Offset(cx, cy + r),
-                strokeWidth = 1.4.dp.toPx(),
-              )
-            }
+            drawUnfoldingOrigamiCrane(
+              path = craneFacetPath,
+              center = Offset(cx, cy),
+              radius = r,
+              unfoldProgress = unfoldStage,
+              flapPhase = flapAngle,
+              primaryColor = if (isChapterCompleted) KyotoGold else chapterInfo.third,
+              secondaryColor = if (isChapterCompleted) Color(0xFFF3D592) else CeladonJade,
+              creaseColor = Color.White,
+              alpha = 1f,
+              headingDeg =
+                if (isAnimatingFold) sin(fp * PI).toFloat() * -12f
+                else (-6f + sin(idleWingFlap.toDouble()).toFloat() * 3.5f),
+            )
           }
         }
 
@@ -1432,7 +1695,7 @@ private fun ChapterMasteryHeaderCard(
             )
             if (isChapterCompleted) {
               Text(
-                text = "MASTERED",
+                text = "✦ CRANE MASTERED",
                 fontSize = 9.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = KyotoGold,
@@ -1467,6 +1730,7 @@ private fun ChapterMasteryHeaderCard(
           onClick = {
             scope.launch {
               manualTriggerCount++
+              onTriggerScreenCraneFlight(chapterId)
             }
           },
           shape = RoundedCornerShape(10.dp),
@@ -1474,7 +1738,7 @@ private fun ChapterMasteryHeaderCard(
           modifier = Modifier.height(36.dp).testTag("btn_chapter_fold_anim_$chapterId"),
         ) {
           Text(
-            text = if (isChapterCompleted) "✦ Replay Fold" else "✦ Fold Seal",
+            text = if (isChapterCompleted) "✦ Crane Flight" else "✦ Fold Seal",
             fontSize = 11.sp,
             fontWeight = FontWeight.ExtraBold,
             color = if (isChapterCompleted) KyotoGold else SkyCyan,
@@ -1482,7 +1746,7 @@ private fun ChapterMasteryHeaderCard(
         }
       }
 
-      // Paper-Folding Crease Sweep + Origami Particle Burst Canvas Overlay over the Chapter Header!
+      // Unfolding Origami Crane Flock + Paper-Crease Wave over the Chapter Header!
       if (isAnimatingFold) {
         Canvas(
           modifier =
@@ -1492,38 +1756,44 @@ private fun ChapterMasteryHeaderCard(
           // 1. Diagonal Paper-Folding Crease Wave sweeping across the Chapter Header
           val sweepX = size.width * fp
           drawLine(
-            color = KyotoGold.copy(alpha = (1f - fp) * 0.75f),
+            color = KyotoGold.copy(alpha = (1f - fp) * 0.78f),
             start = Offset((sweepX - 28.dp.toPx()).coerceAtLeast(0f), 0f),
             end = Offset(sweepX.coerceAtMost(size.width), size.height),
             strokeWidth = 3.dp.toPx(),
           )
 
-          // 2. 28 Origami Paper-Triangle/Diamond Particles bursting across the Chapter Header
-          val palette = listOf(KyotoGold, CeladonJade, VermilionRed, SkyCyan, Color(0xFFD65A7A))
-          val count = 28
+          // 2. Unfolding Paper-Origami Crane Particles & Gold-Leaf Sparks soaring across the Chapter Header
+          val cranePalette =
+            listOf(
+              KyotoGold to Color(0xFFF3D592),
+              CeladonJade to Color(0xFF8CD4AE),
+              SkyCyan to Color(0xFF9AC8EA),
+              VermilionRed to Color(0xFFF29B8E),
+              Color(0xFFD65A7A) to Color(0xFFF5B8C8),
+            )
+          val count = 14
           val fadeAlpha = sin(bp * PI).toFloat().coerceIn(0f, 1f)
           for (i in 0 until count) {
-            val originX = size.width * (0.12f + 0.76f * ((i % 7) / 6f))
-            val originY = size.height * 0.5f
-            val angle = (2.0 * PI * i) / count + (i * 0.37)
-            val dist = size.height * (0.35f + 0.85f * (i % 3) * 0.35f) * bp
-            val px = originX + (cos(angle) * dist).toFloat()
-            val py = originY + (sin(angle) * dist * 0.65f).toFloat() - (size.height * 0.28f * bp)
-            val pSize = (4.5f + (i % 3) * 2f).dp.toPx() * (1f - bp * 0.3f)
-            val col = palette[i % palette.size].copy(alpha = (fadeAlpha * 0.88f).coerceIn(0f, 1f))
+            val originX = size.width * (0.08f + 0.84f * ((i % 7) / 6f))
+            val originY = size.height * (0.72f - (i % 3) * 0.14f)
+            val glideX = originX + (if (i % 2 == 0) 1f else -1f) * size.width * 0.16f * bp
+            val glideY = originY - size.height * 0.55f * bp + sin(bp * PI * 2 + i).toFloat() * 6.dp.toPx()
+            val craneRadius = (9.5f + (i % 3) * 2.5f).dp.toPx()
+            val craneUnfold = (bp / 0.45f).coerceIn(0f, 1f)
+            val (col1, col2) = cranePalette[i % cranePalette.size]
 
-            withTransform({
-              translate(left = px, top = py)
-              rotate(degrees = (i * 47f + bp * 220f) % 360f, pivot = Offset.Zero)
-            }) {
-              particlePath.reset()
-              particlePath.moveTo(0f, -pSize)
-              particlePath.lineTo(pSize * 0.85f, 0f)
-              particlePath.lineTo(0f, pSize)
-              particlePath.lineTo(-pSize * 0.85f, 0f)
-              particlePath.close()
-              drawPath(path = particlePath, color = col)
-            }
+            drawUnfoldingOrigamiCrane(
+              path = particlePath,
+              center = Offset(glideX, glideY),
+              radius = craneRadius,
+              unfoldProgress = craneUnfold,
+              flapPhase = bp * 22f + i * 1.3f,
+              primaryColor = col1,
+              secondaryColor = col2,
+              creaseColor = Color.White,
+              alpha = (fadeAlpha * 0.92f).coerceIn(0f, 1f),
+              headingDeg = (if (i % 2 == 0) -12f else 12f) + cos(bp * PI * 2 + i).toFloat() * 10f,
+            )
           }
         }
       }

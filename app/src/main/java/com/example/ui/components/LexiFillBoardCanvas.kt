@@ -211,6 +211,24 @@ fun LexiFillBoardCanvas(
     reticlePhase = 0f
   }
 
+  val hasLockedCells =
+    remember(puzzleState.cells) {
+      puzzleState.cells.any { row -> row.any { it.isLockedCompleted } }
+    }
+
+  val washiInfinite = rememberInfiniteTransition(label = "locked_washi_shader_clock")
+  val continuousWashiPhase by
+    washiInfinite.animateFloat(
+      initialValue = 0f,
+      targetValue = (2.0 * PI).toFloat(),
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(durationMillis = 6400, easing = LinearEasing),
+          repeatMode = RepeatMode.Restart,
+        ),
+      label = "washi_shader_phase",
+    )
+
   // Frame clock tick for smooth tile-snap squash/stretch, paper-fold lock transitions & popups
   var frameNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
   LaunchedEffect(
@@ -221,6 +239,7 @@ fun LexiFillBoardCanvas(
     puzzleState.particleBursts,
     puzzleState.confettiExplosions,
   ) {
+    frameNowMs = System.currentTimeMillis()
     val hasActiveAnimations =
       puzzleState.cellFlashTimestamps.isNotEmpty() ||
         puzzleState.tilePlacementTimestamps.isNotEmpty() ||
@@ -230,7 +249,7 @@ fun LexiFillBoardCanvas(
         puzzleState.confettiExplosions.isNotEmpty()
     if (hasActiveAnimations) {
       val start = System.currentTimeMillis()
-      while (System.currentTimeMillis() - start < 1200L) {
+      while (System.currentTimeMillis() - start < 1850L) {
         withFrameMillis {
           frameNowMs = System.currentTimeMillis()
         }
@@ -238,9 +257,7 @@ fun LexiFillBoardCanvas(
     }
   }
 
-  val washiShaderTimeSec = remember(frameNowMs) {
-    ((frameNowMs % 6400L).toFloat() / 6400f) * (2.0 * PI).toFloat()
-  }
+  val washiShaderTimeSec = if (hasLockedCells) continuousWashiPhase else 0f
 
   // Gentle paper micro-nudge on invalid intersection or dual-axis clear
   val shakeOffset = remember { Animatable(0f) }
