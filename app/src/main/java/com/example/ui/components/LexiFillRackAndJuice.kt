@@ -398,20 +398,6 @@ fun LexiFillDraggableRack(
       label = "shuffle_btn_spin",
     )
 
-  // Shared single InfiniteTransition for all idle floating rack tiles; read only in graphicsLayer (0 recompositions)
-  val sharedRackInfinite = rememberInfiniteTransition(label = "shared_rack_tile_float")
-  val sharedFloatPhaseState =
-    sharedRackInfinite.animateFloat(
-      initialValue = 0f,
-      targetValue = (2f * PI).toFloat(),
-      animationSpec =
-        infiniteRepeatable(
-          animation = tween(durationMillis = 2500, easing = LinearEasing),
-          repeatMode = RepeatMode.Restart,
-        ),
-      label = "shared_float_phase",
-    )
-
   Surface(
     modifier =
       modifier
@@ -487,7 +473,6 @@ fun LexiFillDraggableRack(
                 SpringDraggableRackTile(
                   tile = tile,
                   tileIndex = index,
-                  sharedFloatPhaseProvider = { sharedFloatPhaseState.value },
                   shuffleGeneration = shuffleGeneration,
                   isSelected = tile.id == selectedTileId,
                   skin = equippedSkin,
@@ -598,7 +583,6 @@ private fun LegendMiniPill(label: String, color: Color) {
 private fun SpringDraggableRackTile(
   tile: Tile,
   tileIndex: Int,
-  sharedFloatPhaseProvider: () -> Float,
   shuffleGeneration: Int,
   isSelected: Boolean,
   skin: CosmeticTileSkin,
@@ -609,7 +593,6 @@ private fun SpringDraggableRackTile(
   onDragCancel: () -> Unit,
 ) {
   val scope = rememberCoroutineScope()
-  val density = LocalDensity.current
   val dragOffset = remember(tile.id) { Animatable(Offset.Zero, Offset.VectorConverter) }
   // Spring-driven magnetic-snap pull offset when dragged near a valid board slot!
   val magneticPullOffset = remember(tile.id) { Animatable(Offset.Zero, Offset.VectorConverter) }
@@ -688,20 +671,18 @@ private fun SpringDraggableRackTile(
   var dragVelocity by remember(tile.id) { mutableStateOf(Offset.Zero) }
   var trailOffsets by remember(tile.id) { mutableStateOf<List<Offset>>(emptyList()) }
 
-  val floatAmplitudePx = remember(density) { with(density) { 2.6.dp.toPx() } }
-
   val scaleState =
     animateFloatAsState(
       targetValue =
         when {
-          isDragging && isMagneticallySnapped -> 1.16f
-          isDragging -> 1.24f
-          isSelected -> 1.10f
+          isDragging && isMagneticallySnapped -> 1.15f
+          isDragging -> 1.20f
+          isSelected -> 1.09f
           else -> 1.0f
         },
       animationSpec =
         spring(
-          dampingRatio = Spring.DampingRatioMediumBouncy,
+          dampingRatio = Spring.DampingRatioNoBouncy,
           stiffness = Spring.StiffnessMedium,
         ),
       label = "rack_tile_scale",
@@ -721,7 +702,17 @@ private fun SpringDraggableRackTile(
   Box(
     modifier =
       Modifier.zIndex(if (isDragging) 50f else if (isSelected) 10f else 1f)
-        .size(52.dp),
+        .size(52.dp)
+        .onGloballyPositioned { coords ->
+          if (!isDragging) {
+            val pos = coords.positionInRoot()
+            tileRootCenter =
+              Offset(
+                pos.x + coords.size.width / 2f,
+                pos.y + coords.size.height / 2f,
+              )
+          }
+        },
     contentAlignment = Alignment.Center,
   ) {
     // Subtle paper trail & magnetic lock halo while dragging
@@ -735,25 +726,23 @@ private fun SpringDraggableRackTile(
               y = dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y,
             )
 
-        // Soft paper-breeze trail dots behind dragged tile
         trailOffsets.forEachIndexed { idx, pastOffset ->
           val progress = (idx + 1).toFloat() / trailOffsets.size.toFloat()
           val sparkCenter = center + pastOffset
           val sparkColor = if (isMagneticallySnapped) CeladonJade else SkyCyan
           drawCircle(
-            color = sparkColor.copy(alpha = progress * 0.35f),
-            radius = (2.5f + 4.5f * progress).dp.toPx(),
+            color = sparkColor.copy(alpha = progress * 0.30f),
+            radius = (2.2f + 3.8f * progress).dp.toPx(),
             center = sparkCenter,
           )
         }
 
-        // Magnetic lock-on halo around the tile when snapped near a valid board slot
         if (isMagneticallySnapped) {
           drawCircle(
             color = CeladonJade.copy(alpha = 0.35f),
-            radius = 32.dp.toPx(),
+            radius = 30.dp.toPx(),
             center = currentPos,
-            style = Stroke(width = 2.2.dp.toPx()),
+            style = Stroke(width = 2.dp.toPx()),
           )
         }
       }
@@ -762,44 +751,32 @@ private fun SpringDraggableRackTile(
     Box(
       modifier =
         Modifier.graphicsLayer {
-            val phaseAngle = sharedFloatPhaseProvider() + (tileIndex * 0.85f)
-            val idleFloatY = if (!isDragging) sin(phaseAngle) * floatAmplitudePx else 0f
-            val idleFloatTilt = if (!isDragging) cos(phaseAngle) * 1.4f else 0f
             val combinedScale = scaleState.value * shufflePopScale.value
+            val selectedLiftY = if (isSelected && !isDragging) -8f else 0f
             translationX = dragOffset.value.x + magneticPullOffset.value.x + shuffleOffset.value.x
             translationY =
-              dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y + idleFloatY
+              dragOffset.value.y + magneticPullOffset.value.y + shuffleOffset.value.y + selectedLiftY
             scaleX = combinedScale
             scaleY = combinedScale
             rotationZ =
-              if (isDragging) tiltZ.value else (idleFloatTilt + shuffleTiltZ.value)
-            rotationX = (-dragVelocity.y * 0.35f).coerceIn(-12f, 12f)
+              if (isDragging) tiltZ.value else shuffleTiltZ.value
+            rotationX = if (isDragging) (-dragVelocity.y * 0.25f).coerceIn(-10f, 10f) else 0f
             rotationY =
-              (dragVelocity.x * 0.35f).coerceIn(-12f, 12f) + shuffleFlipY.value
+              if (isDragging) (dragVelocity.x * 0.25f).coerceIn(-10f, 10f) + shuffleFlipY.value
+              else shuffleFlipY.value
           }
           .size(50.dp)
           .shadow(
-            elevation = if (isDragging) 14.dp else 4.dp,
+            elevation = if (isDragging) 10.dp else 3.dp,
             shape = RoundedCornerShape(10.dp),
           )
           .clip(RoundedCornerShape(10.dp))
           .background(baseColor)
-          .paperGrainOverlay(alpha = 0.05f, fiberCount = 10, speckleCount = 16, seed = 707 + tileIndex)
           .border(
             width = if (isDragging || isSelected) 2.2.dp else 1.4.dp,
             color = borderColor,
             shape = RoundedCornerShape(10.dp),
           )
-          .onGloballyPositioned { coords ->
-            if (!isDragging) {
-              val pos = coords.positionInRoot()
-              tileRootCenter =
-                Offset(
-                  pos.x + coords.size.width / 2f,
-                  pos.y + coords.size.height / 2f,
-                )
-            }
-          }
           .clickable { onTap() }
           .pointerInput(tile.id) {
             detectDragGestures(
@@ -818,30 +795,27 @@ private fun SpringDraggableRackTile(
                     x = dragVelocity.x * 0.55f + dragAmount.x * 0.45f,
                     y = dragVelocity.y * 0.55f + dragAmount.y * 0.45f,
                   )
-                trailOffsets = (trailOffsets + nextOffset).takeLast(7)
+                trailOffsets = (trailOffsets + nextOffset).takeLast(5)
 
                 val currentFingerRootPoint = tileRootCenter + nextOffset
                 val magneticPull = onDragMove(currentFingerRootPoint)
                 val snappedNow = hypot(magneticPull.x, magneticPull.y) > 1.5f
                 isMagneticallySnapped = snappedNow
 
-                // Dampen tilt when magnetically locked onto a slot so it aligns cleanly
                 val targetTilt =
-                  if (snappedNow) (dragVelocity.x * 0.18f).coerceIn(-4f, 4f)
-                  else (dragVelocity.x * 0.55f).coerceIn(-14f, 14f)
+                  if (snappedNow) (dragVelocity.x * 0.16f).coerceIn(-4f, 4f)
+                  else (dragVelocity.x * 0.45f).coerceIn(-12f, 12f)
+
+                val smoothedPull =
+                  Offset(
+                    x = magneticPullOffset.value.x * 0.35f + magneticPull.x * 0.65f,
+                    y = magneticPullOffset.value.y * 0.35f + magneticPull.y * 0.65f,
+                  )
 
                 scope.launch {
                   dragOffset.snapTo(nextOffset)
                   tiltZ.snapTo(targetTilt)
-                  // Spring-animate the magnetic pull offset for tactile magnetic-snap physics!
-                  magneticPullOffset.animateTo(
-                    targetValue = magneticPull,
-                    animationSpec =
-                      spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium,
-                      ),
-                  )
+                  magneticPullOffset.snapTo(smoothedPull)
                 }
               },
               onDragEnd = {
@@ -1067,6 +1041,34 @@ fun LevelClearFanfareOverlay(
             style = MaterialTheme.typography.titleMedium,
             color = WashiCream,
           )
+
+          if (summary.completedChapterId != null) {
+            Surface(
+              shape = RoundedCornerShape(12.dp),
+              color = KyotoGold.copy(alpha = 0.16f),
+              modifier =
+                Modifier.fillMaxWidth()
+                  .border(1.5.dp, KyotoGold, RoundedCornerShape(12.dp))
+                  .testTag("fanfare_chapter_mastered_banner"),
+            ) {
+              Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+              ) {
+                Text(
+                  text = "✦ CHAPTER ${summary.completedChapterId} MASTERED! ✦",
+                  style = MaterialTheme.typography.labelLarge,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = KyotoGold,
+                )
+                Text(
+                  text = "All 20 Chapter Origami Folds Complete · Golden Crane Seal Unfolded!",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = WashiCream,
+                )
+              }
+            }
+          }
 
           // Star Rating Row
           Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

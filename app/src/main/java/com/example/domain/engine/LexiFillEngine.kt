@@ -568,6 +568,17 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         else -> 1
       }
 
+    val updatedCompletedLevels =
+      if (allWordsCompleted) state.completedLevels + state.levelTemplate.levelNumber
+      else state.completedLevels
+
+    val currentChapterId = ((state.levelTemplate.levelNumber - 1) / 20) + 1
+    val chapterStartLevel = (currentChapterId - 1) * 20 + 1
+    val chapterEndLevel = currentChapterId * 20
+    val isChapterNowCompleted =
+      allWordsCompleted &&
+        (chapterStartLevel..chapterEndLevel).all { it in updatedCompletedLevels }
+
     val clearSummary =
       if (allWordsCompleted) {
         LevelClearSummary(
@@ -579,6 +590,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
           accuracyBonus = accuracyBonus,
           coinsEarned = coinsEarned,
           stars = stars,
+          completedChapterId = if (isChapterNowCompleted) currentChapterId else null,
         )
       } else {
         null
@@ -590,6 +602,8 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
 
     val statusText =
       when {
+        isChapterNowCompleted ->
+          "CHAPTER $currentChapterId MASTERED! Level ${state.levelTemplate.levelNumber} Cleared (+$finalLevelScore PTS)!"
         allWordsCompleted ->
           "LEVEL ${state.levelTemplate.levelNumber} CLEARED! +$finalLevelScore PTS · Next puzzle in 3s..."
         isDualIntersectionClear ->
@@ -634,9 +648,7 @@ class LexiFillEngine(val trie: WordTrieEngine = WordTrieEngine()) {
         comboMultiplier = newComboMultiplier,
         movesMade = state.movesMade + 1,
         hintsRemaining = (state.hintsRemaining + bonusHintRecharge).coerceAtMost(9),
-        completedLevels =
-          if (allWordsCompleted) state.completedLevels + state.levelTemplate.levelNumber
-          else state.completedLevels,
+        completedLevels = updatedCompletedLevels,
         highestUnlockedLevel = nextUnlocked,
         hoverCoord = null,
         hoverPreview = null,

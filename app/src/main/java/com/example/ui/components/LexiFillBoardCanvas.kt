@@ -211,30 +211,7 @@ fun LexiFillBoardCanvas(
     reticlePhase = 0f
   }
 
-  val hasLockedCells =
-    remember(puzzleState.cells) {
-      puzzleState.cells.any { row -> row.any { it.isLockedCompleted } }
-    }
-  val washiShaderTimeSec: Float
-  if (hasLockedCells) {
-    val lockedShaderTransition = rememberInfiniteTransition(label = "locked_washi_grain_shader")
-    val animShaderTime by
-      lockedShaderTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2.0 * PI).toFloat(),
-        animationSpec =
-          infiniteRepeatable(
-            animation = tween(durationMillis = 6400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-          ),
-        label = "washi_shader_time",
-      )
-    washiShaderTimeSec = animShaderTime
-  } else {
-    washiShaderTimeSec = 0f
-  }
-
-  // Frame clock tick for smooth tile-snap squash/stretch, subtle paper shimmer & popups
+  // Frame clock tick for smooth tile-snap squash/stretch, paper-fold lock transitions & popups
   var frameNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
   LaunchedEffect(
     puzzleState.cellFlashTimestamps,
@@ -253,12 +230,16 @@ fun LexiFillBoardCanvas(
         puzzleState.confettiExplosions.isNotEmpty()
     if (hasActiveAnimations) {
       val start = System.currentTimeMillis()
-      while (System.currentTimeMillis() - start < 1450L) {
+      while (System.currentTimeMillis() - start < 1200L) {
         withFrameMillis {
           frameNowMs = System.currentTimeMillis()
         }
       }
     }
+  }
+
+  val washiShaderTimeSec = remember(frameNowMs) {
+    ((frameNowMs % 6400L).toFloat() / 6400f) * (2.0 * PI).toFloat()
   }
 
   // Gentle paper micro-nudge on invalid intersection or dual-axis clear
@@ -664,80 +645,44 @@ fun LexiFillBoardCanvas(
               }
             }
 
-            // 3. Open Blank Target Paper Cutout Socket (Embossed 'Pressed-Paper' Depth-Map)
+            // 3. Open Blank Target Paper Cutout Socket (Zero-Allocation Embossed 'Pressed-Paper' Bevel)
             else -> {
-              val (topDepthCol, midDepthCol, botDepthCol) =
+              val (topLipCol, midSocketCol, botCatchCol) =
                 when (cell.multiplier) {
                   SquareMultiplier.TW ->
-                    Triple(Color(0xFFEFBFC0), SquareTwBg, Color(0xFFFBE4E4))
+                    Triple(Color(0xFFD6989A), SquareTwBg, Color(0xFFFCECEC))
                   SquareMultiplier.DW ->
-                    Triple(Color(0xFFF3CEDA), SquareDwBg, Color(0xFFFDEBF0))
+                    Triple(Color(0xFFDDA5B6), SquareDwBg, Color(0xFFFDF0F4))
                   SquareMultiplier.TL ->
-                    Triple(Color(0xFFA3CCF0), SquareTlBg, Color(0xFFD5EBFB))
+                    Triple(Color(0xFF88B4DA), SquareTlBg, Color(0xFFEAF5FD))
                   SquareMultiplier.DL ->
-                    Triple(Color(0xFFBBDDF3), SquareDlBg, Color(0xFFE6F3FC))
+                    Triple(Color(0xFF9EC4DF), SquareDlBg, Color(0xFFF0F8FE))
                   else ->
-                    Triple(Color(0xFFDED3BE), BlankSlotSocketBg, Color(0xFFF3ECDE))
+                    Triple(Color(0xFFC5B59B), BlankSlotSocketBg, Color(0xFFF8F3E8))
                 }
 
-              // Outer bottom paper-emboss ridge where the surrounding Washi sheet meets the pressed slot
+              // Outer bottom paper-emboss catchlight ridge
               drawRoundRect(
-                color = Color(0xFFFFFEFA).copy(alpha = 0.92f),
-                topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.032f),
+                color = botCatchCol,
+                topLeft = Offset(topLeft.x, topLeft.y + cellSize * 0.030f),
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
               )
 
-              // Concave directional pressed-paper depth-map fill
+              // Top inner recessed lip shadow (simulates overhead light casting shadow inside cavity)
               drawRoundRect(
-                brush =
-                  Brush.verticalGradient(
-                    0.0f to topDepthCol,
-                    0.46f to midDepthCol,
-                    1.0f to botDepthCol,
-                    startY = topLeft.y,
-                    endY = topLeft.y + innerSize,
-                  ),
+                color = topLipCol,
                 topLeft = topLeft,
                 size = Size(innerSize, innerSize),
                 cornerRadius = cornerRadius,
               )
 
-              // Top-edge inner recessed shadow gradient (simulates overhead light casting shadow inside the pressed cavity)
-              val shadowTint =
-                when (cell.multiplier) {
-                  SquareMultiplier.TW -> Color(0xFF8C2A2A)
-                  SquareMultiplier.DW -> Color(0xFF8A3850)
-                  SquareMultiplier.TL,
-                  SquareMultiplier.DL -> Color(0xFF1A4B78)
-                  else -> Color(0xFF4E3C24)
-                }
+              // Main pressed-paper socket bed shifted slightly down to reveal recessed top bevel
+              val insetTop = cellSize * 0.042f
               drawRoundRect(
-                brush =
-                  Brush.verticalGradient(
-                    0.0f to shadowTint.copy(alpha = 0.23f),
-                    0.34f to shadowTint.copy(alpha = 0.07f),
-                    0.65f to Color.Transparent,
-                    startY = topLeft.y,
-                    endY = topLeft.y + innerSize,
-                  ),
-                topLeft = topLeft,
-                size = Size(innerSize, innerSize),
-                cornerRadius = cornerRadius,
-              )
-
-              // Bottom-edge inner catchlight lip where overhead light catches the lower pressed paper bevel
-              drawRoundRect(
-                brush =
-                  Brush.verticalGradient(
-                    0.0f to Color.Transparent,
-                    0.68f to Color.Transparent,
-                    1.0f to Color(0xFFFFFDF7).copy(alpha = 0.82f),
-                    startY = topLeft.y,
-                    endY = topLeft.y + innerSize,
-                  ),
-                topLeft = Offset(topLeft.x + cellSize * 0.025f, topLeft.y + cellSize * 0.025f),
-                size = Size(innerSize - cellSize * 0.05f, innerSize - cellSize * 0.05f),
+                color = midSocketCol,
+                topLeft = Offset(topLeft.x + cellSize * 0.014f, topLeft.y + insetTop),
+                size = Size(innerSize - cellSize * 0.028f, innerSize - insetTop - cellSize * 0.012f),
                 cornerRadius = CornerRadius(cellSize * 0.12f, cellSize * 0.12f),
               )
 

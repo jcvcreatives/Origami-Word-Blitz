@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -14,6 +15,12 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -87,9 +94,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import android.app.Activity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
@@ -638,99 +652,143 @@ private fun IntersectingCluesStrip(
   cells: List<List<com.example.domain.model.BoardCell>>,
   onSelectClueWord: (String) -> Unit,
 ) {
+  val allCompleted = remember(targetWords) { targetWords.isNotEmpty() && targetWords.all { it.isCompleted } }
+
   Row(
     modifier =
       Modifier.fillMaxWidth()
         .horizontalScroll(rememberScrollState())
         .testTag("intersecting_clues_strip"),
     horizontalArrangement = Arrangement.spacedBy(8.dp),
+    verticalAlignment = Alignment.CenterVertically,
   ) {
-    for (tw in targetWords) {
-      val isFocused = tw.id == focusedWordId
-      val bg =
-        when {
-          tw.isCompleted -> CompletedWordBg
-          isFocused -> Color(0xFFDFECF6)
-          else -> IndigoSurface
-        }
-      val border =
-        when {
-          tw.isCompleted -> CeladonJade
-          isFocused -> SkyCyan
-          else -> IndigoElevated
-        }
-      val dirTag = if (tw.direction == WordDirection.HORIZONTAL) "ACROSS →" else "DOWN ↓"
-
+    if (allCompleted) {
       Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = bg,
+        shape = RoundedCornerShape(10.dp),
+        color = CompletedWordBg,
         modifier =
-          Modifier.border(
-              width = if (isFocused || tw.isCompleted) 1.6.dp else 1.dp,
-              color = border,
-              shape = RoundedCornerShape(12.dp),
-            )
-            .paperGrainOverlay(
-              alpha = 0.042f,
-              fiberCount = 14,
-              speckleCount = 22,
-              seed = 303 + tw.id.hashCode(),
-            )
-            .clickable { onSelectClueWord(tw.id) }
-            .testTag("clue_chip_${tw.id}"),
+          Modifier.border(1.2.dp, CeladonJade, RoundedCornerShape(10.dp))
+            .testTag("all_clues_folded_badge"),
       ) {
         Row(
-          modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-          if (tw.isCompleted) {
-            Icon(
-              imageVector = Icons.Filled.CheckCircle,
-              contentDescription = "Completed word",
-              tint = CeladonJade,
-              modifier = Modifier.size(16.dp),
-            )
-          }
-          Column {
+          Icon(
+            imageVector = Icons.Filled.CheckCircle,
+            contentDescription = "All clues folded",
+            tint = CeladonJade,
+            modifier = Modifier.size(15.dp),
+          )
+          Text(
+            text = "All Origami Clues Folded!",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = CeladonJade,
+          )
+        }
+      }
+    }
+
+    for (tw in targetWords) {
+      key(tw.id) {
+        val foldAngleX by
+          animateFloatAsState(
+            targetValue = if (tw.isCompleted) -82f else 0f,
+            animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            label = "clue_fold_angle_${tw.id}",
+          )
+        val foldScaleY by
+          animateFloatAsState(
+            targetValue = if (tw.isCompleted) 0.18f else 1f,
+            animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            label = "clue_fold_scale_${tw.id}",
+          )
+
+        AnimatedVisibility(
+          visible = !tw.isCompleted,
+          enter =
+            fadeIn(tween(220)) +
+              expandHorizontally(tween(260, easing = FastOutSlowInEasing)) +
+              scaleIn(initialScale = 0.85f, animationSpec = tween(240)),
+          exit =
+            shrinkHorizontally(
+              animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+              shrinkTowards = Alignment.Start,
+            ) +
+              scaleOut(
+                targetScale = 0.25f,
+                transformOrigin = TransformOrigin(0.5f, 0f),
+                animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
+              ) +
+              fadeOut(tween(durationMillis = 320)),
+        ) {
+          val isFocused = tw.id == focusedWordId
+          val bg =
+            when {
+              tw.isCompleted -> CompletedWordBg
+              isFocused -> Color(0xFFDFECF6)
+              else -> IndigoSurface
+            }
+          val border =
+            when {
+              tw.isCompleted -> CeladonJade
+              isFocused -> SkyCyan
+              else -> IndigoElevated
+            }
+          val dirTag = if (tw.direction == WordDirection.HORIZONTAL) "ACROSS →" else "DOWN ↓"
+
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = bg,
+            modifier =
+              Modifier.graphicsLayer {
+                  rotationX = foldAngleX
+                  scaleY = foldScaleY
+                  cameraDistance = 12f * density
+                }
+                .border(
+                  width = if (isFocused) 1.6.dp else 1.dp,
+                  color = border,
+                  shape = RoundedCornerShape(12.dp),
+                )
+                .clickable { onSelectClueWord(tw.id) }
+                .testTag("clue_chip_${tw.id}"),
+          ) {
             Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-              Text(
-                text = dirTag,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color =
-                  when {
-                    tw.isCompleted -> CeladonJade
-                    isFocused -> KyotoGold
-                    else -> SkyCyan
-                  },
-              )
-              Text(
-                text = tw.formattedSkeleton(cells),
-                style = MaterialTheme.typography.labelMedium,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.ExtraBold,
-                color = WashiCream,
-              )
-              if (tw.isCompleted && tw.awardedScore > 0) {
+              Column {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                  Text(
+                    text = dirTag,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isFocused) KyotoGold else SkyCyan,
+                  )
+                  Text(
+                    text = tw.formattedSkeleton(cells),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = WashiCream,
+                  )
+                }
                 Text(
-                  text = "+${tw.awardedScore}",
+                  text = tw.clue,
                   fontSize = 10.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = KyotoGold,
+                  color = if (isFocused) WashiCream.copy(alpha = 0.9f) else WashiMuted,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
                 )
               }
             }
-            Text(
-              text = tw.clue,
-              fontSize = 10.sp,
-              color = if (isFocused) WashiCream.copy(alpha = 0.9f) else WashiMuted,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis,
-            )
           }
         }
       }
@@ -1015,13 +1073,23 @@ private fun PuzzleVaultScreen(
       ) {
         for ((chId, chLabel) in chapters) {
           val isSelected = selectedChapter == chId
+          val isChDone = chId in 1..5 && puzzleState.isChapterCompleted(chId)
           Surface(
             shape = RoundedCornerShape(999.dp),
-            color = if (isSelected) SkyCyan else IndigoSurface,
+            color =
+              when {
+                isSelected -> SkyCyan
+                isChDone -> CompletedWordBg
+                else -> IndigoSurface
+              },
             modifier =
               Modifier.border(
                   1.dp,
-                  if (isSelected) SkyCyan else IndigoCard,
+                  when {
+                    isSelected -> SkyCyan
+                    isChDone -> CeladonJade
+                    else -> IndigoCard
+                  },
                   RoundedCornerShape(999.dp),
                 )
                 .clickable { selectedChapter = chId }
@@ -1029,17 +1097,41 @@ private fun PuzzleVaultScreen(
                 .testTag("vault_chapter_filter_$chId"),
           ) {
             Text(
-              text = chLabel,
+              text = if (isChDone) "✦ $chLabel ✓" else chLabel,
               style = MaterialTheme.typography.labelSmall,
               fontWeight = FontWeight.ExtraBold,
-              color = if (isSelected) IndigoNight else WashiCream,
+              color =
+                when {
+                  isSelected -> IndigoNight
+                  isChDone -> CeladonJade
+                  else -> WashiCream
+                },
             )
           }
         }
       }
     }
 
+    if (selectedChapter in 1..5) {
+      item(key = "chapter_header_$selectedChapter") {
+        ChapterMasteryHeaderCard(
+          chapterId = selectedChapter,
+          solvedCount = puzzleState.solvedCountInChapter(selectedChapter),
+          isChapterCompleted = puzzleState.isChapterCompleted(selectedChapter),
+        )
+      }
+    }
+
     items(filteredLevels, key = { it.levelNumber }) { template: LevelTemplate ->
+      val chIdForLevel = puzzleState.chapterForLevel(template.levelNumber)
+      if (selectedChapter == 0 && (template.levelNumber - 1) % 20 == 0) {
+        ChapterMasteryHeaderCard(
+          chapterId = chIdForLevel,
+          solvedCount = puzzleState.solvedCountInChapter(chIdForLevel),
+          isChapterCompleted = puzzleState.isChapterCompleted(chIdForLevel),
+          modifier = Modifier.padding(bottom = 10.dp),
+        )
+      }
       val isSolved = template.levelNumber in puzzleState.completedLevels
       val isUnlocked = isSolved || template.levelNumber <= puzzleState.highestUnlockedLevel
       val isCurrent = template.levelNumber == puzzleState.levelTemplate.levelNumber
@@ -1164,6 +1256,274 @@ private fun PuzzleVaultScreen(
                 },
               fontWeight = FontWeight.Bold,
             )
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Chapter Header Card with an interactive & automatic Paper-Folding Animation + Particle Burst
+ * over the chapter header when all 20 levels in the chapter are completed (or when the user
+ * taps the "✦ Fold Seal" preview button).
+ */
+@Composable
+private fun ChapterMasteryHeaderCard(
+  chapterId: Int,
+  solvedCount: Int,
+  isChapterCompleted: Boolean,
+  modifier: Modifier = Modifier,
+) {
+  val chapterInfo =
+    remember(chapterId) {
+      when (chapterId) {
+        1 -> Triple("Chapter I · Apprentice Washi Folds", "Levels 1–20 · Gentle 4–5 Letter Crossings", Color(0xFF1F4E78))
+        2 -> Triple("Chapter II · Courtyard Bamboo Creases", "Levels 21–40 · Balanced 5–6 Letter Grids", Color(0xFF1B6B45))
+        3 -> Triple("Chapter III · Golden Pavilion Symmetry", "Levels 41–60 · Interlocking Multi-Word Skeletons", Color(0xFFB87314))
+        4 -> Triple("Chapter IV · Arashiyama Lantern Weaves", "Levels 61–80 · Advanced Scholar Crossings", Color(0xFFC83720))
+        else -> Triple("Chapter V · Grandmaster Kyoto Crane", "Levels 81–100 · Imperial 100-Level Mastery", Color(0xFF8B3A62))
+      }
+    }
+
+  val scope = rememberCoroutineScope()
+  val foldProgress = remember { Animatable(if (isChapterCompleted) 1f else 0f) }
+  val particleBurstProgress = remember { Animatable(0f) }
+  var manualTriggerCount by remember { mutableIntStateOf(0) }
+  val foldFacetPath = remember { Path() }
+  val particlePath = remember { Path() }
+
+  LaunchedEffect(isChapterCompleted, manualTriggerCount) {
+    if (isChapterCompleted || manualTriggerCount > 0) {
+      foldProgress.snapTo(0f)
+      particleBurstProgress.snapTo(0.01f)
+      kotlinx.coroutines.coroutineScope {
+        launch {
+          foldProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 1050, easing = FastOutSlowInEasing),
+          )
+        }
+        launch {
+          particleBurstProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 1350, easing = FastOutSlowInEasing),
+          )
+          particleBurstProgress.snapTo(0f)
+        }
+      }
+    }
+  }
+
+  val fp = foldProgress.value
+  val bp = particleBurstProgress.value
+  val isAnimatingFold = bp > 0f && bp < 1f
+  val headerTiltX = if (isAnimatingFold) sin(fp * PI).toFloat() * 9f else 0f
+
+  Surface(
+    shape = RoundedCornerShape(16.dp),
+    color = if (isChapterCompleted) CompletedWordBg else IndigoSurface,
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .graphicsLayer {
+          rotationX = headerTiltX
+          cameraDistance = 14f * density
+        }
+        .border(
+          width = if (isChapterCompleted || isAnimatingFold) 1.8.dp else 1.2.dp,
+          brush =
+            if (isChapterCompleted || isAnimatingFold) {
+              Brush.horizontalGradient(listOf(KyotoGold, CeladonJade, SkyCyan))
+            } else {
+              Brush.horizontalGradient(listOf(IndigoElevated, IndigoCard))
+            },
+          shape = RoundedCornerShape(16.dp),
+        )
+        .testTag("vault_chapter_header_$chapterId"),
+  ) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        // Origami Paper-Folding Crest Canvas over the left of the Chapter Header
+        Box(
+          modifier =
+            Modifier.size(48.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(IndigoCard.copy(alpha = 0.7f))
+              .border(1.dp, if (isChapterCompleted) KyotoGold else IndigoElevated, RoundedCornerShape(12.dp)),
+          contentAlignment = Alignment.Center,
+        ) {
+          Canvas(modifier = Modifier.fillMaxSize().padding(6.dp)) {
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val r = size.minDimension * 0.46f
+            val foldStage = fp.coerceIn(0f, 1f)
+
+            // Base Washi Square that folds its 4 corners inward along diagonal mountain/valley creases
+            val cornerPull = 1f - 0.42f * sin(foldStage * PI).toFloat()
+            val crestSpin = foldStage * 45f
+
+            withTransform({
+              rotate(degrees = crestSpin, pivot = Offset(cx, cy))
+            }) {
+              // Top-Left Origami Facet
+              foldFacetPath.reset()
+              foldFacetPath.moveTo(cx, cy)
+              foldFacetPath.lineTo(cx - r * cornerPull, cy - r * cornerPull)
+              foldFacetPath.lineTo(cx, cy - r)
+              foldFacetPath.close()
+              drawPath(foldFacetPath, color = if (isChapterCompleted) KyotoGold else chapterInfo.third)
+
+              // Top-Right Origami Facet
+              foldFacetPath.reset()
+              foldFacetPath.moveTo(cx, cy)
+              foldFacetPath.lineTo(cx, cy - r)
+              foldFacetPath.lineTo(cx + r * cornerPull, cy - r * cornerPull)
+              foldFacetPath.close()
+              drawPath(foldFacetPath, color = CeladonJade.copy(alpha = 0.85f))
+
+              // Bottom-Right Origami Facet
+              foldFacetPath.reset()
+              foldFacetPath.moveTo(cx, cy)
+              foldFacetPath.lineTo(cx + r * cornerPull, cy + r * cornerPull)
+              foldFacetPath.lineTo(cx, cy + r)
+              foldFacetPath.close()
+              drawPath(foldFacetPath, color = SkyCyan.copy(alpha = 0.85f))
+
+              // Bottom-Left Origami Facet
+              foldFacetPath.reset()
+              foldFacetPath.moveTo(cx, cy)
+              foldFacetPath.lineTo(cx, cy + r)
+              foldFacetPath.lineTo(cx - r * cornerPull, cy + r * cornerPull)
+              foldFacetPath.close()
+              drawPath(foldFacetPath, color = VermilionRed.copy(alpha = 0.80f))
+
+              // Crisp white origami crease lines
+              drawLine(
+                color = Color.White.copy(alpha = 0.85f),
+                start = Offset(cx - r, cy),
+                end = Offset(cx + r, cy),
+                strokeWidth = 1.4.dp.toPx(),
+              )
+              drawLine(
+                color = Color.White.copy(alpha = 0.85f),
+                start = Offset(cx, cy - r),
+                end = Offset(cx, cy + r),
+                strokeWidth = 1.4.dp.toPx(),
+              )
+            }
+          }
+        }
+
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+          ) {
+            Text(
+              text = chapterInfo.first,
+              style = MaterialTheme.typography.titleSmall,
+              fontWeight = FontWeight.ExtraBold,
+              color = WashiCream,
+            )
+            if (isChapterCompleted) {
+              Text(
+                text = "MASTERED",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = KyotoGold,
+              )
+            }
+          }
+          Text(
+            text = "${chapterInfo.second} · $solvedCount/20 Solved",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isChapterCompleted) CeladonJade else WashiMuted,
+          )
+          // Chapter Progress Bar
+          Box(
+            modifier =
+              Modifier.fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(IndigoCard)
+          ) {
+            Box(
+              modifier =
+                Modifier.fillMaxWidth((solvedCount / 20f).coerceIn(0f, 1f))
+                  .fillMaxHeight()
+                  .background(
+                    Brush.horizontalGradient(listOf(SkyCyan, CeladonJade, KyotoGold))
+                  )
+            )
+          }
+        }
+
+        OutlinedButton(
+          onClick = {
+            scope.launch {
+              manualTriggerCount++
+            }
+          },
+          shape = RoundedCornerShape(10.dp),
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+          modifier = Modifier.height(36.dp).testTag("btn_chapter_fold_anim_$chapterId"),
+        ) {
+          Text(
+            text = if (isChapterCompleted) "✦ Replay Fold" else "✦ Fold Seal",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = if (isChapterCompleted) KyotoGold else SkyCyan,
+          )
+        }
+      }
+
+      // Paper-Folding Crease Sweep + Origami Particle Burst Canvas Overlay over the Chapter Header!
+      if (isAnimatingFold) {
+        Canvas(
+          modifier =
+            Modifier.matchParentSize()
+              .testTag("chapter_header_particle_canvas_$chapterId")
+        ) {
+          // 1. Diagonal Paper-Folding Crease Wave sweeping across the Chapter Header
+          val sweepX = size.width * fp
+          drawLine(
+            color = KyotoGold.copy(alpha = (1f - fp) * 0.75f),
+            start = Offset((sweepX - 28.dp.toPx()).coerceAtLeast(0f), 0f),
+            end = Offset(sweepX.coerceAtMost(size.width), size.height),
+            strokeWidth = 3.dp.toPx(),
+          )
+
+          // 2. 28 Origami Paper-Triangle/Diamond Particles bursting across the Chapter Header
+          val palette = listOf(KyotoGold, CeladonJade, VermilionRed, SkyCyan, Color(0xFFD65A7A))
+          val count = 28
+          val fadeAlpha = sin(bp * PI).toFloat().coerceIn(0f, 1f)
+          for (i in 0 until count) {
+            val originX = size.width * (0.12f + 0.76f * ((i % 7) / 6f))
+            val originY = size.height * 0.5f
+            val angle = (2.0 * PI * i) / count + (i * 0.37)
+            val dist = size.height * (0.35f + 0.85f * (i % 3) * 0.35f) * bp
+            val px = originX + (cos(angle) * dist).toFloat()
+            val py = originY + (sin(angle) * dist * 0.65f).toFloat() - (size.height * 0.28f * bp)
+            val pSize = (4.5f + (i % 3) * 2f).dp.toPx() * (1f - bp * 0.3f)
+            val col = palette[i % palette.size].copy(alpha = (fadeAlpha * 0.88f).coerceIn(0f, 1f))
+
+            withTransform({
+              translate(left = px, top = py)
+              rotate(degrees = (i * 47f + bp * 220f) % 360f, pivot = Offset.Zero)
+            }) {
+              particlePath.reset()
+              particlePath.moveTo(0f, -pSize)
+              particlePath.lineTo(pSize * 0.85f, 0f)
+              particlePath.lineTo(0f, pSize)
+              particlePath.lineTo(-pSize * 0.85f, 0f)
+              particlePath.close()
+              drawPath(path = particlePath, color = col)
+            }
           }
         }
       }

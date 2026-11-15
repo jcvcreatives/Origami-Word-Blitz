@@ -332,8 +332,16 @@
       border-radius: 11px;
       padding: 5px 9px;
       min-width: 158px;
+      max-width: 260px;
       flex-shrink: 0;
       cursor: pointer;
+      transform-origin: center top;
+      backface-visibility: hidden;
+      will-change: transform, opacity, max-width, min-width, padding;
+      transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.18s ease;
     }
     .clue-chip.focused {
       background: #dfecf6;
@@ -342,6 +350,57 @@
     .clue-chip.done {
       background: var(--completed-word-bg);
       border: 1.5px solid var(--matcha-jade);
+    }
+    .clue-chip.folding-out {
+      pointer-events: none;
+      overflow: hidden;
+      animation: clueOrigamiFoldOut 0.44s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .clue-chip.folded-hidden {
+      display: none !important;
+    }
+    @keyframes clueOrigamiFoldOut {
+      0% {
+        transform: perspective(520px) rotateX(0deg) scaleY(1);
+        background: var(--completed-word-bg);
+        border-color: var(--matcha-jade);
+        opacity: 1;
+        min-width: 158px;
+        max-width: 240px;
+      }
+      45% {
+        transform: perspective(520px) rotateX(-76deg) scaleY(0.25);
+        background: var(--completed-word-bg);
+        border-color: var(--matcha-jade);
+        opacity: 0.85;
+        min-width: 110px;
+        max-width: 140px;
+      }
+      100% {
+        transform: perspective(520px) rotateX(-90deg) scaleY(0);
+        opacity: 0;
+        min-width: 0px;
+        max-width: 0px;
+        padding-left: 0px;
+        padding-right: 0px;
+        padding-top: 0px;
+        padding-bottom: 0px;
+        margin-right: -7px;
+        border-width: 0px;
+      }
+    }
+    .all-clues-folded-pill {
+      background: var(--completed-word-bg);
+      border: 1.2px solid var(--matcha-jade);
+      color: var(--matcha-jade);
+      border-radius: 10px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
     }
     .clue-head {
       display: flex;
@@ -422,7 +481,7 @@
       transform: translateZ(0);
     }
 
-    /* Origami Board Cells */
+    /* Origami Board Cells (GPU-Composited Transform-Only Animations for 60fps Zero-Lag Play) */
     .cell {
       width: 100%;
       height: 100%;
@@ -438,16 +497,9 @@
       font-size: clamp(15px, 4.3vw, 22px);
       line-height: 1;
       position: relative;
-      transform-style: preserve-3d;
       transform-origin: center center;
       backface-visibility: hidden;
-      transition:
-        transform 0.52s cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0ms),
-        background 0.28s ease calc(var(--fold-delay, 0ms) + 195ms),
-        background-color 0.28s ease calc(var(--fold-delay, 0ms) + 195ms),
-        border-color 0.28s ease calc(var(--fold-delay, 0ms) + 195ms),
-        border-bottom-color 0.28s ease calc(var(--fold-delay, 0ms) + 195ms),
-        box-shadow 0.34s ease var(--fold-delay, 0ms);
+      contain: layout style paint;
     }
     .cell-char {
       display: inline-block;
@@ -608,7 +660,7 @@
       overflow: hidden;
     }
 
-    /* 4. Completed & Locked Word Cell (Folded Sage Matcha Paper + Animated Washi Paper Texture Shader) */
+    /* 4. Completed & Locked Word Cell (Folded Sage Matcha Paper + Static Washi Grain Texture) */
     .cell.locked {
       background: linear-gradient(180deg, #e2f5ea 0%, #d1ebd9 100%);
       border: 1.6px solid var(--completed-word-border);
@@ -619,56 +671,34 @@
     .cell.locked::before {
       content: "";
       position: absolute;
-      inset: -35%;
+      inset: 0;
       pointer-events: none;
-      background-image:
-        linear-gradient(
-          125deg,
-          rgba(255, 253, 246, 0) 28%,
-          rgba(255, 253, 246, 0.32) 48%,
-          rgba(21, 127, 75, 0.14) 56%,
-          rgba(255, 253, 246, 0) 74%
-        ),
-        var(--locked-washi-shader-url, var(--washi-grain-url, none));
-      background-size: 180% 180%, 64px 64px;
-      background-repeat: no-repeat, repeat;
-      opacity: 0.88;
-      will-change: transform;
-      animation: lockedWashiShaderDrift 5.8s linear infinite;
+      background-image: var(--locked-washi-shader-url, var(--washi-grain-url, none));
+      background-size: 64px 64px;
+      background-repeat: repeat;
+      opacity: 0.72;
       z-index: 1;
-    }
-    @keyframes lockedWashiShaderDrift {
-      0% {
-        transform: translate3d(-8%, -6%, 0) rotate(0.01deg);
-      }
-      50% {
-        transform: translate3d(8%, 6%, 0) rotate(0.01deg);
-      }
-      100% {
-        transform: translate3d(-8%, -6%, 0) rotate(0.01deg);
-      }
     }
     .cell.locked .dog-ear {
       background: rgba(21, 127, 75, 0.28);
-      transition: background-color 0.28s ease calc(var(--fold-delay, 0ms) + 195ms), transform 0.36s ease calc(var(--fold-delay, 0ms) + 160ms);
       z-index: 2;
     }
 
     .cell.snapped {
-      animation: tileSnapSquash 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+      will-change: transform;
+      animation: tileSnapSquash 0.26s cubic-bezier(0.22, 1, 0.36, 1);
     }
     @keyframes tileSnapSquash {
-      0% { transform: scale(1.24, 1.24); }
-      28% { transform: scale(1.12, 0.89); }
-      62% { transform: scale(0.96, 1.05); }
-      100% { transform: scale(1, 1); }
+      0% { transform: scale3d(1.18, 1.18, 1); }
+      40% { transform: scale3d(1.06, 0.92, 1); }
+      100% { transform: scale3d(1, 1, 1); }
     }
 
-    /* Subtle Origami 'Paper-Fold' Transition into Locked Matcha Green State */
+    /* Crisp 60fps GPU-Composited Origami 'Paper-Fold' Transition into Locked Matcha Green State */
     .cell.paper-fold {
       z-index: 8;
-      will-change: transform, background, border-color, box-shadow;
-      animation: origamiPaperFold 0.56s cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0ms) both;
+      will-change: transform;
+      animation: origamiPaperFold 0.44s cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0ms) both;
     }
     .cell.paper-fold::after {
       content: "";
@@ -681,39 +711,26 @@
       transform: translateY(-50%) scaleX(0.2);
       opacity: 0;
       pointer-events: none;
-      animation: origamiCreaseHighlight 0.56s ease-out var(--fold-delay, 0ms) both;
-    }
-    .cell.paper-fold .dog-ear {
-      transform-origin: top right;
-      animation: dogEarCreaseFold 0.56s cubic-bezier(0.22, 1, 0.36, 1) var(--fold-delay, 0ms) both;
+      animation: origamiCreaseHighlight 0.44s ease-out var(--fold-delay, 0ms) both;
     }
     @keyframes origamiPaperFold {
       0% {
         transform: perspective(550px) rotateX(0deg) scale3d(1, 1, 1);
-        box-shadow: 0 2px 4px rgba(107, 94, 76, 0.14);
       }
       42% {
-        transform: perspective(550px) rotateX(74deg) scale3d(0.93, 0.24, 1);
-        box-shadow: 0 8px 14px rgba(35, 30, 24, 0.22), inset 0 6px 10px rgba(107, 94, 76, 0.18);
+        transform: perspective(550px) rotateX(68deg) scale3d(0.94, 0.28, 1);
       }
       76% {
-        transform: perspective(550px) rotateX(-9deg) scale3d(1.04, 1.04, 1);
-        box-shadow: 0 4px 10px rgba(21, 127, 75, 0.24);
+        transform: perspective(550px) rotateX(-6deg) scale3d(1.03, 1.03, 1);
       }
       100% {
         transform: perspective(550px) rotateX(0deg) scale3d(1, 1, 1);
-        box-shadow: 0 2px 4px rgba(21, 127, 75, 0.14);
       }
     }
     @keyframes origamiCreaseHighlight {
       0%, 15% { opacity: 0; transform: translateY(-50%) scaleX(0.25); }
       42% { opacity: 0.95; transform: translateY(-50%) scaleX(1); }
       85%, 100% { opacity: 0; transform: translateY(-50%) scaleX(0.6); }
-    }
-    @keyframes dogEarCreaseFold {
-      0% { transform: scale(1); }
-      42% { transform: scale(1.38); }
-      100% { transform: scale(1); }
     }
 
     .mult-tag {
@@ -988,21 +1005,19 @@
       position: relative;
       cursor: grab;
       touch-action: none;
-      box-shadow: 0 3px 6px rgba(74, 56, 35, 0.16);
-      animation: idlePaperFloat 2.5s ease-in-out infinite;
-      animation-delay: var(--float-delay, 0s);
-      transform-style: preserve-3d;
-      will-change: transform;
+      box-shadow: 0 2px 4px rgba(74, 56, 35, 0.14);
+      backface-visibility: hidden;
+      transform: translate3d(0, 0, 0);
+      transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.12s ease;
     }
     .tile.shuffling {
-      animation: origamiShuffleFlip 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+      animation: origamiShuffleFlip 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
       animation-delay: var(--shuf-delay, 0ms) !important;
     }
     .tile.selected {
-      animation: none;
-      transform: translate3d(0, -5px, 0) scale(1.10);
+      transform: translate3d(0, -5px, 0) scale(1.09);
       border: 2.2px solid var(--kyoto-gold);
-      box-shadow: 0 6px 12px rgba(200, 125, 10, 0.28);
+      box-shadow: 0 5px 10px rgba(200, 125, 10, 0.24);
     }
     .tile.next-match {
       border: 1.8px solid rgba(200, 125, 10, 0.72);
@@ -1490,6 +1505,101 @@
     }
     .account-pill-btn.guest {
       color: var(--aizome-indigo);
+    }
+
+    /* Chapter Header Card with Paper-Folding & Particle Animation */
+    .chapter-header-card {
+      position: relative;
+      background: var(--washi-sheet);
+      border: 1.4px solid var(--kraft-border);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+      transform-origin: center center;
+      transition: transform 0.35s ease, border-color 0.25s ease;
+    }
+    .chapter-header-card.completed {
+      background: var(--completed-word-bg);
+      border-color: var(--kyoto-gold);
+    }
+    .chapter-header-card.folding-active {
+      animation: chapterHeaderFlex 0.95s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes chapterHeaderFlex {
+      0%, 100% { transform: perspective(650px) rotateX(0deg) scale(1); }
+      40% { transform: perspective(650px) rotateX(9deg) scale(1.015); }
+      75% { transform: perspective(650px) rotateX(-4deg) scale(1.005); }
+    }
+    .chapter-fold-crest {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: var(--kraft-card);
+      border: 1px solid var(--kraft-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chapter-fold-btn {
+      background: rgba(184, 115, 20, 0.14);
+      border: 1px solid rgba(184, 115, 20, 0.45);
+      color: var(--kyoto-gold);
+      border-radius: 9px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Mobile Landscape Responsive Layout (fixes cramped landscape viewports) */
+    @media (max-height: 540px) and (orientation: landscape) {
+      body {
+        padding: 4px 10px 48px 10px;
+      }
+      .app-shell {
+        max-width: 780px;
+        gap: 4px;
+      }
+      .hud-main {
+        padding: 4px 8px;
+      }
+      .hud-title {
+        font-size: 15px;
+      }
+      .clue-chip {
+        padding: 3px 8px;
+        min-width: 140px;
+      }
+      .board-frame {
+        max-width: min(100%, calc(48dvh * var(--board-aspect-num, 1.2)));
+        padding: 6px;
+      }
+      .rack-card {
+        padding: 5px 8px;
+        gap: 4px;
+      }
+      .rack-well {
+        min-height: 44px;
+        padding: 4px;
+      }
+      .tile {
+        width: 38px;
+        height: 38px;
+        font-size: 18px;
+      }
+      .action-btn {
+        height: 32px;
+        font-size: 11px;
+      }
+      .bottom-nav {
+        height: 44px;
+      }
     }
   </style>
 </head>
@@ -2780,10 +2890,13 @@
         maxCombo: 1,
         mult: 1.0,
         completedWords: new Set(),
+        foldedOutWords: new Set(),
         statusMsg: "Select a tile and tap a blank slot, drag tiles, or use keyboard (Arrows + A–Z)!",
         statusErr: false
       };
       applyEquippedSkinVariables();
+      initClueStripDomForLevel();
+      initBoardDomForLevel();
       render();
       renderVaultAndStudio();
     }
@@ -3192,10 +3305,10 @@
       let rafPending = false;
 
       const proxy = document.createElement("div");
-      proxy.className = "drag-proxy-tile paper-surface";
+      proxy.className = "drag-proxy-tile";
       proxy.innerHTML = `<div class="dog-ear"></div>${tile.char}<span class="pts-sub">${tile.pts}</span>`;
       proxy.style.display = "none";
-      proxy.style.transform = `translate3d(${startX}px, ${startY}px, 0) translate(-50%, -50%) scale(1.16)`;
+      proxy.style.transform = `translate3d(${startX}px, ${startY}px, 0) translate(-50%, -50%) scale(1.14)`;
       document.body.appendChild(proxy);
 
       function updateDragFrame() {
@@ -3207,7 +3320,7 @@
         prevX = latestX;
         const tiltDeg = mag.coord ? Math.max(-4, Math.min(4, vx * 0.2)) : Math.max(-12, Math.min(12, vx * 0.55));
 
-        proxy.style.transform = `translate3d(${visualX.toFixed(1)}px, ${visualY.toFixed(1)}px, 0) translate(-50%, -50%) scale(1.16) rotate(${tiltDeg.toFixed(1)}deg)`;
+        proxy.style.transform = `translate3d(${visualX.toFixed(1)}px, ${visualY.toFixed(1)}px, 0) translate(-50%, -50%) scale(1.14) rotate(${tiltDeg.toFixed(1)}deg)`;
         proxy.classList.toggle("magnet-snapped", !!mag.coord);
 
         const prevCoord = state.hoverCoord;
@@ -3223,7 +3336,7 @@
       function onPointerMove(ev) {
         latestX = ev.clientX;
         latestY = ev.clientY;
-        if (!moved && Math.hypot(latestX - startX, latestY - startY) > 5) {
+        if (!moved && Math.hypot(latestX - startX, latestY - startY) > 4) {
           moved = true;
           state.selectedTileId = tile.id;
           tileEl.classList.add("dragging-source");
@@ -3251,7 +3364,11 @@
             ? `Selected '${tile.char}' (${tile.pts} pts) — tap an open blank slot on the board to place it!`
             : "Select a tile and tap a blank slot, drag tiles, or use your keyboard.";
           state.statusErr = false;
-          render();
+          // O(1) selection toggle without rebuilding rack or board DOM
+          document.querySelectorAll("#rackRow .tile").forEach(el => {
+            el.classList.toggle("selected", el.dataset.tileId === state.selectedTileId);
+          });
+          updateSpotlightBanner();
           return;
         }
 
@@ -3316,19 +3433,53 @@
       }
     }
 
-    function renderBoard() {
+    let clueDomMap = new Map();
+
+    function initClueStripDomForLevel() {
+      const strip = document.getElementById("cluesStrip");
+      clueDomMap = new Map();
+      const frag = document.createDocumentFragment();
+      state.tpl.words.forEach(w => {
+        const chip = document.createElement("div");
+        chip.className = "clue-chip";
+        chip.dataset.wordId = w.id;
+        chip.innerHTML = `
+          <div class="clue-head">
+            <span class="clue-dir">${w.dir === "H" ? "ACROSS →" : "DOWN ↓"}</span>
+            <span class="clue-pat"></span>
+          </div>
+          <div class="clue-desc">${w.clue}</div>
+        `;
+        chip.onclick = () => {
+          if (state.completedWords.has(w.id)) return;
+          state.focusedWordId = w.id;
+          for (let i = 0; i < w.word.length; i++) {
+            const cx = w.dir === "H" ? w.sx + i : w.sx;
+            const cy = w.dir === "H" ? w.sy : w.sy + i;
+            const c = state.cells[cy] && state.cells[cy][cx];
+            if (c && c.isBlank && !c.placed && !c.locked) {
+              state.focusedCell = { x: cx, y: cy };
+              break;
+            }
+          }
+          AudioPlayer.play("click");
+          render();
+        };
+        clueDomMap.set(w.id, chip);
+        frag.appendChild(chip);
+      });
+      const allFoldedPill = document.createElement("div");
+      allFoldedPill.id = "allCluesFoldedPill";
+      allFoldedPill.className = "all-clues-folded-pill";
+      allFoldedPill.style.display = "none";
+      allFoldedPill.textContent = "✓ All Origami Clues Folded!";
+      frag.appendChild(allFoldedPill);
+      strip.replaceChildren(frag);
+    }
+
+    function initBoardDomForLevel() {
       const tpl = state.tpl;
       const bounds = getActiveBoardBounds(tpl);
-      const focusedWord = tpl.words.find(w => w.id === state.focusedWordId) || tpl.words[0];
-      const focusedCoords = new Set();
-      if (focusedWord) {
-        for (let i = 0; i < focusedWord.word.length; i++) {
-          const cx = focusedWord.dir === "H" ? focusedWord.sx + i : focusedWord.sx;
-          const cy = focusedWord.dir === "H" ? focusedWord.sy : focusedWord.sy + i;
-          focusedCoords.add(`${cx},${cy}`);
-        }
-      }
-
       const boardFrame = document.getElementById("boardFrame");
       boardFrame.style.setProperty("--board-aspect", `${bounds.cols} / ${bounds.rows}`);
       boardFrame.style.setProperty("--board-aspect-num", (bounds.cols / bounds.rows).toFixed(3));
@@ -3340,102 +3491,135 @@
       const frag = document.createDocumentFragment();
       cellDomGrid = Array.from({ length: tpl.h }, () => Array(tpl.w));
 
-      const foldingEls = [];
-
       for (let y = bounds.minY; y <= bounds.maxY; y++) {
         for (let x = bounds.minX; x <= bounds.maxX; x++) {
           const c = state.cells[y][x];
           const el = document.createElement("div");
-          const isHint = state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y;
-          const inCorridor = focusedCoords.has(`${x},${y}`);
-          const isKbFocused = Boolean(state.focusedCell && state.focusedCell.x === x && state.focusedCell.y === y);
-          const isFolding = Boolean(c.flash && c.locked);
-
-          if (isFolding) {
-            el.style.setProperty("--fold-delay", `${c.foldDelay || 0}ms`);
-            foldingEls.push(el);
-          }
-
+          c._renderKey = "";
+          c._contentKey = "";
           if (!c.expected) {
             el.className = "cell void";
-          } else if (c.fixed) {
-            el.className =
-              "cell fixed" +
-              (c.locked && !isFolding ? " locked" : "") +
-              (isFolding ? " paper-fold" : "") +
-              (inCorridor ? " corridor" : "") +
-              (isKbFocused ? " kb-focused" : "");
-            el.innerHTML = `<div class="dog-ear"></div><span class="cell-char">${c.fixed}</span><span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
-            el.onclick = () => {
-              state.focusedCell = { x, y };
-              if (c.words.length > 0) {
-                state.focusedWordId =
-                  c.words.length >= 2 && c.words[0] === state.focusedWordId ? c.words[1] : c.words[0];
-              }
-              AudioPlayer.play("click");
-              render();
-            };
-          } else if (c.placed) {
-            el.className =
-              "cell placed" +
-              (c.locked && !isFolding ? " locked" : "") +
-              (isFolding ? " paper-fold" : "") +
-              (c.snapped && !isFolding ? " snapped" : "") +
-              (inCorridor ? " corridor" : "") +
-              (isKbFocused ? " kb-focused" : "");
-            el.innerHTML = `<div class="dog-ear"></div><span class="cell-char">${c.placed.char}</span><span class="pts-sub">${c.placed.pts}</span>`;
-            el.onclick = () => {
-              state.focusedCell = { x, y };
-              if (!c.locked) {
-                state.rack.push(c.placed);
-                c.placed = null;
-                AudioPlayer.play("click");
-                render();
-              } else {
-                AudioPlayer.play("click");
-                render();
-              }
-            };
           } else {
-            let blankCls = "cell blank";
-            if (c.mult) blankCls += ` mult-${c.mult}`;
-            if (c.words.length >= 2) blankCls += " intersection";
-            if (inCorridor) blankCls += " corridor";
-            if (isHint) blankCls += " hint-glow";
-            if (isKbFocused) blankCls += " kb-focused";
-            el.className = blankCls;
-            const badge = isHint ? c.expected : (c.mult || "");
-            el.innerHTML = badge ? `<span class="mult-tag">${badge}</span>` : "";
-
             el.onclick = () => {
               state.focusedCell = { x, y };
-              if (state.selectedTileId) {
-                tryDropTile(state.selectedTileId, x, y);
-              } else {
+              if (c.fixed) {
                 if (c.words.length > 0) {
                   state.focusedWordId =
                     c.words.length >= 2 && c.words[0] === state.focusedWordId ? c.words[1] : c.words[0];
                 }
                 AudioPlayer.play("click");
                 render();
+              } else if (c.placed) {
+                if (!c.locked) {
+                  state.rack.push(c.placed);
+                  c.placed = null;
+                }
+                AudioPlayer.play("click");
+                render();
+              } else {
+                if (state.selectedTileId) {
+                  tryDropTile(state.selectedTileId, x, y);
+                } else {
+                  if (c.words.length > 0) {
+                    state.focusedWordId =
+                      c.words.length >= 2 && c.words[0] === state.focusedWordId ? c.words[1] : c.words[0];
+                  }
+                  AudioPlayer.play("click");
+                  render();
+                }
               }
             };
           }
-          c.flash = false;
-          c.foldDelay = 0;
-          c.snapped = false;
           cellDomGrid[y][x] = el;
           frag.appendChild(el);
         }
       }
       grid.replaceChildren(frag);
-      if (foldingEls.length > 0) {
-        // Trigger CSS transition from pre-fold Washi/Kraft state into locked Matcha green at the fold midpoint
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            foldingEls.forEach(el => el.classList.add("locked"));
-          });
-        });
+    }
+
+    function renderBoard() {
+      const tpl = state.tpl;
+      const bounds = getActiveBoardBounds(tpl);
+      if (!cellDomGrid || !cellDomGrid[bounds.minY] || !cellDomGrid[bounds.minY][bounds.minX]) {
+        initBoardDomForLevel();
+      }
+      const focusedWord = tpl.words.find(w => w.id === state.focusedWordId) || tpl.words[0];
+      const focusedCoords = new Set();
+      if (focusedWord) {
+        for (let i = 0; i < focusedWord.word.length; i++) {
+          const cx = focusedWord.dir === "H" ? focusedWord.sx + i : focusedWord.sx;
+          const cy = focusedWord.dir === "H" ? focusedWord.sy : focusedWord.sy + i;
+          focusedCoords.add(`${cx},${cy}`);
+        }
+      }
+
+      for (let y = bounds.minY; y <= bounds.maxY; y++) {
+        for (let x = bounds.minX; x <= bounds.maxX; x++) {
+          const c = state.cells[y][x];
+          if (!c.expected) continue;
+          const el = cellDomGrid[y][x];
+          const isHint = Boolean(state.hintCoord && state.hintCoord.x === x && state.hintCoord.y === y);
+          const inCorridor = focusedCoords.has(`${x},${y}`);
+          const isKbFocused = Boolean(state.focusedCell && state.focusedCell.x === x && state.focusedCell.y === y);
+          const isFolding = Boolean(c.flash && c.locked);
+
+          let nextCls = "";
+          let nextContentKey = "";
+          let nextHtml = "";
+
+          if (c.fixed) {
+            nextCls =
+              "cell fixed" +
+              (c.locked ? " locked" : "") +
+              (isFolding ? " paper-fold" : "") +
+              (inCorridor ? " corridor" : "") +
+              (isKbFocused ? " kb-focused" : "");
+            nextContentKey = `F:${c.fixed}`;
+            if (c._contentKey !== nextContentKey) {
+              nextHtml = `<div class="dog-ear"></div><span class="cell-char">${c.fixed}</span><span class="pts-sub">${LETTER_SCORES[c.fixed] || 1}</span>`;
+            }
+          } else if (c.placed) {
+            nextCls =
+              "cell placed" +
+              (c.locked ? " locked" : "") +
+              (isFolding ? " paper-fold" : "") +
+              (c.snapped && !isFolding ? " snapped" : "") +
+              (inCorridor ? " corridor" : "") +
+              (isKbFocused ? " kb-focused" : "");
+            nextContentKey = `P:${c.placed.char}:${c.placed.pts}`;
+            if (c._contentKey !== nextContentKey) {
+              nextHtml = `<div class="dog-ear"></div><span class="cell-char">${c.placed.char}</span><span class="pts-sub">${c.placed.pts}</span>`;
+            }
+          } else {
+            nextCls = "cell blank";
+            if (c.mult) nextCls += ` mult-${c.mult}`;
+            if (c.words.length >= 2) nextCls += " intersection";
+            if (inCorridor) nextCls += " corridor";
+            if (isHint) nextCls += " hint-glow";
+            if (isKbFocused) nextCls += " kb-focused";
+            const badge = isHint ? c.expected : (c.mult || "");
+            nextContentKey = `B:${badge}`;
+            if (c._contentKey !== nextContentKey) {
+              nextHtml = badge ? `<span class="mult-tag">${badge}</span>` : "";
+            }
+          }
+
+          if (isFolding) {
+            el.style.setProperty("--fold-delay", `${c.foldDelay || 0}ms`);
+          }
+          if (c._renderKey !== nextCls) {
+            el.className = nextCls;
+            c._renderKey = nextCls;
+          }
+          if (c._contentKey !== nextContentKey) {
+            el.innerHTML = nextHtml;
+            c._contentKey = nextContentKey;
+          }
+
+          c.flash = false;
+          c.foldDelay = 0;
+          c.snapped = false;
+        }
       }
       updateSpotlightBanner();
     }
@@ -3458,39 +3642,38 @@
       document.getElementById("scoreVal").textContent = `${state.score} PTS`;
       document.getElementById("totalScoreVal").textContent = `Career ${state.careerScore}`;
 
-      // Clues Strip
-      const strip = document.getElementById("cluesStrip");
-      const clueFrag = document.createDocumentFragment();
+      // O(1) Clues Strip Update with Origami Fold & Disappear on Completed Clues
+      if (!clueDomMap || clueDomMap.size !== tpl.words.length) {
+        initClueStripDomForLevel();
+      }
       tpl.words.forEach(w => {
+        const chip = clueDomMap.get(w.id);
+        if (!chip) return;
         const done = state.completedWords.has(w.id);
         const focused = state.focusedWordId === w.id;
-        const chip = document.createElement("div");
-        chip.className = "clue-chip paper-surface" + (done ? " done" : focused ? " focused" : "");
-        const pat = wordPattern(w).split("").join(" ");
-        chip.innerHTML = `
-          <div class="clue-head">
-            <span class="clue-dir">${done ? "✓ " : ""}${w.dir === "H" ? "ACROSS →" : "DOWN ↓"}</span>
-            <span>${pat}</span>
-          </div>
-          <div class="clue-desc">${w.clue}</div>
-        `;
-        chip.onclick = () => {
-          state.focusedWordId = w.id;
-          for (let i = 0; i < w.word.length; i++) {
-            const cx = w.dir === "H" ? w.sx + i : w.sx;
-            const cy = w.dir === "H" ? w.sy : w.sy + i;
-            const c = state.cells[cy] && state.cells[cy][cx];
-            if (c && c.isBlank && !c.placed && !c.locked) {
-              state.focusedCell = { x: cx, y: cy };
-              break;
-            }
+        const patEl = chip.querySelector(".clue-pat");
+        if (patEl) {
+          patEl.textContent = wordPattern(w).split("").join(" ");
+        }
+        if (done) {
+          if (!state.foldedOutWords.has(w.id)) {
+            state.foldedOutWords.add(w.id);
+            chip.className = "clue-chip done folding-out";
+            setTimeout(() => {
+              if (state && state.completedWords.has(w.id)) {
+                chip.classList.add("folded-hidden");
+              }
+            }, 440);
           }
-          AudioPlayer.play("click");
-          render();
-        };
-        clueFrag.appendChild(chip);
+        } else {
+          chip.className = "clue-chip" + (focused ? " focused" : "");
+        }
       });
-      strip.replaceChildren(clueFrag);
+      const allFoldedPill = document.getElementById("allCluesFoldedPill");
+      if (allFoldedPill) {
+        allFoldedPill.style.display =
+          state.completedWords.size === tpl.words.length ? "inline-flex" : "none";
+      }
 
       renderBoard();
 
@@ -3504,7 +3687,7 @@
       const hasUnlockedPlaced = state.cells.flat().some(c => c.isBlank && c.placed && !c.locked);
       document.getElementById("recallBtn").style.display = hasUnlockedPlaced ? "flex" : "none";
 
-      // Rack Tiles with idle float & 3D Origami Flip Shuffle animation
+      // Rack Tiles (Clean GPU-composited tiles without heavy pseudo-element filters)
       const rackRow = document.getElementById("rackRow");
       if (state.rack.length === 0) {
         rackRow.innerHTML = `<div style="color:var(--matcha-jade); font-weight:800; font-size:13px; padding:8px;">✓ All origami folds complete! Level Solved!</div>`;
@@ -3512,16 +3695,18 @@
         const rackFrag = document.createDocumentFragment();
         state.rack.forEach((t, idx) => {
           const tel = document.createElement("div");
+          tel.dataset.tileId = t.id;
           tel.className =
-            "tile paper-surface" +
+            "tile" +
             (state.selectedTileId === t.id ? " selected" : "") +
             (isShufflingAnim ? " shuffling" : "");
-          tel.style.setProperty("--float-delay", `${(idx * 0.28).toFixed(2)}s`);
-          const dirSign = idx % 2 === 0 ? 1 : -1;
-          tel.style.setProperty("--shuf-x", `${dirSign * (14 + (idx % 3) * 7)}px`);
-          tel.style.setProperty("--shuf-y", `${-16 - (idx % 4) * 5}px`);
-          tel.style.setProperty("--shuf-rot", `${dirSign * 15}deg`);
-          tel.style.setProperty("--shuf-delay", `${(idx % 8) * 22}ms`);
+          if (isShufflingAnim) {
+            const dirSign = idx % 2 === 0 ? 1 : -1;
+            tel.style.setProperty("--shuf-x", `${dirSign * (14 + (idx % 3) * 7)}px`);
+            tel.style.setProperty("--shuf-y", `${-16 - (idx % 4) * 5}px`);
+            tel.style.setProperty("--shuf-rot", `${dirSign * 15}deg`);
+            tel.style.setProperty("--shuf-delay", `${(idx % 8) * 22}ms`);
+          }
           tel.innerHTML = `<div class="dog-ear"></div>${t.char}<span class="pts-sub">${t.pts}</span>`;
           tel.onpointerdown = e => startTilePointerDrag(e, t, tel);
           rackFrag.appendChild(tel);
@@ -3540,7 +3725,7 @@
       render();
       setTimeout(() => {
         isShufflingAnim = false;
-      }, 460);
+      }, 400);
     }
 
     function triggerSmartHint() {
@@ -3586,10 +3771,161 @@
       if (!nextMuted) AudioPlayer.play("click");
     }
 
+    const CHAPTER_META = {
+      1: { title: "Chapter I · Apprentice Washi Folds", sub: "Levels 1–20 · Gentle 4–5 Letter Crossings", color: "#1f4e78" },
+      2: { title: "Chapter II · Courtyard Bamboo Creases", sub: "Levels 21–40 · Balanced 5–6 Letter Grids", color: "#1b6b45" },
+      3: { title: "Chapter III · Golden Pavilion Symmetry", sub: "Levels 41–60 · Interlocking Skeletons", color: "#b87314" },
+      4: { title: "Chapter IV · Arashiyama Lantern Weaves", sub: "Levels 61–80 · Advanced Scholar Crossings", color: "#c83720" },
+      5: { title: "Chapter V · Grandmaster Kyoto Crane", sub: "Levels 81–100 · Imperial 100-Level Mastery", color: "#8b3a62" }
+    };
+
+    function getSolvedCountInChapter(chId) {
+      if (!state || !state.solvedLevels) return 0;
+      const minL = (chId - 1) * 20 + 1;
+      const maxL = chId * 20;
+      let count = 0;
+      for (let l = minL; l <= maxL; l++) {
+        if (state.solvedLevels.has(l)) count++;
+      }
+      return count;
+    }
+
+    function isChapterCompleted(chId) {
+      return getSolvedCountInChapter(chId) >= 20;
+    }
+
+    function triggerChapterHeaderFoldAnimation(chId) {
+      const headerEl = document.getElementById(`chapterHeader_${chId}`);
+      if (!headerEl) return;
+      headerEl.classList.remove("folding-active");
+      void headerEl.offsetWidth;
+      headerEl.classList.add("folding-active");
+
+      const rect = headerEl.getBoundingClientRect();
+      const canvas = document.createElement("canvas");
+      canvas.width = rect.width || 380;
+      canvas.height = rect.height || 74;
+      canvas.style.position = "absolute";
+      canvas.style.inset = "0";
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      canvas.style.pointerEvents = "none";
+      canvas.style.zIndex = "15";
+      headerEl.appendChild(canvas);
+
+      const crestSvg = headerEl.querySelector(".chapter-crest-svg");
+      const ctx = canvas.getContext("2d");
+      const palette = ["#b87314", "#1b6b45", "#c83720", "#1f4e78", "#d65a7a"];
+      const count = 26;
+      const startMs = performance.now();
+      const durationMs = 1150;
+
+      function tick(now) {
+        const elapsed = now - startMs;
+        if (elapsed >= durationMs) {
+          canvas.remove();
+          headerEl.classList.remove("folding-active");
+          if (crestSvg) crestSvg.style.transform = "";
+          return;
+        }
+        const t = elapsed / durationMs;
+        const fadeAlpha = Math.sin(t * Math.PI);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (crestSvg) {
+          const foldDeg = Math.sin(t * Math.PI) * 58;
+          const spinDeg = t * 180;
+          crestSvg.style.transform = `perspective(240px) rotateX(${foldDeg.toFixed(1)}deg) rotateZ(${spinDeg.toFixed(1)}deg)`;
+        }
+
+        // Diagonal Paper-Folding Crease Wave across Chapter Header
+        const sweepX = canvas.width * t;
+        ctx.save();
+        ctx.strokeStyle = `rgba(184, 115, 20, ${((1 - t) * 0.72).toFixed(2)})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(Math.max(0, sweepX - 28), 0);
+        ctx.lineTo(Math.min(canvas.width, sweepX), canvas.height);
+        ctx.stroke();
+        ctx.restore();
+
+        // Origami Paper Triangle/Diamond Particles bursting across the Chapter Header
+        for (let i = 0; i < count; i++) {
+          const ox = canvas.width * (0.12 + 0.76 * ((i % 7) / 6));
+          const oy = canvas.height * 0.5;
+          const angle = (2 * Math.PI * i) / count + i * 0.37;
+          const dist = canvas.height * (0.32 + 0.75 * ((i % 3) * 0.35)) * t;
+          const px = ox + Math.cos(angle) * dist;
+          const py = oy + Math.sin(angle) * dist * 0.65 - canvas.height * 0.25 * t;
+          const pSize = (4.5 + (i % 3) * 1.8) * (1 - t * 0.28);
+
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.rotate(((i * 47 + t * 220) * Math.PI) / 180);
+          ctx.globalAlpha = Math.max(0, Math.min(0.9, fadeAlpha * 0.88));
+          ctx.fillStyle = palette[i % palette.length];
+          ctx.beginPath();
+          ctx.moveTo(0, -pSize);
+          ctx.lineTo(pSize * 0.85, 0);
+          ctx.lineTo(0, pSize);
+          ctx.lineTo(-pSize * 0.85, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function createChapterHeaderCard(chId) {
+      const meta = CHAPTER_META[chId] || CHAPTER_META[1];
+      const solvedCount = getSolvedCountInChapter(chId);
+      const completed = solvedCount >= 20;
+      const pct = Math.min(100, Math.round((solvedCount / 20) * 100));
+
+      const card = document.createElement("div");
+      card.id = `chapterHeader_${chId}`;
+      card.className = "chapter-header-card paper-surface" + (completed ? " completed" : "");
+      card.innerHTML = `
+        <div class="chapter-fold-crest">
+          <svg class="chapter-crest-svg" width="32" height="32" viewBox="0 0 36 36">
+            <polygon points="18,18 4,4 18,3" fill="${completed ? "#b87314" : meta.color}" />
+            <polygon points="18,18 18,3 32,4" fill="#1b6b45" />
+            <polygon points="18,18 32,32 18,33" fill="#1f4e78" />
+            <polygon points="18,18 18,33 4,32" fill="#c83720" />
+            <line x1="3" y1="18" x2="33" y2="18" stroke="#fffcf5" stroke-width="1.4" />
+            <line x1="18" y1="3" x2="18" y2="33" stroke="#fffcf5" stroke-width="1.4" />
+          </svg>
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:13.5px; font-weight:800; color:var(--sumi-ink);">
+            ${meta.title} ${completed ? '<span style="color:var(--kyoto-gold); font-size:10px;">✦ MASTERED</span>' : ""}
+          </div>
+          <div style="font-size:11px; color:${completed ? "var(--matcha-jade)" : "var(--walnut-muted)"}; margin-bottom:4px;">
+            ${meta.sub} · ${solvedCount}/20 Solved
+          </div>
+          <div style="width:100%; height:4px; background:var(--kraft-card); border-radius:999px; overflow:hidden;">
+            <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, var(--aizome-indigo), var(--matcha-jade), var(--kyoto-gold));"></div>
+          </div>
+        </div>
+        <button class="chapter-fold-btn" onclick="triggerChapterHeaderFoldAnimation(${chId})">
+          ${completed ? "✦ Replay Fold" : "✦ Fold Seal"}
+        </button>
+      `;
+      if (completed) {
+        setTimeout(() => triggerChapterHeaderFoldAnimation(chId), 120);
+      }
+      return card;
+    }
+
     function showLevelClearModal(accuracyBonus, coinsEarned) {
+      const chId = Math.floor((state.tpl.level - 1) / 20) + 1;
+      const chapterMastered = isChapterCompleted(chId);
       document.getElementById("fanfareSubtitle").textContent = `Level ${state.tpl.level} · ${state.tpl.title}`;
       document.getElementById("fanfareStars").textContent = state.mistakes === 0 ? "★★★" : state.mistakes <= 2 ? "★★☆" : "★☆☆";
       document.getElementById("fanfareBreakdown").innerHTML = `
+        ${chapterMastered ? `<div style="background:rgba(184,115,20,0.16); border:1.5px solid var(--kyoto-gold); border-radius:10px; padding:6px 10px; margin-bottom:4px; font-weight:800; color:var(--kyoto-gold);">✦ CHAPTER ${chId} MASTERED! Golden Origami Seal Unfolded! ✦</div>` : ""}
         <div class="stat-line"><span>Intersecting Words Solved</span><span>${state.tpl.words.length}</span></div>
         <div class="stat-line"><span>Max Combo Streak</span><span>×${state.maxCombo}</span></div>
         <div class="stat-line"><span>Accuracy Bonus</span><span>+${accuracyBonus} PTS</span></div>
@@ -3676,11 +4012,17 @@
       const vaultEl = document.getElementById("levelsVaultList");
       if (vaultEl) {
         const frag = document.createDocumentFragment();
+        if (activeVaultChapter > 0) {
+          frag.appendChild(createChapterHeaderCard(activeVaultChapter));
+        }
         LEVELS.forEach((lvl, idx) => {
           if (activeVaultChapter > 0) {
             const minL = (activeVaultChapter - 1) * 20 + 1;
             const maxL = activeVaultChapter * 20;
             if (lvl.level < minL || lvl.level > maxL) return;
+          } else if ((lvl.level - 1) % 20 === 0) {
+            const chId = Math.floor((lvl.level - 1) / 20) + 1;
+            frag.appendChild(createChapterHeaderCard(chId));
           }
           const solved = state.solvedLevels.has(lvl.level);
           const unlocked = solved || lvl.level <= (state.highestUnlockedLevel || 1);

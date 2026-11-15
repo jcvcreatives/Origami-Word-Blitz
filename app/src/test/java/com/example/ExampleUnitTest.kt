@@ -185,4 +185,31 @@ class ExampleUnitTest {
     assertTrue(viewModel.loadLevel(2))
     assertEquals(2, viewModel.puzzleState.value.levelTemplate.levelNumber)
   }
+
+  @Test
+  fun chapterCompletion_detectsWhenAll20LevelsInChapterAreSolved() {
+    val engine = LexiFillEngine()
+    val level20 = engine.getLevelTemplate(20)
+    var state =
+      engine.createPuzzleState(
+        template = level20,
+        completedLevels = (1..19).toSet(),
+        highestUnlockedLevel = 20,
+      )
+    assertEquals(19, state.solvedCountInChapter(1))
+    assertFalse(state.isChapterCompleted(1))
+
+    // Solve all blanks in Level 20 to complete Chapter 1 (Levels 1..20)
+    while (!state.isLevelCleared) {
+      val openBlank =
+        state.cells.flatten().first { it.isBlankTarget && it.placedTile == null && !it.isLockedCompleted }
+      val matchingTile = state.rackState.tiles.first { it.char == openBlank.expectedLetter }
+      state = engine.commitTileDrop(state, matchingTile.id, openBlank.coordinate.x, openBlank.coordinate.y).updatedState
+    }
+
+    assertTrue(state.isLevelCleared)
+    assertTrue(state.isChapterCompleted(1))
+    assertEquals(20, state.solvedCountInChapter(1))
+    assertEquals(1, state.levelClearSummary?.completedChapterId)
+  }
 }

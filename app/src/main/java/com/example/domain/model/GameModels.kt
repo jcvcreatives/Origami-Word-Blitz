@@ -217,6 +217,7 @@ data class LevelClearSummary(
   val accuracyBonus: Int,
   val coinsEarned: Int,
   val stars: Int,
+  val completedChapterId: Int? = null,
 )
 
 @Immutable
@@ -294,6 +295,24 @@ data class PuzzleState(
 
   val completedWordsCount: Int
     get() = targetWords.count { it.isCompleted }
+
+  fun chapterForLevel(levelNumber: Int): Int = ((levelNumber - 1) / 20) + 1
+
+  fun chapterLevelRange(chapterId: Int): IntRange {
+    val start = (chapterId - 1) * 20 + 1
+    val end = chapterId * 20
+    return start..end
+  }
+
+  fun solvedCountInChapter(chapterId: Int): Int {
+    val range = chapterLevelRange(chapterId)
+    return completedLevels.count { it in range }
+  }
+
+  fun isChapterCompleted(chapterId: Int): Boolean {
+    val range = chapterLevelRange(chapterId)
+    return range.all { it in completedLevels }
+  }
 }
 
 // --- Legacy Compatibility Models for Existing Tests ---
